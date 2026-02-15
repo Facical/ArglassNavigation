@@ -670,8 +670,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d26d00fb7a972490790cb1665c87e5e2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  routeAMissions: []
-  routeBMissions: []
+  routeAMissions:
+  - {fileID: 11400000, guid: dbdcf521df899409eb1736a3b6c2d937, type: 2}
+  - {fileID: 11400000, guid: f279278af39e643b690cae0594f5957b, type: 2}
+  - {fileID: 11400000, guid: e75e19f3c3c964f31af4d77b24b5de14, type: 2}
+  - {fileID: 11400000, guid: 4004495187bd84d2ea7280e8495be65b, type: 2}
+  - {fileID: 11400000, guid: 5de7bacb85cb74549b999ab3b72ceaac, type: 2}
+  routeBMissions:
+  - {fileID: 11400000, guid: 7e2cdb6e51b5b450283738dc99dad530, type: 2}
+  - {fileID: 11400000, guid: 26e678e837c6a4acfa5a8b8cc86b3413, type: 2}
+  - {fileID: 11400000, guid: 5dcddf0149e394a13a561ffd020f55f6, type: 2}
+  - {fileID: 11400000, guid: 8a60447382104426d964bcafa3d5af85, type: 2}
+  - {fileID: 11400000, guid: f54994bfc905f4311930b522d66eb9de, type: 2}
   briefingUI: {fileID: 0}
   verificationUI: {fileID: 0}
 --- !u!1 &291430015

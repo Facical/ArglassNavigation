@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c91d0b795795846309dc88577bbd3277, type: 3}
+  m_Name: RouteA_C1
+  m_EditorClassIdentifier: 
+  missionId: C1
+  type: 2
+  briefingText: "B132 \uAC15\uC758\uC2E4\uACFC B133 \uC138\uBBF8\uB098\uC2E4\uC744
+    \uAC01\uAC01 \uD655\uC778\uD558\uC138\uC694. 10\uBA85 \uC774\uD558 \uC18C\uADDC\uBAA8
+    \uADF8\uB8F9 \uD1A0\uB860\uC5D0 \uB354 \uC801\uD569\uD55C \uACF5\uAC04\uC758
+    \uD638\uC2E4 \uBC88\uD638\uB97C \uC120\uD0DD\uD558\uC138\uC694."
+  targetWaypointId: WP08
+  verificationQuestion: "\uC18C\uADDC\uBAA8 \uADF8\uB8F9 \uD1A0\uB860\uC5D0 \uB354
+    \uC801\uD569\uD55C \uACF5\uAC04\uC740?"
+  answerOptions:
+  - "B132 (\uAC15\uC758\uC2E4)"
+  - "B133 (\uC138\uBBF8\uB098\uC2E4)"
+  - "\uB458 \uB2E4 \uC801\uD569"
+  - "\uB458 \uB2E4 \uBD80\uC801\uD569"
+  correctAnswerIndex: 1
+  associatedTriggerId: 
+  relevantPOIs:
+  - {fileID: 11400000, guid: f566ca1f45299490eaea8a4a0b021d8e, type: 2}
+  - {fileID: 11400000, guid: ead76f0412fbc4a06a8fde3677f72551, type: 2}
+  infoCards: []
+  comparisonData:
+    comparisonId: 
+    itemNames: []
+    attributes: []
+    values: []
+  referenceImages: []

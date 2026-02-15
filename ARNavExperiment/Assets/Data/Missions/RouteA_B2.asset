@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c91d0b795795846309dc88577bbd3277, type: 3}
+  m_Name: RouteA_B2
+  m_EditorClassIdentifier: 
+  missionId: B2
+  type: 1
+  briefingText: "\uC138\uBBF8\uB098\uC2E4\uC744 \uCC3E\uC544\uAC00\uC138\uC694."
+  targetWaypointId: WP06
+  verificationQuestion: "\uB3C4\uCC29\uD55C \uC138\uBBF8\uB098\uC2E4\uC758 \uD638\uC2E4
+    \uBC88\uD638\uB294 \uBB34\uC5C7\uC785\uB2C8\uAE4C?"
+  answerOptions:
+  - B131
+  - B132
+  - B133
+  - B134
+  correctAnswerIndex: 2
+  associatedTriggerId: T4
+  relevantPOIs:
+  - {fileID: 11400000, guid: ead76f0412fbc4a06a8fde3677f72551, type: 2}
+  - {fileID: 11400000, guid: f566ca1f45299490eaea8a4a0b021d8e, type: 2}
+  infoCards: []
+  comparisonData:
+    comparisonId: 
+    itemNames: []
+    attributes: []
+    values: []
+  referenceImages: []

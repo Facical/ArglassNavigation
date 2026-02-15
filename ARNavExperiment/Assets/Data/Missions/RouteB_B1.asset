@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c91d0b795795846309dc88577bbd3277, type: 3}
+  m_Name: RouteB_B1
+  m_EditorClassIdentifier: 
+  missionId: B1
+  type: 1
+  briefingText: "\uAD50\uC218 \uC5F0\uAD6C\uC2E4\uC774 \uC788\uB294 \uBC29\uD5A5\uC73C\uB85C
+    \uC774\uB3D9\uD558\uC138\uC694."
+  targetWaypointId: WP03
+  verificationQuestion: "\uC774\uB3D9\uD55C \uBC29\uD5A5\uC5D0\uC11C \uCC98\uC74C
+    \uB9CC\uB09C \uAD50\uC218\uC2E4\uC758 \uD638\uC2E4 \uBC88\uD638\uB294?"
+  answerOptions:
+  - B108
+  - B109
+  - B110
+  - B111
+  correctAnswerIndex: 2
+  associatedTriggerId: T2
+  relevantPOIs:
+  - {fileID: 11400000, guid: 937b2e91e5edd4d88b889071ec85f5cb, type: 2}
+  - {fileID: 11400000, guid: 202599ccd291e445c933d6fca4785b24, type: 2}
+  infoCards: []
+  comparisonData:
+    comparisonId: 
+    itemNames: []
+    attributes: []
+    values: []
+  referenceImages: []

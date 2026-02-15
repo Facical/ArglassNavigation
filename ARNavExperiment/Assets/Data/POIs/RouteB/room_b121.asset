@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72779fb54f5214ba9818a7c5687f27c0, type: 3}
+  m_Name: room_b121
+  m_EditorClassIdentifier: 
+  poiId: room_b121
+  poiType: computer_lab
+  displayName: "B121 PC\uC2E4\uC2B5\uC2E4"
+  description: "PC \uC2E4\uC2B5\uC2E4"
+  capacity: 40
+  equipment:
+  - "\uB370\uC2A4\uD06C\uD0D1 PC"
+  - "\uBE54\uD504\uB85C\uC81D\uD130"
+  mapPosition: {x: 0, y: 0}
+  icon: {fileID: 0}
