@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 444ec120f8ecf4ed2b34343206a6c297, type: 3}
+  m_Name: b_card_01
+  m_EditorClassIdentifier: 
+  cardId: b_card_01
+  cardType: sign_card
+  title: "B116 \uC548\uB0B4"
+  content: "\uC704\uCE58: \uB3D9\uCABD\uBCF5\uB3C4 \uB0A8\uB2E8\n\uC6A9\uB3C4: \uD604\uC7A5
+    \uD655\uC778 \uD544\uC694\n\uCC38\uACE0: SE\uAD50\uCC28\uB85C\uC5D0\uC11C \uBD81\uCABD\uC73C\uB85C
+    \uC774\uB3D9 \uC2DC \uCCAB \uBC88\uC9F8 \uC2E4"
+  image: {fileID: 0}
+  triggerWaypointId: WP02
+  autoShow: 1

@@ -31,10 +31,28 @@ MonoBehaviour:
   relevantPOIs:
   - {fileID: 11400000, guid: f566ca1f45299490eaea8a4a0b021d8e, type: 2}
   - {fileID: 11400000, guid: ead76f0412fbc4a06a8fde3677f72551, type: 2}
-  infoCards: []
+  infoCards:
+  - {fileID: 11400000, guid: f90e7a785956a46c489c7774cc935ace, type: 2}
   comparisonData:
-    comparisonId: 
-    itemNames: []
-    attributes: []
-    values: []
+    comparisonId: comp_a_b132_b133
+    itemNames:
+    - "B132 \uAC15\uC758\uC2E4"
+    - "B133 \uC138\uBBF8\uB098\uC2E4"
+    attributes:
+    - "\uC6A9\uB3C4"
+    - "\uC218\uC6A9\uC778\uC6D0"
+    - "\uC88C\uC11D \uBC30\uCE58"
+    - "\uC8FC\uC694 \uC7A5\uBE44"
+    - "\uC18C\uADDC\uBAA8 \uD1A0\uB860 \uC801\uD569\uC131"
+    values:
+    - "\uAC15\uC758"
+    - "60\uBA85"
+    - "\uACE0\uC815\uC2DD (\uAC15\uC758 \uBC29\uD5A5)"
+    - "\uBE54\uD504\uB85C\uC81D\uD130, \uB9C8\uC774\uD06C"
+    - "\uBD80\uC801\uD569 (\uACFC\uB300)"
+    - "\uC138\uBBF8\uB098/\uD1A0\uB860"
+    - "15\uBA85"
+    - "\uC774\uB3D9\uC2DD (\uC6D0\uD615 \uBC30\uCE58 \uAC00\uB2A5)"
+    - "\uD654\uC774\uD2B8\uBCF4\uB4DC, \uBAA8\uB2C8\uD130"
+    - "\uC801\uD569"
   referenceImages: []

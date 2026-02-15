@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 444ec120f8ecf4ed2b34343206a6c297, type: 3}
+  m_Name: a_card_04
+  m_EditorClassIdentifier: 
+  cardId: a_card_04
+  cardType: landmark
+  title: "NW\uAD50\uCC28\uB85C \uC8FC\uBCC0 \uC2DC\uC124"
+  content: "\uB0A8\uCABD(\uC11C\uCABD\uBCF5\uB3C4): B131 \uAC15\uC758\uC2E4\n\uB3D9\uCABD(\uBD81\uCABD\uBCF5\uB3C4):
+    B132 \uAC15\uC758\uC2E4, B133 \uC138\uBBF8\uB098\uC2E4, B134 \uAC15\uC758\uC2E4\n\uD604\uC7AC
+    \uC704\uCE58: \uC11C\uCABD\uBCF5\uB3C4\uC640 \uBD81\uCABD\uBCF5\uB3C4 \uAD50\uCC28\uC810"
+  image: {fileID: 0}
+  triggerWaypointId: WP06
+  autoShow: 1

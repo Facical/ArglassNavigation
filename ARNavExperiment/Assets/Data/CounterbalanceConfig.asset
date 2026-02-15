@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42e7aecb4218847628dad153cee3595e, type: 3}
+  m_Name: CounterbalanceConfig
+  m_EditorClassIdentifier: 
+  assignments:
+  - participantId: P01
+    orderGroup: S1
+  - participantId: P02
+    orderGroup: S2
+  - participantId: P03
+    orderGroup: S1
+  - participantId: P04
+    orderGroup: S2
+  - participantId: P05
+    orderGroup: S1
+  - participantId: P06
+    orderGroup: S2
+  - participantId: P07
+    orderGroup: S1
+  - participantId: P08
+    orderGroup: S2
+  - participantId: P09
+    orderGroup: S1
+  - participantId: P10
+    orderGroup: S2
+  - participantId: P11
+    orderGroup: S1
+  - participantId: P12
+    orderGroup: S2
+  - participantId: P13
+    orderGroup: S1
+  - participantId: P14
+    orderGroup: S2
+  - participantId: P15
+    orderGroup: S1
+  - participantId: P16
+    orderGroup: S2
+  - participantId: P17
+    orderGroup: S1
+  - participantId: P18
+    orderGroup: S2
+  - participantId: P19
+    orderGroup: S1
+  - participantId: P20
+    orderGroup: S2
+  - participantId: P21
+    orderGroup: S1
+  - participantId: P22
+    orderGroup: S2
+  - participantId: P23
+    orderGroup: S1
+  - participantId: P24
+    orderGroup: S2

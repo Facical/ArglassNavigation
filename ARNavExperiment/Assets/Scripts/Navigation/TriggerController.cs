@@ -28,7 +28,6 @@ namespace ARNavExperiment.Navigation
         [SerializeField] private float t3SpreadAngle = 30f;
 
         [Header("T4 Settings")]
-        [SerializeField] private float t4ProximityDistance = 20f;
         [SerializeField] private string t4MessageText = "목적지 근처입니다";
 
         [Header("T4 UI")]

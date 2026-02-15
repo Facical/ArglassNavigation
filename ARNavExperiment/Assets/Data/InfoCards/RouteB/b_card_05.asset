@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 444ec120f8ecf4ed2b34343206a6c297, type: 3}
+  m_Name: b_card_05
+  m_EditorClassIdentifier: 
+  cardId: b_card_05
+  cardType: comparison
+  title: "B104 vs B105 \uBE44\uAD50\uD45C"
+  content: "B104: \uCD5C\uD0DC\uD6C8 \uAD50\uC218\uC2E4\nB105: \uC1A1\uC601\uBBFC
+    \uAD50\uC218\uC2E4\n\u2192 \uBB38 \uC55E \uC548\uB0B4\uD310 \uC815\uBCF4 \uBE44\uAD50
+    (\uD604\uC7A5 \uD655\uC778 \uD544\uC694)"
+  image: {fileID: 0}
+  triggerWaypointId: WP07
+  autoShow: 1

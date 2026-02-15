@@ -31,10 +31,25 @@ MonoBehaviour:
   relevantPOIs:
   - {fileID: 11400000, guid: 06df47dcec1e14f528ecc4ee75ab62eb, type: 2}
   - {fileID: 11400000, guid: 190c90d2e2729418bab7fc669176b948, type: 2}
-  infoCards: []
+  infoCards:
+  - {fileID: 11400000, guid: 48882d47005c64ab0a85c925e3ee00cd, type: 2}
   comparisonData:
-    comparisonId: 
-    itemNames: []
-    attributes: []
-    values: []
+    comparisonId: comp_b_b104_b105
+    itemNames:
+    - "B104 \uCD5C\uD0DC\uD6C8 \uAD50\uC218\uC2E4"
+    - "B105 \uC1A1\uC601\uBBFC \uAD50\uC218\uC2E4"
+    attributes:
+    - "\uAD50\uC218\uBA85"
+    - "\uC804\uACF5 \uBD84\uC57C"
+    - "\uC548\uB0B4\uD310 \uC815\uBCF4\uB7C9"
+    - "\uC5F0\uAD6C\uC2E4 \uC704\uCE58"
+    values:
+    - "\uCD5C\uD0DC\uD6C8"
+    - "(\uD604\uC7A5 \uD655\uC778)"
+    - "\uC0C1\uC138 (\uD604\uC7A5 \uD655\uC778)"
+    - "\uB3D9\uCABD\uBCF5\uB3C4 \uBD81\uB2E8"
+    - "\uC1A1\uC601\uBBFC"
+    - "(\uD604\uC7A5 \uD655\uC778)"
+    - "\uAC04\uB7B5 (\uD604\uC7A5 \uD655\uC778)"
+    - "\uB3D9\uCABD\uBCF5\uB3C4 \uBD81\uB2E8"
   referenceImages: []

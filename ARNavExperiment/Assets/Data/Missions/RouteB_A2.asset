@@ -30,7 +30,8 @@ MonoBehaviour:
   relevantPOIs:
   - {fileID: 11400000, guid: db39b09c1838948ee9027e499920f212, type: 2}
   - {fileID: 11400000, guid: ad0b751e584be4ba3a322946cd04bd8f, type: 2}
-  infoCards: []
+  infoCards:
+  - {fileID: 11400000, guid: 28362c1e19d0242ac8fc70970ed26fa0, type: 2}
   comparisonData:
     comparisonId: 
     itemNames: []

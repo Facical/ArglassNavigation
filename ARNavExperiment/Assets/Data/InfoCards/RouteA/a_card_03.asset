@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 444ec120f8ecf4ed2b34343206a6c297, type: 3}
+  m_Name: a_card_03
+  m_EditorClassIdentifier: 
+  cardId: a_card_03
+  cardType: sign_card
+  title: "B130 \uB300\uD559\uC6D0\uAC15\uC758\uC2E4 \uC548\uB0B4"
+  content: "\uC218\uC6A9\uC778\uC6D0: 30\uBA85\n\uC8FC\uC694 \uC7A5\uBE44: \uBE54\uD504\uB85C\uC81D\uD130,
+    \uD654\uC774\uD2B8\uBCF4\uB4DC\n\uC6A9\uB3C4: \uB300\uD559\uC6D0 \uC804\uC6A9
+    \uAC15\uC758\uC2E4\n\uC704\uCE58: \uC11C\uCABD\uBCF5\uB3C4 \uC911\uB2E8"
+  image: {fileID: 0}
+  triggerWaypointId: WP05
+  autoShow: 1
