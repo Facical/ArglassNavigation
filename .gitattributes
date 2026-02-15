@@ -1,0 +1,4 @@
+*.so filter=lfs diff=lfs merge=lfs -text
+ARNavExperiment/LocalPackages/com.xreal.xr/Tools~/MacOS/trackableImageTools filter=lfs diff=lfs merge=lfs -text
+*.aar filter=lfs diff=lfs merge=lfs -text
+*.exe filter=lfs diff=lfs merge=lfs -text

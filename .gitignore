@@ -1,0 +1,48 @@
+# Unity
+ARNavExperiment/Library/
+ARNavExperiment/Temp/
+ARNavExperiment/Obj/
+ARNavExperiment/Build/
+ARNavExperiment/Builds/
+ARNavExperiment/Logs/
+ARNavExperiment/UserSettings/
+ARNavExperiment/MemoryCaptures/
+ARNavExperiment/Recordings/
+ARNavExperiment/Assets/Plugins/Android/
+ARNavExperiment/Assets/TextMesh Pro/
+
+# IDE
+.vs/
+.vscode/
+*.csproj
+*.sln
+*.suo
+*.user
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Analysis output
+analysis/output/
+
+# Data
+data/raw/*.csv
+data/processed/
+
+# Claude
+.claude/
