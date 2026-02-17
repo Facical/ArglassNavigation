@@ -26,6 +26,13 @@ namespace ARNavExperiment.Core
             Instance = this;
         }
 
+        private void Start()
+        {
+            // 조건 설정 전에는 BeamPro UI 숨기기
+            if (beamProUI) beamProUI.SetActive(false);
+            if (lockedScreenUI) lockedScreenUI.SetActive(false);
+        }
+
         public void SetCondition(ExperimentCondition condition)
         {
             CurrentCondition = condition;
