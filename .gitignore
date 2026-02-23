@@ -44,5 +44,12 @@ analysis/output/
 data/raw/*.csv
 data/processed/
 
+# Reference / research notes
+Reference/
+system-prompt-extraction/
+연구 주제 정리.txt
+연구주제_정리_가이드.md
+지하1층 도면.jpeg
+
 # Claude
 .claude/
