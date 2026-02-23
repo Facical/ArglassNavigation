@@ -7,6 +7,7 @@ namespace ARNavExperiment.Core
     public enum ExperimentState
     {
         Idle,
+        Relocalization,
         Setup,
         Practice,
         Condition1,
@@ -63,6 +64,9 @@ namespace ARNavExperiment.Core
 
             switch (newState)
             {
+                case ExperimentState.Relocalization:
+                    StartRelocalization();
+                    break;
                 case ExperimentState.Practice:
                     StartPractice();
                     break;
@@ -97,6 +101,7 @@ namespace ARNavExperiment.Core
             switch (CurrentState)
             {
                 case ExperimentState.Idle: TransitionTo(ExperimentState.Setup); break;
+                case ExperimentState.Relocalization: TransitionTo(ExperimentState.Setup); break;
                 case ExperimentState.Setup: TransitionTo(ExperimentState.Practice); break;
                 case ExperimentState.Practice: TransitionTo(ExperimentState.Condition1); break;
                 case ExperimentState.Condition1: TransitionTo(ExperimentState.Survey1); break;
@@ -105,6 +110,15 @@ namespace ARNavExperiment.Core
                 case ExperimentState.Survey2: TransitionTo(ExperimentState.PostSurvey); break;
                 case ExperimentState.PostSurvey: TransitionTo(ExperimentState.Complete); break;
             }
+        }
+
+        private void StartRelocalization()
+        {
+            // SpatialAnchorManager의 앵커 로드 시작
+            // RelocalizationUI가 OnStateChanged 이벤트를 받아 UI를 표시하고
+            // SpatialAnchorManager.LoadAllAnchors()를 호출
+            EventLogger.Instance?.LogEvent("RELOCALIZATION_START");
+            Debug.Log("[ExperimentManager] Relocalization 시작 — 앵커 재인식 대기 중");
         }
 
         private void StartPractice()

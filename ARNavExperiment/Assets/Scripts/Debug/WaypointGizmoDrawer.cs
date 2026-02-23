@@ -49,7 +49,7 @@ namespace ARNavExperiment.DebugTools
             for (int i = 0; i < waypoints.arraySize; i++)
             {
                 var wp = waypoints.GetArrayElementAtIndex(i);
-                var pos = wp.FindPropertyRelative("position").vector3Value;
+                var pos = wp.FindPropertyRelative("fallbackPosition").vector3Value;
                 var radius = wp.FindPropertyRelative("radius").floatValue;
                 var wpId = wp.FindPropertyRelative("waypointId").stringValue;
                 var locName = wp.FindPropertyRelative("locationName").stringValue;
@@ -64,7 +64,7 @@ namespace ARNavExperiment.DebugTools
                 if (i < waypoints.arraySize - 1)
                 {
                     var nextPos = waypoints.GetArrayElementAtIndex(i + 1)
-                        .FindPropertyRelative("position").vector3Value;
+                        .FindPropertyRelative("fallbackPosition").vector3Value;
                     Gizmos.DrawLine(pos + Vector3.up * 0.1f, nextPos + Vector3.up * 0.1f);
                 }
 
@@ -86,7 +86,7 @@ namespace ARNavExperiment.DebugTools
             // Draw start marker
             if (waypoints.arraySize > 0)
             {
-                var startPos = waypoints.GetArrayElementAtIndex(0).FindPropertyRelative("position").vector3Value;
+                var startPos = waypoints.GetArrayElementAtIndex(0).FindPropertyRelative("fallbackPosition").vector3Value;
                 Gizmos.color = Color.red;
                 Gizmos.DrawCube(startPos + Vector3.up * 0.5f, new Vector3(0.3f, 1f, 0.3f));
             }

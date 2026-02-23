@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using ARNavExperiment.Logging;
 using ARNavExperiment.Mission;
+using ARNavExperiment.UI;
 
 namespace ARNavExperiment.BeamPro
 {
@@ -95,6 +96,10 @@ namespace ARNavExperiment.BeamPro
 
         private void Update()
         {
+            // WorldSpace(GlassOnly) 모드에서는 터치 줌 비활성화 (MapZoomButtons가 대체)
+            var canvasCtrl = GetComponentInParent<BeamProCanvasController>();
+            if (canvasCtrl != null && canvasCtrl.IsWorldSpace) return;
+
             // pinch-to-zoom gesture handling
             if (Input.touchCount == 2)
             {

@@ -40,9 +40,9 @@ namespace ARNavExperiment.Core
             switch (condition)
             {
                 case ExperimentCondition.GlassOnly:
-                    if (beamProUI) beamProUI.SetActive(false);
-                    if (lockedScreenUI) lockedScreenUI.SetActive(true);
-                    DeviceStateTracker.Instance?.SetLocked(true);
+                    if (beamProUI) beamProUI.SetActive(true);      // 글래스 WorldSpace로 표시
+                    if (lockedScreenUI) lockedScreenUI.SetActive(false); // 잠금화면 불필요
+                    // DeviceStateTracker 잠금 해제 — 폰 사용 시도 감지용으로 유지
                     break;
 
                 case ExperimentCondition.Hybrid:

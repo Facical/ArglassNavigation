@@ -35,6 +35,9 @@ namespace ARNavExperiment.Navigation
 
         private Coroutine activeTrigger;
         private float triggerStartTime;
+        private TriggerType currentTriggerType;
+        private string currentTriggerId;
+        private bool triggerCompleted;
 
         private void Awake()
         {
@@ -47,6 +50,9 @@ namespace ARNavExperiment.Navigation
             if (activeTrigger != null)
                 StopCoroutine(activeTrigger);
 
+            currentTriggerType = type;
+            currentTriggerId = triggerId;
+            triggerCompleted = false;
             triggerStartTime = Time.time;
             EventLogger.Instance?.LogEvent("TRIGGER_ACTIVATED",
                 extraData: $"{{\"trigger_type\":\"{type}\",\"trigger_id\":\"{triggerId}\"}}");
@@ -138,6 +144,10 @@ namespace ARNavExperiment.Navigation
                 activeTrigger = null;
             }
 
+            // T3/T4 등 미션 완료로 해제되는 트리거 로그
+            if (!triggerCompleted)
+                LogTriggerComplete(currentTriggerType, currentTriggerId);
+
             arrowRenderer.SetTriggerMode(false);
             arrowRenderer.Show();
 
@@ -147,6 +157,7 @@ namespace ARNavExperiment.Navigation
 
         private void LogTriggerComplete(TriggerType type, string triggerId)
         {
+            triggerCompleted = true;
             float duration = Time.time - triggerStartTime;
             EventLogger.Instance?.LogEvent("TRIGGER_DEACTIVATED",
                 extraData: $"{{\"trigger_type\":\"{type}\",\"duration_s\":{duration:F1}}}");

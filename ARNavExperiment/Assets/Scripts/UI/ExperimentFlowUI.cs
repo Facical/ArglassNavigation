@@ -9,11 +9,16 @@ namespace ARNavExperiment.UI
     public class ExperimentFlowUI : MonoBehaviour
     {
         [Header("Panels")]
+        [SerializeField] private GameObject appModeSelectorPanel;
+        [SerializeField] private GameObject relocalizationPanel;
         [SerializeField] private GameObject sessionSetupPanel;
         [SerializeField] private GameObject practicePanel;
         [SerializeField] private GameObject conditionTransitionPanel;
         [SerializeField] private GameObject surveyPromptPanel;
         [SerializeField] private GameObject completionPanel;
+
+        [Header("Relocalization")]
+        [SerializeField] private RelocalizationUI relocalizationUI;
 
         [Header("Practice Panel")]
         [SerializeField] private TextMeshProUGUI practiceInstructionText;
@@ -41,15 +46,24 @@ namespace ARNavExperiment.UI
             surveyDoneButton?.onClick.AddListener(OnSurveyDone);
 
             if (ExperimentManager.Instance != null)
+            {
+                ExperimentManager.Instance.OnStateChanged -= OnStateChanged;
                 ExperimentManager.Instance.OnStateChanged += OnStateChanged;
+            }
 
             HideAllPanels();
-            if (sessionSetupPanel != null)
+
+            // 앱 시작 시 모드 선택 화면 표시
+            if (appModeSelectorPanel != null)
+                appModeSelectorPanel.SetActive(true);
+            else if (sessionSetupPanel != null)
                 sessionSetupPanel.SetActive(true);
         }
 
         private void HideAllPanels()
         {
+            if (appModeSelectorPanel) appModeSelectorPanel.SetActive(false);
+            if (relocalizationPanel) relocalizationPanel.SetActive(false);
             if (sessionSetupPanel) sessionSetupPanel.SetActive(false);
             if (practicePanel) practicePanel.SetActive(false);
             if (conditionTransitionPanel) conditionTransitionPanel.SetActive(false);
@@ -63,6 +77,10 @@ namespace ARNavExperiment.UI
 
             switch (state)
             {
+                case ExperimentState.Relocalization:
+                    ShowRelocalization();
+                    break;
+
                 case ExperimentState.Setup:
                     ShowSetupTransition();
                     break;
@@ -97,8 +115,24 @@ namespace ARNavExperiment.UI
             }
         }
 
+        private void ShowRelocalization()
+        {
+            if (relocalizationPanel != null)
+                relocalizationPanel.SetActive(true);
+
+            if (relocalizationUI != null)
+                relocalizationUI.StartRelocalization();
+        }
+
         private void ShowSetupTransition()
         {
+            // Relocalization 완료 후 SessionSetup 표시 (세션 미초기화 시에만)
+            if (ExperimentManager.Instance?.session == null && sessionSetupPanel != null)
+            {
+                sessionSetupPanel.SetActive(true);
+                return;
+            }
+
             if (conditionTransitionPanel == null) return;
             conditionTransitionPanel.SetActive(true);
 
@@ -143,8 +177,8 @@ namespace ARNavExperiment.UI
             if (transitionDetailText)
             {
                 string deviceInfo = condition == "glass_only"
-                    ? "글래스의 AR 화살표만 사용합니다.\n스마트폰은 사용하지 마세요."
-                    : "글래스의 AR 화살표와 스마트폰의\n정보 허브를 모두 사용할 수 있습니다.";
+                    ? "글래스의 AR 화살표와 글래스에 표시되는\n정보 허브를 사용합니다.\n핸드트래킹으로 조작하세요."
+                    : "글래스의 AR 화살표와 스마트폰 화면의\n정보 허브를 사용합니다.";
 
                 transitionDetailText.text =
                     $"조건: {conditionKr}\n" +
@@ -211,8 +245,6 @@ namespace ARNavExperiment.UI
         private void OnPracticeStart()
         {
             if (practicePanel) practicePanel.SetActive(false);
-            // 연습은 간략하게 진행 후 자동으로 조건 1로 전환
-            // 실제 실험에서는 짧은 연습 경로를 걷고 연구자가 AdvanceState 호출
             Debug.Log("[ExperimentFlowUI] 연습 시작 — 연습 완료 후 'N' 키 또는 HUD Advance 버튼으로 다음 단계");
         }
 

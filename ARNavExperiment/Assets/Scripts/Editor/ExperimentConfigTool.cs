@@ -72,26 +72,38 @@ namespace ARNavExperiment.EditorTools
                 issues.AppendLine("[O] 빌드 타겟: Android");
             }
 
-            // 2. Graphics API
+            // 2. Graphics API (XREAL: OpenGLES3 필수, Vulkan 사용 금지)
             if (PlayerSettings.GetUseDefaultGraphicsAPIs(BuildTarget.Android))
             {
-                issues.AppendLine("[O] Graphics API: Auto");
+                issues.AppendLine("[ ] Graphics API가 Auto입니다. Auto를 끄고 OpenGLES3만 설정하세요.");
+                issues.AppendLine("    → Player Settings > Auto Graphics API 해제 > OpenGLES3만 남기기");
+                issueCount++;
             }
             else
             {
                 var apis = PlayerSettings.GetGraphicsAPIs(BuildTarget.Android);
+                bool hasGLES3 = false;
                 bool hasVulkan = false;
                 foreach (var api in apis)
-                    if (api == UnityEngine.Rendering.GraphicsDeviceType.Vulkan) hasVulkan = true;
-                if (!hasVulkan)
                 {
-                    issues.AppendLine("[ ] Vulkan이 Graphics API에 없습니다.");
-                    issues.AppendLine("    → Player Settings > Graphics APIs > Vulkan 추가");
+                    if (api == UnityEngine.Rendering.GraphicsDeviceType.OpenGLES3) hasGLES3 = true;
+                    if (api == UnityEngine.Rendering.GraphicsDeviceType.Vulkan) hasVulkan = true;
+                }
+                if (!hasGLES3)
+                {
+                    issues.AppendLine("[ ] OpenGLES3가 Graphics API에 없습니다.");
+                    issues.AppendLine("    → Player Settings > Graphics APIs > OpenGLES3 추가");
+                    issueCount++;
+                }
+                else if (hasVulkan)
+                {
+                    issues.AppendLine("[ ] Vulkan이 Graphics API에 포함되어 있습니다 (XREAL 호환 불가).");
+                    issues.AppendLine("    → Player Settings > Graphics APIs > Vulkan 제거");
                     issueCount++;
                 }
                 else
                 {
-                    issues.AppendLine("[O] Graphics API: Vulkan 포함");
+                    issues.AppendLine("[O] Graphics API: OpenGLES3");
                 }
             }
 

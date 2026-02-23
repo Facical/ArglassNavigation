@@ -109,6 +109,45 @@ namespace ARNavExperiment.DebugTools
                 Mission.MissionManager.Instance?.StartNextMission();
                 Debug.Log("[EditorTest] M키 → StartNextMission");
             }
+
+            // J키: 미션 Navigation → Arrival 강제 전환 (웨이포인트 도달 시뮬레이션)
+            if (Input.GetKeyDown(KeyCode.J))
+            {
+                var mm = Mission.MissionManager.Instance;
+                if (mm != null && mm.CurrentState == Mission.MissionState.Navigation)
+                {
+                    var wpMgr = Navigation.WaypointManager.Instance;
+                    if (wpMgr?.CurrentWaypoint != null)
+                    {
+                        // 플레이어를 현재 웨이포인트 위치로 이동 (반경 내 도달 트리거)
+                        var wpPos = wpMgr.CurrentWaypoint.Position;
+                        transform.position = new Vector3(wpPos.x, 1.6f, wpPos.z);
+                        Debug.Log($"[EditorTest] J키 → 웨이포인트 {wpMgr.CurrentWaypoint.waypointId}로 텔레포트");
+                    }
+                }
+            }
+
+            // B키: BeamProCanvas 토글 (BeamPro UI 확인용)
+            if (Input.GetKeyDown(KeyCode.B))
+            {
+                var beamProCanvas = GameObject.Find("BeamProCanvas");
+                if (beamProCanvas == null)
+                    beamProCanvas = FindInactiveByName("BeamProCanvas");
+                if (beamProCanvas != null)
+                {
+                    beamProCanvas.SetActive(!beamProCanvas.activeSelf);
+                    Debug.Log($"[EditorTest] B키 → BeamProCanvas {(beamProCanvas.activeSelf ? "ON" : "OFF")}");
+                }
+            }
+        }
+
+        private static GameObject FindInactiveByName(string name)
+        {
+            var all = Resources.FindObjectsOfTypeAll<GameObject>();
+            foreach (var go in all)
+                if (go.name == name && go.scene.isLoaded)
+                    return go;
+            return null;
         }
 
         private void HandleMovement()
@@ -178,7 +217,7 @@ namespace ARNavExperiment.DebugTools
             }
 
             style.normal.textColor = new Color(0.6f, 0.6f, 0.6f);
-            GUI.Label(new Rect(10, y, 700, 20), "WASD:이동 / Shift:달리기 / 우클릭드래그:시점 / N:다음단계 / M:다음미션", style);
+            GUI.Label(new Rect(10, y, 800, 20), "WASD:이동 / Shift:달리기 / 우클릭드래그:시점 / N:다음단계 / M:다음미션 / J:웨이포인트이동 / B:BeamPro토글", style);
         }
 
         private void OnDisable()

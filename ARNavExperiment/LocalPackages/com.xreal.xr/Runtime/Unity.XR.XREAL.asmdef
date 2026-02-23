@@ -8,7 +8,8 @@
         "Unity.XR.ARSubsystems",
         "Unity.XR.Interaction.Toolkit",
         "Unity.XR.ARFoundation",
-        "Unity.XR.CoreUtils"
+        "Unity.XR.CoreUtils",
+        "Unity.XR.Hands"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -42,6 +43,11 @@
             "name": "com.xreal.xr.enterprise",
             "expression": "",
             "define": "XREAL_ENTERPRISE"
+        },
+        {
+            "name": "com.unity.xr.hands",
+            "expression": "",
+            "define": "XR_HANDS"
         }
     ],
     "noEngineReferences": false

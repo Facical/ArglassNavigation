@@ -5,6 +5,10 @@ using ARNavExperiment.Mission;
 
 namespace ARNavExperiment.UI
 {
+    /// <summary>
+    /// 글래스(ExperimentCanvas)에 표시되는 참가자용 HUD.
+    /// 표시 전용 — 제어 버튼은 ExperimenterHUD(ExperimenterCanvas)로 이동됨.
+    /// </summary>
     public class ExperimentHUD : MonoBehaviour
     {
         [Header("Status Display")]
@@ -13,15 +17,8 @@ namespace ARNavExperiment.UI
         [SerializeField] private TextMeshProUGUI missionText;
         [SerializeField] private TextMeshProUGUI waypointText;
 
-        [Header("Experimenter Controls")]
-        [SerializeField] private UnityEngine.UI.Button advanceButton;
-        [SerializeField] private UnityEngine.UI.Button nextMissionButton;
-
         private void Start()
         {
-            advanceButton?.onClick.AddListener(OnAdvanceClicked);
-            nextMissionButton?.onClick.AddListener(OnNextMissionClicked);
-
             if (ExperimentManager.Instance != null)
                 ExperimentManager.Instance.OnStateChanged += UpdateStateDisplay;
         }
@@ -49,18 +46,13 @@ namespace ARNavExperiment.UI
         private void UpdateStateDisplay(ExperimentState state)
         {
             if (stateText) stateText.text = $"State: {state}";
-            if (conditionText && ConditionController.Instance != null)
-                conditionText.text = $"Condition: {ConditionController.Instance.CurrentCondition}";
-        }
-
-        private void OnAdvanceClicked()
-        {
-            ExperimentManager.Instance?.AdvanceState();
-        }
-
-        private void OnNextMissionClicked()
-        {
-            MissionManager.Instance?.StartNextMission();
+            if (conditionText)
+            {
+                if (state == ExperimentState.Condition1 || state == ExperimentState.Condition2)
+                    conditionText.text = $"Condition: {ConditionController.Instance?.CurrentCondition}";
+                else
+                    conditionText.text = "Condition: \u2014";
+            }
         }
 
         private void OnDestroy()

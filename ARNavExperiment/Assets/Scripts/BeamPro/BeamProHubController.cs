@@ -1,6 +1,7 @@
 using UnityEngine;
 using ARNavExperiment.Core;
 using ARNavExperiment.Logging;
+using ARNavExperiment.UI;
 
 namespace ARNavExperiment.BeamPro
 {
@@ -19,6 +20,10 @@ namespace ARNavExperiment.BeamPro
         [SerializeField] private InteractiveMapController mapController;
         [SerializeField] private InfoCardManager infoCardManager;
         [SerializeField] private MissionRefPanel missionRefPanel;
+
+        public InteractiveMapController MapController => mapController;
+        public InfoCardManager InfoCardMgr => infoCardManager;
+        public MissionRefPanel MissionRef => missionRefPanel;
 
         private int activeTabIndex;
         private bool isLocked;
@@ -49,19 +54,23 @@ namespace ARNavExperiment.BeamPro
 
         private void OnConditionChanged(ExperimentCondition condition)
         {
-            isLocked = condition == ExperimentCondition.GlassOnly;
-            if (hubRoot) hubRoot.SetActive(!isLocked);
-            if (lockedScreen) lockedScreen.SetActive(isLocked);
+            // 양쪽 조건 모두 정보 허브 활성 유지 (GlassOnly: 글래스 WorldSpace, Hybrid: 폰)
+            isLocked = false;
+            if (hubRoot) hubRoot.SetActive(true);
+            if (lockedScreen) lockedScreen.SetActive(false);
         }
 
         private void OnScreenOn()
         {
-            if (isLocked) return;
+            // WorldSpace 모드에서는 폰 화면 상태와 무관하게 항상 표시
             if (hubRoot) hubRoot.SetActive(true);
         }
 
         private void OnScreenOff(float duration)
         {
+            // WorldSpace(GlassOnly) 모드에서는 숨기지 않음
+            var canvasCtrl = GetComponent<BeamProCanvasController>();
+            if (canvasCtrl != null && canvasCtrl.IsWorldSpace) return;
             if (hubRoot) hubRoot.SetActive(false);
         }
 

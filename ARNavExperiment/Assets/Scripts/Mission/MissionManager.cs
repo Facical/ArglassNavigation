@@ -1,8 +1,11 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using ARNavExperiment.Core;
 using ARNavExperiment.Logging;
 using ARNavExperiment.Navigation;
+using ARNavExperiment.UI;
+using ARNavExperiment.BeamPro;
 
 namespace ARNavExperiment.Mission
 {
@@ -13,6 +16,8 @@ namespace ARNavExperiment.Mission
         Navigation,
         Arrival,
         Verification,
+        ConfidenceRating,
+        DifficultyRating,
         Scored
     }
 
@@ -27,6 +32,11 @@ namespace ARNavExperiment.Mission
         [Header("UI References")]
         [SerializeField] private MissionBriefingUI briefingUI;
         [SerializeField] private VerificationUI verificationUI;
+        [SerializeField] private ConfidenceRatingUI confidenceRatingUI;
+        [SerializeField] private DifficultyRatingUI difficultyRatingUI;
+
+        [Header("Navigation")]
+        [SerializeField] private ARArrowRenderer arrowRenderer;
 
         public MissionState CurrentState { get; private set; } = MissionState.Idle;
         public MissionData CurrentMission { get; private set; }
@@ -34,6 +44,7 @@ namespace ARNavExperiment.Mission
 
         private List<MissionData> activeMissions;
         private float missionStartTime;
+        private Coroutine pendingAdvance;
 
         public event System.Action<MissionData> OnMissionStarted;
         public event System.Action<MissionData, bool> OnMissionCompleted;
@@ -90,6 +101,12 @@ namespace ARNavExperiment.Mission
                 case MissionState.Verification:
                     ShowVerification();
                     break;
+                case MissionState.ConfidenceRating:
+                    ShowConfidenceRating();
+                    break;
+                case MissionState.DifficultyRating:
+                    ShowDifficultyRating();
+                    break;
                 case MissionState.Scored:
                     CompleteMission();
                     break;
@@ -107,6 +124,11 @@ namespace ARNavExperiment.Mission
             {
                 briefingUI.Show(CurrentMission, () => TransitionTo(MissionState.Navigation));
             }
+            else
+            {
+                Debug.LogWarning("[MissionManager] briefingUI null — auto-advancing to Navigation");
+                TransitionTo(MissionState.Navigation);
+            }
 
             // activate trigger if associated
             if (!string.IsNullOrEmpty(CurrentMission.associatedTriggerId))
@@ -115,17 +137,32 @@ namespace ARNavExperiment.Mission
                 TriggerController.Instance?.ActivateTrigger(triggerType, CurrentMission.associatedTriggerId);
             }
 
+            // BeamPro 데이터 로드
+            var hub = BeamProHubController.Instance;
+            if (hub != null)
+            {
+                hub.MissionRef?.LoadMission(CurrentMission);
+                if (CurrentMission.infoCards != null && CurrentMission.infoCards.Length > 0)
+                    hub.InfoCardMgr?.LoadCards(CurrentMission.infoCards);
+                if (CurrentMission.relevantPOIs != null)
+                    hub.MapController?.LoadPOIs(CurrentMission.relevantPOIs);
+            }
+
             OnMissionStarted?.Invoke(CurrentMission);
         }
 
         private void StartNavigation()
         {
             Debug.Log($"[MissionManager] Navigating to {CurrentMission.targetWaypointId}");
+            arrowRenderer?.Show();
         }
 
         private void OnWaypointReached(Waypoint wp)
         {
             if (CurrentMission == null || CurrentState != MissionState.Navigation) return;
+
+            // BeamPro info card 자동 표시
+            BeamProHubController.Instance?.InfoCardMgr?.TryAutoShow(wp.waypointId);
 
             if (wp.waypointId == CurrentMission.targetWaypointId)
             {
@@ -148,6 +185,11 @@ namespace ARNavExperiment.Mission
             {
                 verificationUI.Show(CurrentMission, OnVerificationAnswered);
             }
+            else
+            {
+                Debug.LogWarning("[MissionManager] verificationUI null — auto-advancing to ConfidenceRating");
+                TransitionTo(MissionState.ConfidenceRating);
+            }
         }
 
         private void OnVerificationAnswered(int selectedIndex, float responseTime)
@@ -161,6 +203,46 @@ namespace ARNavExperiment.Mission
                            $"\"answer\":{selectedIndex},\"correct\":{correct.ToString().ToLower()}," +
                            $"\"rt_s\":{responseTime:F1}}}");
 
+            TransitionTo(MissionState.ConfidenceRating);
+        }
+
+        private void ShowConfidenceRating()
+        {
+            if (confidenceRatingUI != null)
+            {
+                confidenceRatingUI.Show("방금 답변에 대해 얼마나 확신하십니까?\n(1: 전혀 확신 없음 ~ 7: 매우 확신)", OnConfidenceRated);
+            }
+            else
+            {
+                // UI 없으면 건너뛰기
+                TransitionTo(MissionState.Scored);
+            }
+        }
+
+        private void OnConfidenceRated(int rating)
+        {
+            EventLogger.Instance?.LogEvent("CONFIDENCE_RATED",
+                waypointId: CurrentMission.targetWaypointId,
+                confidenceRating: rating,
+                extraData: $"{{\"mission_id\":\"{CurrentMission.missionId}\",\"rating\":{rating}}}");
+
+            TransitionTo(MissionState.DifficultyRating);
+        }
+
+        private void ShowDifficultyRating()
+        {
+            if (difficultyRatingUI != null)
+            {
+                difficultyRatingUI.Show(CurrentMission.missionId, OnDifficultyRated);
+            }
+            else
+            {
+                TransitionTo(MissionState.Scored);
+            }
+        }
+
+        private void OnDifficultyRated(int rating)
+        {
             TransitionTo(MissionState.Scored);
         }
 
@@ -183,10 +265,29 @@ namespace ARNavExperiment.Mission
             CurrentMissionIndex++;
 
             // auto-start next mission after short delay
+            if (pendingAdvance != null) StopCoroutine(pendingAdvance);
             if (CurrentMissionIndex < activeMissions.Count)
             {
-                Invoke(nameof(StartNextMission), 2f);
+                pendingAdvance = StartCoroutine(DelayedAction(2f, StartNextMission));
             }
+            else
+            {
+                Debug.Log("[MissionManager] All missions in route completed — auto advancing experiment state");
+                arrowRenderer?.Hide();
+                pendingAdvance = StartCoroutine(DelayedAction(2f, AutoAdvanceExperiment));
+            }
+        }
+
+        private void AutoAdvanceExperiment()
+        {
+            ExperimentManager.Instance?.AdvanceState();
+        }
+
+        private IEnumerator DelayedAction(float delay, System.Action action)
+        {
+            yield return new WaitForSeconds(delay);
+            pendingAdvance = null;
+            action?.Invoke();
         }
 
         private TriggerType ParseTriggerType(string triggerId)

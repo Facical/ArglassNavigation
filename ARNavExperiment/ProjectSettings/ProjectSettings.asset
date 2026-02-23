@@ -142,7 +142,10 @@ PlayerSettings:
   visionOSBundleVersion: 1.0
   tvOSBundleVersion: 1.0
   bundleVersion: 1.0
-  preloadedAssets: []
+  preloadedAssets:
+  - {fileID: 11400000, guid: f3935e38de69449a0bbd5ae948ab9e2c, type: 2}
+  - {fileID: 11400000, guid: 9cfc7bd925052488c989982051fe0008, type: 2}
+  - {fileID: -2937058461074916459, guid: b6783254d2ede49259889010698557ef, type: 2}
   metroInputSource: 0
   wsaTransparentSwapchain: 0
   m_HolographicPauseOnTrackingLoss: 1
@@ -175,7 +178,7 @@ PlayerSettings:
   AndroidTargetSdkVersion: 0
   AndroidPreferredInstallLocation: 1
   aotOptions: 
-  stripEngineCode: 1
+  stripEngineCode: 0
   iPhoneStrippingLevel: 0
   iPhoneScriptCallOptimization: 0
   ForceInternetPermission: 0
@@ -385,7 +388,10 @@ PlayerSettings:
   m_BuildTargetShaderSettings: []
   m_BuildTargetGraphicsJobs: []
   m_BuildTargetGraphicsJobMode: []
-  m_BuildTargetGraphicsAPIs: []
+  m_BuildTargetGraphicsAPIs:
+  - m_BuildTarget: AndroidPlayer
+    m_APIs: 0b000000
+    m_Automatic: 0
   m_BuildTargetVRSettings: []
   m_DefaultShaderChunkSizeInMB: 16
   m_DefaultShaderChunkCount: 0
@@ -663,7 +669,7 @@ PlayerSettings:
   webGLMemoryGeometricGrowthCap: 96
   webGLPowerPreference: 2
   scriptingDefineSymbols:
-    Android: ENABLE_INPUT_SYSTEM;ENABLE_LEGACY_INPUT_MANAGER
+    Android: ENABLE_INPUT_SYSTEM;ENABLE_LEGACY_INPUT_MANAGER;XR_HANDS
     Standalone: ENABLE_INPUT_SYSTEM;ENABLE_LEGACY_INPUT_MANAGER
   additionalCompilerArguments: {}
   platformArchitecture: {}

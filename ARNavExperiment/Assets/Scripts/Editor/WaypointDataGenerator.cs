@@ -68,7 +68,7 @@ namespace ARNavExperiment.EditorTools
         {
             var wp = list.GetArrayElementAtIndex(index);
             wp.FindPropertyRelative("waypointId").stringValue = id;
-            wp.FindPropertyRelative("position").vector3Value = pos;
+            wp.FindPropertyRelative("fallbackPosition").vector3Value = pos;
             wp.FindPropertyRelative("radius").floatValue = radius;
             wp.FindPropertyRelative("locationName").stringValue = locationName;
         }

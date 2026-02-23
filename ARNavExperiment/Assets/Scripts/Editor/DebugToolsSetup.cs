@@ -103,18 +103,17 @@ namespace ARNavExperiment.EditorTools
                 EditorUtility.SetDirty(cam);
             }
 
-            // 6. Fix ExperimentHUD: layout + position below tabs
+            // 6. Fix ExperimentHUD (Glass): layout + position at top-left
             var hud = GameObject.Find("ExperimentHUD");
             if (hud != null)
             {
-                // Move HUD below BeamPro tab bar (top-left, offset down by 70px)
                 var hudRect = hud.GetComponent<RectTransform>();
                 if (hudRect != null)
                 {
                     hudRect.anchorMin = new Vector2(0, 1);
                     hudRect.anchorMax = new Vector2(0.3f, 1);
                     hudRect.pivot = new Vector2(0, 1);
-                    hudRect.anchoredPosition = new Vector2(5, -70);
+                    hudRect.anchoredPosition = new Vector2(5, -5);
                     hudRect.sizeDelta = new Vector2(0, 100);
                 }
 
@@ -130,6 +129,12 @@ namespace ARNavExperiment.EditorTools
                     csf.verticalFit = UnityEngine.UI.ContentSizeFitter.FitMode.PreferredSize;
                 }
             }
+
+            // 7. Disable hand ray interactors in editor (마우스 클릭 사용)
+            var rightHandRay = GameObject.Find("Right Hand Ray");
+            if (rightHandRay != null) rightHandRay.SetActive(false);
+            var leftHandRay = GameObject.Find("Left Hand Ray");
+            if (leftHandRay != null) leftHandRay.SetActive(false);
 
             EditorUtility.DisplayDialog("완료",
                 $"에디터 테스트 모드 구성 완료!\n\n" +

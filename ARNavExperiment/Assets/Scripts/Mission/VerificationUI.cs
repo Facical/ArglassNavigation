@@ -32,6 +32,7 @@ namespace ARNavExperiment.Mission
             onAnswered = callback;
             correctIndex = mission.correctAnswerIndex;
             showTime = Time.time;
+            LastAnswerCorrect = false;
 
             if (questionText) questionText.text = mission.verificationQuestion;
 

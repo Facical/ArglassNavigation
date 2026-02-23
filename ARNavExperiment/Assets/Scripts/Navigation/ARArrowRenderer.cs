@@ -18,18 +18,29 @@ namespace ARNavExperiment.Navigation
         private float targetYaw;
         private float currentYaw;
         private float yawVelocity;
-        private bool isVisible = true;
+        private bool isVisible = false;
         private bool isTriggerActive;
 
         private void Start()
         {
             if (arrowObject != null)
                 arrowRenderer = arrowObject.GetComponent<Renderer>();
+            // 경로 로드 전까지 숨김 (로그 없이)
+            isVisible = false;
+            if (arrowObject) arrowObject.SetActive(false);
         }
 
         private void LateUpdate()
         {
             if (!isVisible || arrowObject == null) return;
+
+            // auto-update direction from WaypointManager during normal navigation
+            if (!isTriggerActive && WaypointManager.Instance != null)
+            {
+                var dir = WaypointManager.Instance.GetDirectionToNext();
+                if (dir.sqrMagnitude > 0.001f)
+                    targetYaw = Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg;
+            }
 
             // view-locked positioning
             if (Camera.main != null)
