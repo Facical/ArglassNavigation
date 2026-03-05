@@ -122,4 +122,55 @@ namespace ARNavExperiment.Domain.Events
             NewPosition = newPosition;
         }
     }
+
+    /// <summary>
+    /// 10초 주기 내비게이션 상태 스냅샷 (현장 디버깅용).
+    /// </summary>
+    public readonly struct NavigationStateSnapshot : IDomainEvent
+    {
+        public readonly string WaypointId;
+        public readonly bool IsAnchorBound;
+        public readonly string PlayerPosition;
+        public readonly string TargetPosition;
+        public readonly float DistanceToTarget;
+        public readonly bool ArrowVisible;
+        public readonly string RouteId;
+        public readonly string Condition;
+
+        public NavigationStateSnapshot(string waypointId, bool isAnchorBound,
+            string playerPosition, string targetPosition, float distanceToTarget,
+            bool arrowVisible, string routeId, string condition)
+        {
+            WaypointId = waypointId;
+            IsAnchorBound = isAnchorBound;
+            PlayerPosition = playerPosition;
+            TargetPosition = targetPosition;
+            DistanceToTarget = distanceToTarget;
+            ArrowVisible = arrowVisible;
+            RouteId = routeId;
+            Condition = condition;
+        }
+    }
+
+    /// <summary>
+    /// 경로 로드 시 전체 웨이포인트 바인딩 요약 (현장 디버깅용).
+    /// </summary>
+    public readonly struct RouteBindingSummary : IDomainEvent
+    {
+        public readonly string RouteId;
+        public readonly int TotalWaypoints;
+        public readonly int AnchorBound;
+        public readonly int FallbackUsed;
+        public readonly string DetailsJson;
+
+        public RouteBindingSummary(string routeId, int totalWaypoints,
+            int anchorBound, int fallbackUsed, string detailsJson)
+        {
+            RouteId = routeId;
+            TotalWaypoints = totalWaypoints;
+            AnchorBound = anchorBound;
+            FallbackUsed = fallbackUsed;
+            DetailsJson = detailsJson;
+        }
+    }
 }

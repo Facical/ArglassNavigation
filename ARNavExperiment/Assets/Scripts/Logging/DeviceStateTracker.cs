@@ -76,5 +76,22 @@ namespace ARNavExperiment.Logging
                 DeactivateScreen();
             enabled = !locked;
         }
+
+        private void OnApplicationPause(bool paused)
+        {
+            string eventType = paused ? "pause" : "resume";
+            DomainEventBus.Instance?.Publish(new AppLifecycleEvent(eventType, Time.realtimeSinceStartup));
+        }
+
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            string eventType = hasFocus ? "focus_gained" : "focus_lost";
+            DomainEventBus.Instance?.Publish(new AppLifecycleEvent(eventType, Time.realtimeSinceStartup));
+        }
+
+        private void OnApplicationQuit()
+        {
+            DomainEventBus.Instance?.Publish(new AppLifecycleEvent("quit", Time.realtimeSinceStartup));
+        }
     }
 }

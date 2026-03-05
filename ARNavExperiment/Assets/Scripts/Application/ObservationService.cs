@@ -70,6 +70,11 @@ namespace ARNavExperiment.Application
             bus.Subscribe<BeamMissionRefViewed>(OnBeamMissionRefViewed);
             bus.Subscribe<BeamMapZoomed>(OnBeamMapZoomed);
             bus.Subscribe<GlassCaptureStateChanged>(OnGlassCaptureStateChanged);
+
+            // === Diagnostics ===
+            bus.Subscribe<NavigationStateSnapshot>(OnNavigationStateSnapshot);
+            bus.Subscribe<RouteBindingSummary>(OnRouteBindingSummary);
+            bus.Subscribe<AppLifecycleEvent>(OnAppLifecycleEvent);
         }
 
         private void OnDisable()
@@ -115,6 +120,10 @@ namespace ARNavExperiment.Application
             bus.Unsubscribe<BeamMissionRefViewed>(OnBeamMissionRefViewed);
             bus.Unsubscribe<BeamMapZoomed>(OnBeamMapZoomed);
             bus.Unsubscribe<GlassCaptureStateChanged>(OnGlassCaptureStateChanged);
+
+            bus.Unsubscribe<NavigationStateSnapshot>(OnNavigationStateSnapshot);
+            bus.Unsubscribe<RouteBindingSummary>(OnRouteBindingSummary);
+            bus.Unsubscribe<AppLifecycleEvent>(OnAppLifecycleEvent);
         }
 
         // ── Experiment ──────────────────────────────────────────
@@ -353,6 +362,46 @@ namespace ARNavExperiment.Application
             };
             EventLogger.Instance?.LogEvent(eventType,
                 extraData: string.IsNullOrEmpty(e.FilePath) ? "{}" : $"{{\"file\":\"{EscapeJson(e.FilePath)}\"}}");
+        }
+
+        // ── Diagnostics ────────────────────────────────────────
+
+        private void OnNavigationStateSnapshot(NavigationStateSnapshot e)
+        {
+            EventLogger.Instance?.LogEvent("NAV_STATE_SNAPSHOT",
+                waypointId: e.WaypointId,
+                extraData: $"{{\"anchor_bound\":{e.IsAnchorBound.ToString().ToLower()}," +
+                           $"\"player_pos\":\"{e.PlayerPosition}\"," +
+                           $"\"target_pos\":\"{e.TargetPosition}\"," +
+                           $"\"distance_m\":{e.DistanceToTarget:F2}," +
+                           $"\"arrow_visible\":{e.ArrowVisible.ToString().ToLower()}," +
+                           $"\"route\":\"{e.RouteId}\"," +
+                           $"\"condition\":\"{e.Condition}\"}}");
+        }
+
+        private void OnRouteBindingSummary(RouteBindingSummary e)
+        {
+            EventLogger.Instance?.LogEvent("ROUTE_BINDING_SUMMARY",
+                extraData: $"{{\"route\":\"{e.RouteId}\"," +
+                           $"\"total\":{e.TotalWaypoints}," +
+                           $"\"anchor_bound\":{e.AnchorBound}," +
+                           $"\"fallback\":{e.FallbackUsed}," +
+                           $"\"details\":{e.DetailsJson}}}");
+        }
+
+        private void OnAppLifecycleEvent(AppLifecycleEvent e)
+        {
+            string eventType = e.EventType switch
+            {
+                "pause" => "APP_PAUSE",
+                "resume" => "APP_RESUME",
+                "focus_lost" => "APP_FOCUS_LOST",
+                "focus_gained" => "APP_FOCUS_GAINED",
+                "quit" => "APP_QUIT",
+                _ => $"APP_{e.EventType.ToUpper()}"
+            };
+            EventLogger.Instance?.LogEvent(eventType,
+                extraData: $"{{\"time_since_startup\":{e.TimeSinceStartup:F1}}}");
         }
 
         // ── Util ────────────────────────────────────────────────

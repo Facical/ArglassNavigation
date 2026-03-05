@@ -240,6 +240,24 @@ namespace ARNavExperiment.Core
             catch { }
         }
 
+        /// <summary>외부 컴포넌트가 진단 .log 파일에 기록할 수 있도록 하는 public API.</summary>
+        public void WriteDiagnostic(string message)
+        {
+            Diag(message);
+        }
+
+        /// <summary>TimedOut 상태인 웨이포인트 ID 목록을 쉼표 구분 문자열로 반환.</summary>
+        private string PendingAnchorNames()
+        {
+            var names = new List<string>();
+            foreach (var kv in relocResults)
+            {
+                if (kv.Value.state == AnchorRelocState.TimedOut)
+                    names.Add(kv.Key);
+            }
+            return names.Count > 0 ? string.Join(",", names) : "none";
+        }
+
         private void OnDestroy()
         {
             try
@@ -784,8 +802,9 @@ namespace ARNavExperiment.Core
                 {
                     string expectedFile = Path.Combine(AnchorStoragePath, mapping.anchorGuid);
                     bool fileExists = File.Exists(expectedFile);
+                    var slamAtFail = GetSlamTrackingStatus();
                     DiagWarn($"앵커 로드 실패: {mapping.waypointId} " +
-                             $"(GUID={mapping.anchorGuid}, expectedPath={expectedFile}, fileExists={fileExists})");
+                             $"(GUID={mapping.anchorGuid}, expectedPath={expectedFile}, fileExists={fileExists}, SLAM={slamAtFail.reasonKey})");
                     FailedAnchorCount++;
                     relocResults[mapping.waypointId] = new AnchorRelocResult
                     {
@@ -848,7 +867,10 @@ namespace ARNavExperiment.Core
                 yield return new WaitForSeconds(0.5f);
             }
 
-            DiagWarn($"앵커 재인식 타임아웃: {waypointId} ({timeout}s)");
+            var finalSlam = GetSlamTrackingStatus();
+            Vector3 camPos = Camera.main != null ? Camera.main.transform.position : Vector3.zero;
+            DiagWarn($"앵커 재인식 타임아웃: {waypointId} ({timeout}s) | " +
+                $"SLAM={finalSlam.reasonKey} | camPos={camPos}");
             TimedOutAnchorCount++;
             RelocalizedAnchorCount++;
 
@@ -964,6 +986,12 @@ namespace ARNavExperiment.Core
             {
                 yield return new WaitForSeconds(5f);
                 loopCount++;
+
+                if (loopCount % 5 == 0) // 25초마다
+                {
+                    var slam = GetSlamTrackingStatus();
+                    Diag($"Background #{loopCount} — SLAM={slam.reasonKey}, pending={PendingAnchorNames()}");
+                }
 
                 bool allRecovered = true;
 

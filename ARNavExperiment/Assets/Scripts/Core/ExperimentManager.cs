@@ -27,6 +27,8 @@ namespace ARNavExperiment.Core
         public ParticipantSession session;
 
         public ExperimentState CurrentState { get; private set; } = ExperimentState.Idle;
+        public string ActiveRoute { get; private set; }
+        public string ActiveCondition { get; private set; }
 
         public event System.Action<ExperimentState> OnStateChanged;
 
@@ -95,6 +97,9 @@ namespace ARNavExperiment.Core
 
             DomainEventBus.Instance?.Publish(new ExperimentStateChanged(prev.ToString(), newState.ToString()));
             OnStateChanged?.Invoke(newState);
+
+            // 상태 전환 진단 스냅샷
+            WriteTransitionSnapshot(prev, newState);
         }
 
         public void AdvanceState()
@@ -129,6 +134,9 @@ namespace ARNavExperiment.Core
             string condition = conditionNumber == 1 ? session.FirstCondition : session.SecondCondition;
             string route = conditionNumber == 1 ? session.firstRoute : session.secondRoute;
 
+            ActiveCondition = condition;
+            ActiveRoute = route;
+
             var cond = condition == "glass_only" ? ExperimentCondition.GlassOnly : ExperimentCondition.Hybrid;
             ConditionController.Instance?.SetCondition(cond);
 
@@ -142,6 +150,27 @@ namespace ARNavExperiment.Core
             DomainEventBus.Instance?.Publish(new RouteStarted(route, condition));
 
             WaypointManager.Instance?.LoadRoute(route);
+        }
+
+        private void WriteTransitionSnapshot(ExperimentState prev, ExperimentState next)
+        {
+            var sam = SpatialAnchorManager.Instance;
+            var wpm = WaypointManager.Instance;
+            var mm = Mission.MissionManager.Instance;
+
+            int anchorSuccess = sam != null ? sam.SuccessfulAnchorCount : -1;
+            int anchorTotal = sam != null ? sam.TotalAnchorCount : -1;
+            int fallbackCount = wpm != null ? wpm.FallbackWaypointCount : -1;
+            string missionState = mm != null ? mm.CurrentState.ToString() : "N/A";
+            float uptime = Time.realtimeSinceStartup;
+
+            string snapshot = $"StateTransition {prev}→{next} | " +
+                $"participant={session?.participantId} | route={ActiveRoute} | condition={ActiveCondition} | " +
+                $"anchors={anchorSuccess}/{anchorTotal} | fallback={fallbackCount} | " +
+                $"mission={missionState} | uptime={uptime:F0}s";
+
+            Debug.Log($"[ExperimentManager] {snapshot}");
+            sam?.WriteDiagnostic(snapshot);
         }
 
         private void CompleteExperiment()

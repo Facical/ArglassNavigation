@@ -62,6 +62,8 @@ namespace ARNavExperiment.Navigation
 
         private RouteData activeRoute;
         private Transform playerTransform;
+        private float lastSnapshotTime;
+        private ARArrowRenderer cachedArrowRenderer;
 
         public event Action<Waypoint> OnWaypointReached;
         public event Action OnRouteComplete;
@@ -96,6 +98,13 @@ namespace ARNavExperiment.Navigation
 
             // SpatialAnchorManager에서 앵커 Transform 바인딩
             BindAnchorTransforms(routeId);
+
+            // 바인딩 요약 도메인 이벤트 발행
+            PublishRouteBindingSummary(routeId);
+
+            // 스냅샷 타이머 초기화
+            lastSnapshotTime = Time.time;
+            cachedArrowRenderer = FindObjectOfType<ARArrowRenderer>();
 
             // 앵커 바인딩 후 가장 가까운 웨이포인트를 시작 인덱스로 설정
             int nearestIdx = FindNearestWaypointIndex();
@@ -198,6 +207,30 @@ namespace ARNavExperiment.Navigation
             }
         }
 
+        private void PublishRouteBindingSummary(string routeId)
+        {
+            if (activeRoute == null) return;
+
+            int anchorBound = 0;
+            int fallbackUsed = 0;
+            var details = new System.Text.StringBuilder("[");
+
+            for (int i = 0; i < activeRoute.waypoints.Count; i++)
+            {
+                var wp = activeRoute.waypoints[i];
+                bool bound = wp.anchorTransform != null;
+                if (bound) anchorBound++;
+                else fallbackUsed++;
+
+                if (i > 0) details.Append(",");
+                details.Append($"{{\"id\":\"{wp.waypointId}\",\"bound\":{bound.ToString().ToLower()},\"pos\":\"{wp.Position:F2}\"}}");
+            }
+            details.Append("]");
+
+            DomainEventBus.Instance?.Publish(new RouteBindingSummary(
+                routeId, activeRoute.waypoints.Count, anchorBound, fallbackUsed, details.ToString()));
+        }
+
         /// <summary>특정 웨이포인트가 fallback 사용 중인지 확인</summary>
         public bool IsUsingFallback(string waypointId)
         {
@@ -246,6 +279,25 @@ namespace ARNavExperiment.Navigation
             if (dist <= wp.radius)
             {
                 ReachWaypoint(wp);
+            }
+
+            // 10초 주기 내비게이션 상태 스냅샷
+            if (Time.time - lastSnapshotTime >= 10f)
+            {
+                lastSnapshotTime = Time.time;
+                bool arrowVisible = cachedArrowRenderer != null && cachedArrowRenderer.IsVisible;
+                string routeId = activeRoute?.routeId ?? "";
+                string condition = Core.ExperimentManager.Instance?.ActiveCondition ?? "";
+
+                DomainEventBus.Instance?.Publish(new NavigationStateSnapshot(
+                    wp.waypointId,
+                    wp.anchorTransform != null,
+                    playerTransform.position.ToString("F2"),
+                    wpPos.ToString("F2"),
+                    dist,
+                    arrowVisible,
+                    routeId,
+                    condition));
             }
         }
 

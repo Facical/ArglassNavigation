@@ -23,6 +23,7 @@ namespace ARNavExperiment.Navigation
         private float currentYaw;
         private float yawVelocity;
         private bool isVisible = false;
+        public bool IsVisible => isVisible;
         private bool isTriggerActive;
 
         private GameObject[] fanObjects;

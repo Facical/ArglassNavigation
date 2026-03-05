@@ -94,4 +94,19 @@ namespace ARNavExperiment.Domain.Events
             FilePath = filePath;
         }
     }
+
+    /// <summary>
+    /// 앱 생명주기 이벤트 (pause/resume/focus_lost/focus_gained/quit).
+    /// </summary>
+    public readonly struct AppLifecycleEvent : IDomainEvent
+    {
+        public readonly string EventType;
+        public readonly float TimeSinceStartup;
+
+        public AppLifecycleEvent(string eventType, float timeSinceStartup)
+        {
+            EventType = eventType;
+            TimeSinceStartup = timeSinceStartup;
+        }
+    }
 }
