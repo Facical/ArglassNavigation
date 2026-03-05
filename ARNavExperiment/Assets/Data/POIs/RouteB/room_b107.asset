@@ -14,11 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b107
   poiType: research_lab
-  displayName: "B107 \uC804\uC0B0\uC9C0\uB2A5\uC5F0\uAD6C\uC2E4"
-  description: "\uC804\uC0B0\uC9C0\uB2A5 \uC5F0\uAD6C\uC2E4"
+  displayName: B107 Computational Intelligence Lab
+  description: Computational intelligence lab
   capacity: 10
   equipment:
+  - Server
+  - Workstation
+  mapPosition: {x: 20, y: 15}
+  icon: {fileID: 0}
+  displayNameKo: "B107 \uC804\uC0B0\uC9C0\uB2A5\uC5F0\uAD6C\uC2E4"
+  descriptionKo: "\uC804\uC0B0\uC9C0\uB2A5 \uC5F0\uAD6C\uC2E4"
+  equipmentKo:
   - "\uC11C\uBC84"
   - "\uC6CC\uD06C\uC2A4\uD14C\uC774\uC158"
-  mapPosition: {x: 0, y: 0}
-  icon: {fileID: 0}

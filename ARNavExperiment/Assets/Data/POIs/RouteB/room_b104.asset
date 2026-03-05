@@ -14,9 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b104
   poiType: professor_office
-  displayName: "B104 \uCD5C\uD0DC\uD6C8 \uAD50\uC218\uC2E4"
-  description: "\uCD5C\uD0DC\uD6C8 \uAD50\uC218 \uC5F0\uAD6C\uC2E4"
+  displayName: B104 Prof. Choi's Office
+  description: Prof. Taehoon Choi's office
   capacity: 2
   equipment: []
-  mapPosition: {x: 0, y: 0}
+  mapPosition: {x: 11, y: 25}
   icon: {fileID: 0}
+  displayNameKo: "B104 \uCD5C\uAD50\uC218 \uC5F0\uAD6C\uC2E4"
+  descriptionKo: "\uCD5C\uD0DC\uD6C8 \uAD50\uC218 \uC5F0\uAD6C\uC2E4"
+  equipmentKo: []

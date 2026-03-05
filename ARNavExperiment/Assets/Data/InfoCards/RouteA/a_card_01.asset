@@ -14,11 +14,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardId: a_card_01
   cardType: sign_card
-  title: "B125 \uB300\uAC15\uC758\uC2E4 \uC548\uB0B4"
-  content: "\uC218\uC6A9\uC778\uC6D0: 80\uBA85\n\uC8FC\uC694 \uC7A5\uBE44: \uBE54\uD504\uB85C\uC81D\uD130,
-    \uB9C8\uC774\uD06C, \uB300\uD615 \uC2A4\uD06C\uB9B0\n\uC6A9\uB3C4: \uC9C0\uD5581\uCE35
-    \uCD5C\uB300 \uADDC\uBAA8 \uAC15\uC758\uC2E4\n\uC704\uCE58: \uC11C\uCABD\uBCF5\uB3C4
-    \uB0A8\uB2E8"
+  title: B125 Main Lecture Hall Guide
+  content: 'Capacity: 80
+
+    Equipment: Projector, Microphone, Large Screen
+
+    Purpose:
+    Largest classroom on B1F
+
+    Location: South end of west corridor'
   image: {fileID: 0}
   triggerWaypointId: WP02
   autoShow: 1
+  titleKo: "B125 \uB300\uAC15\uC758\uC2E4 \uC548\uB0B4"
+  contentKo: "\uC218\uC6A9\uC778\uC6D0: 80\n\uC7A5\uBE44: \uD504\uB85C\uC81D\uD130,
+    \uB9C8\uC774\uD06C, \uB300\uD615 \uC2A4\uD06C\uB9B0\n\uC6A9\uB3C4: B1F \uCD5C\uB300
+    \uADDC\uBAA8 \uAC15\uC758\uC2E4\n\uC704\uCE58: \uC11C\uCABD \uBCF5\uB3C4 \uB0A8\uB2E8"

@@ -14,10 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardId: b_card_02
   cardType: poi_detail
-  title: "E-T\uAD50\uCC28\uB85C \uBC29\uD5A5\uBCC4 \uC2DC\uC124"
-  content: "\uBD81\uCABD(\uC9C1\uC9C4): B107 \uC804\uC0B0\uC9C0\uB2A5\uC5F0\uAD6C\uC2E4,
-    B106 \uC9C0\uB2A5\uACF5\uD559\uC5F0\uAD6C\uC2E4\n\uB0A8\uCABD(\uB4A4\uB85C):
-    B116, SE\uAD50\uCC28\uB85C\n\uC8FC\uBCC0: B110 (\uD655\uC778 \uD544\uC694)"
+  title: E-T Junction Area Guide
+  content: 'North (Straight): B107 Computational Intelligence Lab, B106 Intelligent
+    Engineering Lab
+
+    South (Back): B116, SE junction
+
+    Nearby: B110 (TBD)'
   image: {fileID: 0}
   triggerWaypointId: WP03
   autoShow: 1
+  titleKo: "\uB3D9\uCABD \uAD50\uCC28\uB85C \uC548\uB0B4"
+  contentKo: "\uBD81\uCABD (\uC9C1\uC9C4): B107 \uC804\uC0B0\uC9C0\uB2A5\uC5F0\uAD6C\uC2E4,
+    B106 \uC9C0\uB2A5\uACF5\uD559\uC5F0\uAD6C\uC2E4\n\uB0A8\uCABD (\uB4A4): B116,
+    \uB0A8\uB3D9 \uAD50\uCC28\uB85C\n\uC778\uADFC: B110 (\uD604\uC7A5 \uD655\uC778
+    \uD544\uC694)"

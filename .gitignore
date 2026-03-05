@@ -40,6 +40,9 @@ venv/
 # Analysis output
 analysis/output/
 
+# Debug captures
+debug_captures/
+
 # Data
 data/raw/*.csv
 data/processed/
@@ -50,6 +53,13 @@ system-prompt-extraction/
 연구 주제 정리.txt
 연구주제_정리_가이드.md
 지하1층 도면.jpeg
+
+# XR Simulation duplicates
+*XRSimulationPreferences 2*
+
+# Unity 중복 에셋 (자동 생성된 숫자 접미사 복사본)
+ARNavExperiment/Assets/Data/** [0-9].asset
+ARNavExperiment/Assets/Data/** [0-9].asset.meta
 
 # Claude
 .claude/

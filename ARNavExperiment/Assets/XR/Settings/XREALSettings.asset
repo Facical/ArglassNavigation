@@ -14,5 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   StereoRendering: 2
   InitialTrackingType: 0
+  InitialInputSource: 3
+  VirtualController: {fileID: 0}
+  SupportMultiResume: 1
+  AddtionalPermissions: []
+  EnableAutoLogcat: 0
+  EnableNativeSessionManager: 0
   SupportDevices: 0100000002000000
   LicenseAsset: {fileID: 0}

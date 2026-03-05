@@ -14,9 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: restroom_w
   poiType: restroom
-  displayName: "\uC5EC\uC790\uD654\uC7A5\uC2E4"
-  description: "B128 \uBD80\uADFC \uD654\uC7A5\uC2E4"
+  displayName: Women's Restroom
+  description: Restroom near B128
   capacity: 0
   equipment: []
-  mapPosition: {x: 0, y: 0}
+  mapPosition: {x: -20, y: 8}
   icon: {fileID: 0}
+  displayNameKo: "\uC5EC\uC790 \uD654\uC7A5\uC2E4"
+  descriptionKo: "B128 \uADFC\uCC98 \uD654\uC7A5\uC2E4"
+  equipmentKo: []

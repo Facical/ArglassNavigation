@@ -1,4 +1,6 @@
 using UnityEngine;
+using ARNavExperiment.Domain.Events;
+using ARNavExperiment.Application;
 using ARNavExperiment.Logging;
 
 namespace ARNavExperiment.Core
@@ -43,22 +45,23 @@ namespace ARNavExperiment.Core
                     if (beamProUI) beamProUI.SetActive(true);      // 글래스 WorldSpace로 표시
                     if (lockedScreenUI) lockedScreenUI.SetActive(false); // 잠금화면 불필요
                     // DeviceStateTracker 잠금 해제 — 폰 사용 시도 감지용으로 유지
+                    HandTrackingManager.Instance?.ActivateHandRays();  // GlassOnly: 핸드트래킹으로 UI 조작
                     break;
 
                 case ExperimentCondition.Hybrid:
                     if (lockedScreenUI) lockedScreenUI.SetActive(false);
                     if (beamProUI) beamProUI.SetActive(true);
                     DeviceStateTracker.Instance?.SetLocked(false);
+                    HandTrackingManager.Instance?.DeactivateHandRays(); // Hybrid: 터치로 UI 조작
                     break;
             }
 
             string condStr = condition == ExperimentCondition.GlassOnly ? "glass_only" : "hybrid";
-            EventLogger.Instance?.SetCondition(condStr);
-            EventLogger.Instance?.LogEvent("CONDITION_CHANGE",
-                extraData: $"{{\"condition\":\"{condStr}\"}}");
+            DomainEventBus.Instance?.Publish(new ConditionChanged(condStr));
 
+            Debug.Log($"[ConditionCtrl] SetCondition({condition}) — beamProUI.active={beamProUI?.activeSelf}");
             OnConditionChanged?.Invoke(condition);
-            Debug.Log($"[ConditionController] Condition set to: {condition}");
+            Debug.Log($"[ConditionCtrl] OnConditionChanged invoked for {condition}");
         }
     }
 }

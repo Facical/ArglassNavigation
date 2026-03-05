@@ -14,11 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   missionId: B1
   type: 1
-  briefingText: "\uC2DC\uCCAD\uAC01 \uC7A5\uBE44\uAC00 \uAC16\uCDB0\uC9C4 \uACF5\uAC04\uC744
-    \uCC3E\uC544\uAC00\uC138\uC694."
+  briefingText: Find a room equipped with audio-visual facilities.
   targetWaypointId: WP03
-  verificationQuestion: "\uB3C4\uCC29\uD55C \uACF5\uAC04\uC758 \uD638\uC2E4 \uBC88\uD638\uB294
-    \uBB34\uC5C7\uC785\uB2C8\uAE4C?"
+  verificationQuestion: What is the room number of the space you arrived at?
   answerOptions:
   - B125
   - B126
@@ -37,3 +35,12 @@ MonoBehaviour:
     attributes: []
     values: []
   referenceImages: []
+  briefingTextKo: "\uC2DC\uCCAD\uAC01 \uC124\uBE44\uAC00 \uAC16\uCDB0\uC9C4 \uACF5\uAC04\uC744
+    \uCC3E\uC73C\uC138\uC694."
+  verificationQuestionKo: "\uB3C4\uCC29\uD55C \uACF5\uAC04\uC758 \uD638\uC2E4 \uBC88\uD638\uB294
+    \uBB34\uC5C7\uC785\uB2C8\uAE4C?"
+  answerOptionsKo:
+  - B125
+  - B126
+  - B127
+  - B128

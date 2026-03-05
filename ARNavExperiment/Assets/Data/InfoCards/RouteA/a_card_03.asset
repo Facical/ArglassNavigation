@@ -14,10 +14,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardId: a_card_03
   cardType: sign_card
-  title: "B130 \uB300\uD559\uC6D0\uAC15\uC758\uC2E4 \uC548\uB0B4"
-  content: "\uC218\uC6A9\uC778\uC6D0: 30\uBA85\n\uC8FC\uC694 \uC7A5\uBE44: \uBE54\uD504\uB85C\uC81D\uD130,
-    \uD654\uC774\uD2B8\uBCF4\uB4DC\n\uC6A9\uB3C4: \uB300\uD559\uC6D0 \uC804\uC6A9
-    \uAC15\uC758\uC2E4\n\uC704\uCE58: \uC11C\uCABD\uBCF5\uB3C4 \uC911\uB2E8"
+  title: B130 Graduate Classroom Guide
+  content: 'Capacity: 30
+
+    Equipment: Projector, Whiteboard
+
+    Purpose: Graduate-only
+    classroom
+
+    Location: Mid-section of west corridor'
   image: {fileID: 0}
   triggerWaypointId: WP05
   autoShow: 1
+  titleKo: "B130 \uB300\uD559\uC6D0 \uAC15\uC758\uC2E4 \uC548\uB0B4"
+  contentKo: "\uC218\uC6A9\uC778\uC6D0: 30\n\uC7A5\uBE44: \uD504\uB85C\uC81D\uD130,
+    \uD654\uC774\uD2B8\uBCF4\uB4DC\n\uC6A9\uB3C4: \uB300\uD559\uC6D0 \uC804\uC6A9
+    \uAC15\uC758\uC2E4\n\uC704\uCE58: \uC11C\uCABD \uBCF5\uB3C4 \uC911\uAC04"

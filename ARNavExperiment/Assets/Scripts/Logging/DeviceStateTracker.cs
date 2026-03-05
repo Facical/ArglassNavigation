@@ -1,4 +1,6 @@
 using UnityEngine;
+using ARNavExperiment.Domain.Events;
+using ARNavExperiment.Application;
 
 namespace ARNavExperiment.Logging
 {
@@ -56,7 +58,7 @@ namespace ARNavExperiment.Logging
             screenOnTime = Time.time;
             lastMotionTime = Time.time;
             OnBeamProScreenOn?.Invoke();
-            EventLogger.Instance?.LogEvent("BEAM_SCREEN_ON", deviceActive: "beam_pro");
+            DomainEventBus.Instance?.Publish(new DeviceScreenChanged(true));
         }
 
         public void DeactivateScreen()
@@ -65,8 +67,7 @@ namespace ARNavExperiment.Logging
             IsBeamProActive = false;
             float duration = Time.time - screenOnTime;
             OnBeamProScreenOff?.Invoke(duration);
-            EventLogger.Instance?.LogEvent("BEAM_SCREEN_OFF", deviceActive: "glass",
-                extraData: $"{{\"duration_s\":{duration:F1}}}");
+            DomainEventBus.Instance?.Publish(new DeviceScreenChanged(false));
         }
 
         public void SetLocked(bool locked)

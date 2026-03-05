@@ -14,12 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   missionId: A1
   type: 0
-  briefingText: "\uC774 \uCE35\uC5D0\uC11C \uAC00\uC7A5 \uD070 \uAC15\uC758\uC2E4(\uB300\uAC15\uC758\uC2E4)\uC744
-    \uCC3E\uC544\uAC00\uC138\uC694. \uB3C4\uCC29 \uD6C4 \uD574\uB2F9 \uAC15\uC758\uC2E4\uC758
-    \uD638\uC2E4 \uBC88\uD638\uB97C \uD655\uC778\uD558\uC138\uC694."
+  briefingText: Find the largest classroom (main lecture hall) on this floor. Upon
+    arrival, check the room number.
   targetWaypointId: WP02
-  verificationQuestion: "\uBC29\uAE08 \uB3C4\uCC29\uD55C \uAC15\uC758\uC2E4\uC758
-    \uD638\uC2E4 \uBC88\uD638\uB294 \uBB34\uC5C7\uC785\uB2C8\uAE4C?"
+  verificationQuestion: What is the room number of the classroom you just arrived
+    at?
   answerOptions:
   - B124
   - B125
@@ -38,3 +37,13 @@ MonoBehaviour:
     attributes: []
     values: []
   referenceImages: []
+  briefingTextKo: "\uC774 \uCE35\uC5D0\uC11C \uAC00\uC7A5 \uD070 \uAC15\uC758\uC2E4(\uB300\uAC15\uC758\uC2E4)\uC744
+    \uCC3E\uC73C\uC138\uC694. \uB3C4\uCC29\uD558\uBA74 \uD638\uC2E4 \uBC88\uD638\uB97C
+    \uD655\uC778\uD558\uC138\uC694."
+  verificationQuestionKo: "\uBC29\uAE08 \uB3C4\uCC29\uD55C \uAC15\uC758\uC2E4\uC758
+    \uD638\uC2E4 \uBC88\uD638\uB294 \uBB34\uC5C7\uC785\uB2C8\uAE4C?"
+  answerOptionsKo:
+  - B124
+  - B125
+  - B126
+  - B127

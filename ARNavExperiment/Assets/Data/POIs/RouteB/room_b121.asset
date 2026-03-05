@@ -14,11 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b121
   poiType: computer_lab
-  displayName: "B121 PC\uC2E4\uC2B5\uC2E4"
-  description: "PC \uC2E4\uC2B5\uC2E4"
+  displayName: B121 Computer Lab
+  description: PC computer lab
   capacity: 40
   equipment:
-  - "\uB370\uC2A4\uD06C\uD0D1 PC"
-  - "\uBE54\uD504\uB85C\uC81D\uD130"
-  mapPosition: {x: 0, y: 0}
+  - Desktop PC
+  - Projector
+  mapPosition: {x: 7, y: 0}
   icon: {fileID: 0}
+  displayNameKo: "B121 \uCEF4\uD4E8\uD130\uC2E4"
+  descriptionKo: "PC \uCEF4\uD4E8\uD130 \uC2E4\uC2B5\uC2E4"
+  equipmentKo:
+  - "\uB370\uC2A4\uD06C\uD1B1 PC"
+  - "\uD504\uB85C\uC81D\uD130"

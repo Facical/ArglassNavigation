@@ -14,9 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b128
   poiType: counseling
-  displayName: "B128 \uD559\uC0DD\uC0C1\uB2F4\uC2E4"
-  description: "\uD559\uC0DD \uC0C1\uB2F4 \uACF5\uAC04"
+  displayName: B128 Student Counseling
+  description: Student counseling room
   capacity: 5
   equipment: []
-  mapPosition: {x: 0, y: 0}
+  mapPosition: {x: -20, y: 7}
   icon: {fileID: 0}
+  displayNameKo: "B128 \uD559\uC0DD \uC0C1\uB2F4\uC2E4"
+  descriptionKo: "\uD559\uC0DD \uC0C1\uB2F4\uC2E4"
+  equipmentKo: []

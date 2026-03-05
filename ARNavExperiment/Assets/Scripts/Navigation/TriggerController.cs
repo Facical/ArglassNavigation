@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
-using ARNavExperiment.Logging;
+using ARNavExperiment.Domain.Events;
+using ARNavExperiment.Application;
 
 namespace ARNavExperiment.Navigation
 {
@@ -28,7 +29,7 @@ namespace ARNavExperiment.Navigation
         [SerializeField] private float t3SpreadAngle = 30f;
 
         [Header("T4 Settings")]
-        [SerializeField] private string t4MessageText = "목적지 근처입니다";
+        [SerializeField] private string t4MessageText = "Near destination";
 
         [Header("T4 UI")]
         [SerializeField] private TMPro.TextMeshProUGUI proximityText;
@@ -54,8 +55,7 @@ namespace ARNavExperiment.Navigation
             currentTriggerId = triggerId;
             triggerCompleted = false;
             triggerStartTime = Time.time;
-            EventLogger.Instance?.LogEvent("TRIGGER_ACTIVATED",
-                extraData: $"{{\"trigger_type\":\"{type}\",\"trigger_id\":\"{triggerId}\"}}");
+            DomainEventBus.Instance?.Publish(new TriggerActivated(triggerId, type.ToString()));
 
             switch (type)
             {
@@ -90,8 +90,7 @@ namespace ARNavExperiment.Navigation
                 var jitteredDir = new Vector3(Mathf.Sin(jitteredYaw * Mathf.Deg2Rad), 0, Mathf.Cos(jitteredYaw * Mathf.Deg2Rad));
                 arrowRenderer.UpdateDirection(jitteredDir);
 
-                EventLogger.Instance?.LogEvent("GLASS_ARROW_OFFSET",
-                    extraData: $"{{\"offset_angle\":{jitter:F1},\"trigger_id\":\"T1\"}}");
+                DomainEventBus.Instance?.Publish(new ArrowOffset("T1", jitter));
 
                 elapsed += 0.2f;
                 yield return new WaitForSeconds(0.2f);
@@ -111,15 +110,17 @@ namespace ARNavExperiment.Navigation
         private IEnumerator RunT3()
         {
             arrowRenderer.SetTriggerMode(true);
+            arrowRenderer.SetFanMode(true, t3SpreadAngle);
 
-            // fan-out arrow display
-            // The visual spread effect would be handled by a shader or multiple arrow instances
-            // Here we log the trigger and maintain the state
-            EventLogger.Instance?.LogEvent("GLASS_ARROW_OFFSET",
-                extraData: $"{{\"spread_angle\":{t3SpreadAngle},\"trigger_id\":\"T3\"}}");
+            DomainEventBus.Instance?.Publish(new ArrowOffset("T3", t3SpreadAngle));
 
-            // T3 stays active until the participant makes a choice (mission completion)
-            yield return null;
+            // 미션 완료까지 유지 — DeactivateCurrentTrigger()의 StopCoroutine()으로 종료
+            while (true)
+            {
+                var dir = WaypointManager.Instance.GetDirectionToNext();
+                arrowRenderer.UpdateDirection(dir);
+                yield return new WaitForSeconds(0.1f);
+            }
         }
 
         private IEnumerator RunT4()
@@ -148,6 +149,7 @@ namespace ARNavExperiment.Navigation
             if (!triggerCompleted)
                 LogTriggerComplete(currentTriggerType, currentTriggerId);
 
+            arrowRenderer.SetFanMode(false, 0);
             arrowRenderer.SetTriggerMode(false);
             arrowRenderer.Show();
 
@@ -159,8 +161,7 @@ namespace ARNavExperiment.Navigation
         {
             triggerCompleted = true;
             float duration = Time.time - triggerStartTime;
-            EventLogger.Instance?.LogEvent("TRIGGER_DEACTIVATED",
-                extraData: $"{{\"trigger_type\":\"{type}\",\"duration_s\":{duration:F1}}}");
+            DomainEventBus.Instance?.Publish(new TriggerDeactivated(triggerId, type.ToString(), duration));
         }
     }
 }

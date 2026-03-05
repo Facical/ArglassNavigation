@@ -15,9 +15,12 @@ MonoBehaviour:
   poiId: room_b116
   poiType: tbd
   displayName: B116
-  description: "\uB3D9\uCABD\uBCF5\uB3C4 \uB0A8\uB2E8 (\uD604\uC7A5 \uD655\uC778
-    \uD544\uC694)"
+  description: East corridor south end (TBD on-site)
   capacity: 0
   equipment: []
-  mapPosition: {x: 0, y: 0}
+  mapPosition: {x: 20, y: 4}
   icon: {fileID: 0}
+  displayNameKo: B116
+  descriptionKo: "\uB3D9\uCABD \uBCF5\uB3C4 \uB0A8\uB2E8 (\uD604\uC7A5 \uD655\uC778
+    \uD544\uC694)"
+  equipmentKo: []

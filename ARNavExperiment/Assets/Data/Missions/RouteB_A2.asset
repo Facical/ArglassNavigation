@@ -14,12 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   missionId: A2
   type: 0
-  briefingText: "\uC9C0\uB2A5 \uAD00\uB828 \uC5F0\uAD6C\uB97C \uC218\uD589\uD558\uB294
-    \uC5F0\uAD6C\uC2E4\uC744 \uCC3E\uC544\uAC00\uC138\uC694. \uB3C4\uCC29 \uD6C4
-    \uD638\uC2E4 \uBC88\uD638\uB97C \uD655\uC778\uD558\uC138\uC694."
+  briefingText: Find a research lab focused on intelligence-related studies. Upon
+    arrival, check the room number.
   targetWaypointId: WP05
-  verificationQuestion: "\uBC29\uAE08 \uB3C4\uCC29\uD55C \uC5F0\uAD6C\uC2E4\uC758
-    \uD638\uC2E4 \uBC88\uD638\uB294 \uBB34\uC5C7\uC785\uB2C8\uAE4C?"
+  verificationQuestion: What is the room number of the research lab you just arrived
+    at?
   answerOptions:
   - B106
   - B107
@@ -38,3 +37,13 @@ MonoBehaviour:
     attributes: []
     values: []
   referenceImages: []
+  briefingTextKo: "\uC9C0\uB2A5 \uAD00\uB828 \uC5F0\uAD6C\uB97C \uC218\uD589\uD558\uB294
+    \uC5F0\uAD6C\uC2E4\uC744 \uCC3E\uC73C\uC138\uC694. \uB3C4\uCC29\uD558\uBA74 \uD638\uC2E4
+    \uBC88\uD638\uB97C \uD655\uC778\uD558\uC138\uC694."
+  verificationQuestionKo: "\uBC29\uAE08 \uB3C4\uCC29\uD55C \uC5F0\uAD6C\uC2E4\uC758
+    \uD638\uC2E4 \uBC88\uD638\uB294 \uBB34\uC5C7\uC785\uB2C8\uAE4C?"
+  answerOptionsKo:
+  - B106
+  - B107
+  - B108
+  - B109

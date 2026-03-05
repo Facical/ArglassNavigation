@@ -103,11 +103,35 @@ namespace ARNavExperiment.DebugTools
                 Debug.Log("[EditorTest] N키 → AdvanceState");
             }
 
-            // M키: 다음 미션 시작
+            // M키: 컨텍스트 인식 미션 제어
             if (Input.GetKeyDown(KeyCode.M))
             {
-                Mission.MissionManager.Instance?.StartNextMission();
-                Debug.Log("[EditorTest] M키 → StartNextMission");
+                var mm = Mission.MissionManager.Instance;
+                if (mm != null)
+                {
+                    switch (mm.CurrentState)
+                    {
+                        case Mission.MissionState.Briefing:
+                            mm.AdvanceBriefing();
+                            Debug.Log("[EditorTest] M키 → AdvanceBriefing");
+                            break;
+                        case Mission.MissionState.Navigation:
+                            mm.ForceArrival();
+                            Debug.Log("[EditorTest] M키 → ForceArrival");
+                            break;
+                        case Mission.MissionState.Arrival:
+                        case Mission.MissionState.Verification:
+                        case Mission.MissionState.ConfidenceRating:
+                        case Mission.MissionState.DifficultyRating:
+                            mm.ForceSkipMission();
+                            Debug.Log("[EditorTest] M키 → ForceSkipMission");
+                            break;
+                        default:
+                            mm.StartNextMission();
+                            Debug.Log("[EditorTest] M키 → StartNextMission");
+                            break;
+                    }
+                }
             }
 
             // J키: 미션 Navigation → Arrival 강제 전환 (웨이포인트 도달 시뮬레이션)
@@ -139,6 +163,7 @@ namespace ARNavExperiment.DebugTools
                     Debug.Log($"[EditorTest] B키 → BeamProCanvas {(beamProCanvas.activeSelf ? "ON" : "OFF")}");
                 }
             }
+
         }
 
         private static GameObject FindInactiveByName(string name)
@@ -217,7 +242,7 @@ namespace ARNavExperiment.DebugTools
             }
 
             style.normal.textColor = new Color(0.6f, 0.6f, 0.6f);
-            GUI.Label(new Rect(10, y, 800, 20), "WASD:이동 / Shift:달리기 / 우클릭드래그:시점 / N:다음단계 / M:다음미션 / J:웨이포인트이동 / B:BeamPro토글", style);
+            GUI.Label(new Rect(10, y, 1100, 20), "WASD:이동 / Shift:달리기 / 우클릭드래그:시점 / N:다음단계 / M:미션제어(상태별) / J:웨이포인트이동 / B:BeamPro토글 / R:글래스캡처", style);
         }
 
         private void OnDisable()

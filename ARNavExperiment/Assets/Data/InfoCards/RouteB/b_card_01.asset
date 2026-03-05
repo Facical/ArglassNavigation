@@ -14,10 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardId: b_card_01
   cardType: sign_card
-  title: "B116 \uC548\uB0B4"
-  content: "\uC704\uCE58: \uB3D9\uCABD\uBCF5\uB3C4 \uB0A8\uB2E8\n\uC6A9\uB3C4: \uD604\uC7A5
-    \uD655\uC778 \uD544\uC694\n\uCC38\uACE0: SE\uAD50\uCC28\uB85C\uC5D0\uC11C \uBD81\uCABD\uC73C\uB85C
-    \uC774\uB3D9 \uC2DC \uCCAB \uBC88\uC9F8 \uC2E4"
+  title: B116 Guide
+  content: 'Location: South end of east corridor
+
+    Purpose: TBD on-site
+
+    Note:
+    First room heading north from SE junction'
   image: {fileID: 0}
   triggerWaypointId: WP02
   autoShow: 1
+  titleKo: "B116 \uC548\uB0B4"
+  contentKo: "\uC704\uCE58: \uB3D9\uCABD \uBCF5\uB3C4 \uB0A8\uB2E8\n\uC6A9\uB3C4:
+    \uD604\uC7A5 \uD655\uC778 \uD544\uC694\n\uCC38\uACE0: \uB0A8\uB3D9 \uAD50\uCC28\uB85C\uC5D0\uC11C
+    \uBD81\uCABD\uC73C\uB85C \uCCAB \uBC88\uC9F8 \uACF5\uAC04"

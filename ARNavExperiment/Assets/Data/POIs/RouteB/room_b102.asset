@@ -14,10 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b102
   poiType: research_lab
-  displayName: "B102 \uB124\uD2B8\uC6CC\uD06C\uC5F0\uAD6C\uC2E4"
-  description: "\uB124\uD2B8\uC6CC\uD06C \uC5F0\uAD6C\uC2E4"
+  displayName: B102 Network Lab
+  description: Network research lab
   capacity: 10
   equipment:
-  - "\uB124\uD2B8\uC6CC\uD06C \uC7A5\uBE44"
-  mapPosition: {x: 0, y: 0}
+  - Network equipment
+  mapPosition: {x: 20, y: 22}
   icon: {fileID: 0}
+  displayNameKo: "B102 \uB124\uD2B8\uC6CC\uD06C \uC5F0\uAD6C\uC2E4"
+  descriptionKo: "\uB124\uD2B8\uC6CC\uD06C \uC5F0\uAD6C\uC2E4"
+  equipmentKo:
+  - "\uB124\uD2B8\uC6CC\uD06C \uC7A5\uBE44"

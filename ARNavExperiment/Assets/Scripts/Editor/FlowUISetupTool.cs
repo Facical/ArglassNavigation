@@ -2,7 +2,10 @@ using UnityEngine;
 using UnityEditor;
 using UnityEngine.UI;
 using TMPro;
-using ARNavExperiment.UI;
+using ARNavExperiment.Presentation.Shared;
+using ARNavExperiment.Presentation.Mapping;
+using ARNavExperiment.Presentation.Experimenter;
+using ARNavExperiment.Presentation.Glass;
 
 namespace ARNavExperiment.EditorTools
 {
@@ -13,7 +16,7 @@ namespace ARNavExperiment.EditorTools
         {
             string[] targets = {
                 "AppModeSelectorPanel", "MappingModePanel", "RelocalizationPanel",
-                "SessionSetupPanel", "PracticePanel", "ConditionTransitionPanel",
+                "SessionSetupPanel", "ConditionTransitionPanel",
                 "SurveyPromptPanel", "CompletionPanel", "ExperimentFlowUI"
             };
 
@@ -63,29 +66,49 @@ namespace ARNavExperiment.EditorTools
 
             // Mode Selector Title
             var modeTitleText = CreateTMP("ModeTitle", modeSelectorPanel.transform,
-                "AR 내비게이션 실험", 36, TextAlignmentOptions.Center);
+                "AR Navigation Experiment", 36, TextAlignmentOptions.Center);
             SetRect(modeTitleText.gameObject, new Vector2(0.1f, 0.75f), new Vector2(0.9f, 0.9f));
 
             // Mode Selector Subtitle
             var modeSubtitle = CreateTMP("ModeSubtitle", modeSelectorPanel.transform,
-                "모드를 선택하세요", 20, TextAlignmentOptions.Center);
+                "Select a mode", 20, TextAlignmentOptions.Center);
             SetRect(modeSubtitle.gameObject, new Vector2(0.1f, 0.67f), new Vector2(0.9f, 0.75f));
             modeSubtitle.color = new Color(0.7f, 0.7f, 0.7f);
 
             // Mapping Mode Button
             var mappingBtn = CreateButton("MappingModeBtn", modeSelectorPanel.transform,
-                "매핑 모드 (사전 준비)", new Color(0.2f, 0.4f, 0.6f, 1f), 22);
-            SetRect(mappingBtn.gameObject, new Vector2(0.15f, 0.45f), new Vector2(0.85f, 0.6f));
+                "Mapping Mode (Preparation)", new Color(0.2f, 0.4f, 0.6f, 1f), 22);
+            SetRect(mappingBtn.gameObject, new Vector2(0.15f, 0.52f), new Vector2(0.85f, 0.65f));
 
             // Experiment Mode Button
             var expBtn = CreateButton("ExperimentModeBtn", modeSelectorPanel.transform,
-                "실험 모드 (참가자 진행)", new Color(0.2f, 0.5f, 0.2f, 1f), 22);
-            SetRect(expBtn.gameObject, new Vector2(0.15f, 0.25f), new Vector2(0.85f, 0.4f));
+                "Experiment Mode (Participant)", new Color(0.2f, 0.5f, 0.2f, 1f), 22);
+            SetRect(expBtn.gameObject, new Vector2(0.15f, 0.34f), new Vector2(0.85f, 0.47f));
+
+            // Language Button
+            var langBtn = CreateButton("LanguageBtn", modeSelectorPanel.transform,
+                "Language", new Color(0.4f, 0.35f, 0.5f, 1f), 18);
+            SetRect(langBtn.gameObject, new Vector2(0.35f, 0.10f), new Vector2(0.65f, 0.20f));
+
+            // Language Popup (기본 비활성)
+            var langPopup = CreatePanel("LanguagePopup", modeSelectorPanel.transform,
+                new Color(0.12f, 0.12f, 0.18f, 0.95f));
+            SetRect(langPopup, new Vector2(0.20f, 0.22f), new Vector2(0.80f, 0.32f));
+
+            var langKoBtn = CreateButton("LangKoBtn", langPopup.transform,
+                "\ud55c\uad6d\uc5b4", new Color(0.3f, 0.3f, 0.5f, 1f), 18);
+            SetRect(langKoBtn.gameObject, new Vector2(0.05f, 0.55f), new Vector2(0.95f, 0.95f));
+
+            var langEnBtn = CreateButton("LangEnBtn", langPopup.transform,
+                "English", new Color(0.3f, 0.3f, 0.5f, 1f), 18);
+            SetRect(langEnBtn.gameObject, new Vector2(0.05f, 0.05f), new Vector2(0.95f, 0.45f));
+
+            langPopup.SetActive(false);
 
             // Mapping Status Text
             var mappingStatusText = CreateTMP("MappingStatusText", modeSelectorPanel.transform,
-                "매핑 상태: 확인 중...", 14, TextAlignmentOptions.Center,
-                new Vector2(0.1f, 0.12f), new Vector2(0.9f, 0.2f));
+                "Mapping status: checking...", 14, TextAlignmentOptions.Center,
+                new Vector2(0.1f, 0.22f), new Vector2(0.9f, 0.30f));
             mappingStatusText.color = new Color(0.7f, 0.7f, 0.7f);
 
             // === Mapping Mode Panel ===
@@ -96,12 +119,12 @@ namespace ARNavExperiment.EditorTools
 
             // Mapping Title
             var mappingTitle = CreateTMP("MappingTitle", mappingPanel.transform,
-                "매핑 모드", 24, TextAlignmentOptions.Center);
+                "Mapping Mode", 24, TextAlignmentOptions.Center);
             SetRect(mappingTitle.gameObject, new Vector2(0.2f, 0.92f), new Vector2(0.8f, 0.98f));
 
             // Quality Text
             var qualityText = CreateTMP("QualityText", mappingPanel.transform,
-                "매핑 품질: 확인 중...", 15, TextAlignmentOptions.Left,
+                "Mapping quality: checking...", 15, TextAlignmentOptions.Left,
                 new Vector2(0.03f, 0.84f), new Vector2(0.28f, 0.91f));
 
             // Quality Bar Background
@@ -170,24 +193,29 @@ namespace ARNavExperiment.EditorTools
             sr.horizontal = false;
             sr.movementType = ScrollRect.MovementType.Clamped;
 
-            // Create Anchor Button
+            // Row 1: Create Anchor Button (full width for variable-length status text)
             var createAnchorBtn = CreateButton("CreateAnchorBtn", mappingPanel.transform,
-                "웨이포인트를 선택하세요", new Color(0.3f, 0.5f, 0.7f, 1f), 16);
-            SetRect(createAnchorBtn.gameObject, new Vector2(0.03f, 0.04f), new Vector2(0.48f, 0.15f));
+                "Select a waypoint", new Color(0.3f, 0.5f, 0.7f, 1f), 16);
+            SetRect(createAnchorBtn.gameObject, new Vector2(0.03f, 0.11f), new Vector2(0.97f, 0.18f));
 
-            // Save All Button
+            // Row 2: Map Zoom Button
+            var mapZoomBtn = CreateButton("MapZoomBtn", mappingPanel.transform,
+                "Zoom Map", new Color(0.35f, 0.25f, 0.55f, 1f), 16);
+            SetRect(mapZoomBtn.gameObject, new Vector2(0.03f, 0.02f), new Vector2(0.34f, 0.09f));
+
+            // Row 2: Save All Button
             var saveAllBtn = CreateButton("SaveAllBtn", mappingPanel.transform,
-                "모든 앵커 저장", new Color(0.2f, 0.5f, 0.2f, 1f), 16);
-            SetRect(saveAllBtn.gameObject, new Vector2(0.5f, 0.04f), new Vector2(0.76f, 0.15f));
+                "Save All", new Color(0.2f, 0.5f, 0.2f, 1f), 16);
+            SetRect(saveAllBtn.gameObject, new Vector2(0.35f, 0.02f), new Vector2(0.66f, 0.09f));
 
-            // Back Button
+            // Row 2: Back Button
             var backBtn = CreateButton("BackBtn", mappingPanel.transform,
-                "돌아가기", new Color(0.4f, 0.4f, 0.4f, 1f), 16);
-            SetRect(backBtn.gameObject, new Vector2(0.78f, 0.04f), new Vector2(0.97f, 0.15f));
+                "Back", new Color(0.4f, 0.4f, 0.4f, 1f), 16);
+            SetRect(backBtn.gameObject, new Vector2(0.67f, 0.02f), new Vector2(0.97f, 0.09f));
 
             // Wire MappingModeUI
             WireMappingModeUI(mappingUI, mappingPanel, mappingTitle, qualityText,
-                qbImg, createAnchorBtn, saveAllBtn, backBtn, routeDropdown, contentGO.transform);
+                qbImg, createAnchorBtn, mapZoomBtn, saveAllBtn, backBtn, routeDropdown, contentGO.transform);
 
             // === Relocalization Panel ===
             var relocPanel = CreatePanel("RelocalizationPanel", canvasTransform,
@@ -197,12 +225,12 @@ namespace ARNavExperiment.EditorTools
 
             // Relocalization Instruction
             var relocInstr = CreateTMP("RelocInstructionText", relocPanel.transform,
-                "환경을 인식하고 있습니다...\n주변을 천천히 둘러봐주세요.", 24, TextAlignmentOptions.Center);
+                "Scanning the environment...\nPlease look around slowly.", 24, TextAlignmentOptions.Center);
             SetRect(relocInstr.gameObject, new Vector2(0.1f, 0.6f), new Vector2(0.9f, 0.8f));
 
             // Relocalization Progress Text
             var relocProgress = CreateTMP("RelocProgressText", relocPanel.transform,
-                "준비 중...", 18, TextAlignmentOptions.Center);
+                "Preparing...", 18, TextAlignmentOptions.Center);
             SetRect(relocProgress.gameObject, new Vector2(0.1f, 0.5f), new Vector2(0.9f, 0.58f));
 
             // Relocalization Progress Bar Background
@@ -262,19 +290,19 @@ namespace ARNavExperiment.EditorTools
             // Result Panel (기본 비활성)
             var resultPanel = CreatePanel("ResultPanel", relocPanel.transform,
                 new Color(0.1f, 0.1f, 0.15f, 0.95f));
-            SetRect(resultPanel, new Vector2(0.1f, 0.02f), new Vector2(0.9f, 0.18f));
+            SetRect(resultPanel, new Vector2(0.1f, 0.02f), new Vector2(0.9f, 0.28f));
 
             var relocWarningText = CreateTMP("WarningText", resultPanel.transform,
-                "", 11, TextAlignmentOptions.Center,
+                "", 13, TextAlignmentOptions.Center,
                 new Vector2(0.05f, 0.35f), new Vector2(0.95f, 0.95f));
             relocWarningText.color = new Color(1f, 0.8f, 0.4f);
 
             var proceedBtn = CreateButton("ProceedBtn", resultPanel.transform,
-                "계속 진행", new Color(0.2f, 0.5f, 0.2f, 1f), 14);
+                "Proceed", new Color(0.2f, 0.5f, 0.2f, 1f), 14);
             SetRect(proceedBtn.gameObject, new Vector2(0.05f, 0.05f), new Vector2(0.48f, 0.32f));
 
             var retryBtn = CreateButton("RetryBtn", resultPanel.transform,
-                "재시도", new Color(0.2f, 0.4f, 0.6f, 1f), 14);
+                "Retry", new Color(0.2f, 0.4f, 0.6f, 1f), 14);
             SetRect(retryBtn.gameObject, new Vector2(0.52f, 0.05f), new Vector2(0.95f, 0.32f));
 
             resultPanel.SetActive(false);
@@ -291,18 +319,18 @@ namespace ARNavExperiment.EditorTools
 
             // Title
             var titleText = CreateTMP("TitleText", setupPanel.transform,
-                "AR 내비게이션 실험", 32, TextAlignmentOptions.Center);
+                "AR Navigation Experiment", 32, TextAlignmentOptions.Center);
             SetRect(titleText.gameObject, new Vector2(0.1f, 0.8f), new Vector2(0.9f, 0.92f));
 
             // Subtitle
             var subtitleText = CreateTMP("SubtitleText", setupPanel.transform,
-                "실험자 설정 화면", 18, TextAlignmentOptions.Center);
+                "Experimenter Setup", 18, TextAlignmentOptions.Center);
             SetRect(subtitleText.gameObject, new Vector2(0.1f, 0.73f), new Vector2(0.9f, 0.8f));
             subtitleText.color = new Color(0.7f, 0.7f, 0.7f);
 
             // Participant ID Label
             CreateTMP("PIDLabel", setupPanel.transform,
-                "참가자 ID:", 16, TextAlignmentOptions.Left,
+                "Participant ID:", 16, TextAlignmentOptions.Left,
                 new Vector2(0.2f, 0.6f), new Vector2(0.45f, 0.67f));
 
             // Participant ID Input
@@ -311,7 +339,7 @@ namespace ARNavExperiment.EditorTools
 
             // Order Group Label
             CreateTMP("GroupLabel", setupPanel.transform,
-                "순서 그룹:", 16, TextAlignmentOptions.Left,
+                "Order Group:", 16, TextAlignmentOptions.Left,
                 new Vector2(0.2f, 0.5f), new Vector2(0.45f, 0.57f));
 
             // Order Group Dropdown
@@ -320,7 +348,7 @@ namespace ARNavExperiment.EditorTools
 
             // Preview Text
             var previewText = CreateTMP("PreviewText", setupPanel.transform,
-                "참가자: P01\n그룹: S1\n1차: Glass Only + Route A\n2차: Hybrid + Route B",
+                "Participant: P01\nGroup: S1\n1st: Glass Only + Route A\n2nd: Hybrid + Route B",
                 14, TextAlignmentOptions.Left,
                 new Vector2(0.2f, 0.28f), new Vector2(0.8f, 0.47f));
             previewText.color = new Color(0.6f, 0.8f, 1f);
@@ -333,33 +361,12 @@ namespace ARNavExperiment.EditorTools
             errorText.gameObject.SetActive(false);
 
             // Start Button
-            var startBtn = CreateButton("StartButton", setupPanel.transform, "실험 시작",
+            var startBtn = CreateButton("StartButton", setupPanel.transform, "Start Experiment",
                 new Color(0.2f, 0.5f, 0.2f, 1f), 22);
             SetRect(startBtn.gameObject, new Vector2(0.3f, 0.08f), new Vector2(0.7f, 0.18f));
 
             // Wire SessionSetupUI references
             WireSessionSetup(setupUI, setupPanel);
-
-            // === Practice Panel ===
-            var practicePanel = CreatePanel("PracticePanel", canvasTransform,
-                new Color(0.08f, 0.08f, 0.12f, 0.98f));
-            practicePanel.SetActive(false);
-
-            var practiceTitle = CreateTMP("PracticeTitle", practicePanel.transform,
-                "연습 모드", 28, TextAlignmentOptions.Center);
-            SetRect(practiceTitle.gameObject, new Vector2(0.1f, 0.82f), new Vector2(0.9f, 0.92f));
-
-            var practiceInstr = CreateTMP("PracticeInstruction", practicePanel.transform,
-                "", 16, TextAlignmentOptions.Left,
-                new Vector2(0.15f, 0.3f), new Vector2(0.85f, 0.78f));
-
-            var practiceStartBtn = CreateButton("PracticeStartBtn", practicePanel.transform,
-                "연습 시작", new Color(0.2f, 0.4f, 0.6f, 1f), 18);
-            SetRect(practiceStartBtn.gameObject, new Vector2(0.15f, 0.08f), new Vector2(0.48f, 0.18f));
-
-            var practiceSkipBtn = CreateButton("PracticeSkipBtn", practicePanel.transform,
-                "건너뛰기", new Color(0.4f, 0.4f, 0.4f, 1f), 18);
-            SetRect(practiceSkipBtn.gameObject, new Vector2(0.52f, 0.08f), new Vector2(0.85f, 0.18f));
 
             // === Condition Transition Panel ===
             var transPanel = CreatePanel("ConditionTransitionPanel", canvasTransform,
@@ -367,15 +374,16 @@ namespace ARNavExperiment.EditorTools
             transPanel.SetActive(false);
 
             var transTitle = CreateTMP("TransitionTitle", transPanel.transform,
-                "조건 시작", 28, TextAlignmentOptions.Center);
+                "Condition Start", 28, TextAlignmentOptions.Center);
             SetRect(transTitle.gameObject, new Vector2(0.1f, 0.8f), new Vector2(0.9f, 0.92f));
 
             var transDetail = CreateTMP("TransitionDetail", transPanel.transform,
                 "", 16, TextAlignmentOptions.Center,
                 new Vector2(0.1f, 0.3f), new Vector2(0.9f, 0.75f));
+            transDetail.enableWordWrapping = true;
 
             var transContinueBtn = CreateButton("TransitionContinueBtn", transPanel.transform,
-                "계속", new Color(0.2f, 0.5f, 0.2f, 1f), 20);
+                "Continue", new Color(0.2f, 0.5f, 0.2f, 1f), 20);
             SetRect(transContinueBtn.gameObject, new Vector2(0.3f, 0.08f), new Vector2(0.7f, 0.2f));
 
             // === Survey Prompt Panel ===
@@ -384,15 +392,16 @@ namespace ARNavExperiment.EditorTools
             surveyPanel.SetActive(false);
 
             var surveyTitle = CreateTMP("SurveyTitle", surveyPanel.transform,
-                "설문", 28, TextAlignmentOptions.Center);
+                "Survey", 28, TextAlignmentOptions.Center);
             SetRect(surveyTitle.gameObject, new Vector2(0.1f, 0.8f), new Vector2(0.9f, 0.92f));
 
             var surveyInstr = CreateTMP("SurveyInstruction", surveyPanel.transform,
                 "", 16, TextAlignmentOptions.Center,
                 new Vector2(0.1f, 0.3f), new Vector2(0.9f, 0.75f));
+            surveyInstr.enableWordWrapping = true;
 
             var surveyDoneBtn = CreateButton("SurveyDoneBtn", surveyPanel.transform,
-                "설문 완료", new Color(0.2f, 0.5f, 0.2f, 1f), 20);
+                "Survey Done", new Color(0.2f, 0.5f, 0.2f, 1f), 20);
             SetRect(surveyDoneBtn.gameObject, new Vector2(0.3f, 0.08f), new Vector2(0.7f, 0.2f));
 
             // === Completion Panel ===
@@ -413,8 +422,7 @@ namespace ARNavExperiment.EditorTools
             // Wire ExperimentFlowUI references
             WireFlowUI(flowUI,
                 modeSelectorPanel, relocPanel, relocUI,
-                setupPanel, practicePanel, transPanel, surveyPanel, completePanel,
-                practiceInstr, practiceStartBtn, practiceSkipBtn,
+                setupPanel, transPanel, surveyPanel, completePanel,
                 transTitle, transDetail, transContinueBtn,
                 surveyTitle, surveyInstr, surveyDoneBtn,
                 completeText);
@@ -442,9 +450,8 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireFlowUI(ExperimentFlowUI flowUI,
             GameObject modeSelector, GameObject relocPanel, RelocalizationUI relocUI,
-            GameObject setup, GameObject practice, GameObject transition,
+            GameObject setup, GameObject transition,
             GameObject survey, GameObject completion,
-            TextMeshProUGUI practiceInstr, Button practiceStart, Button practiceSkip,
             TextMeshProUGUI transTitle, TextMeshProUGUI transDetail, Button transContinue,
             TextMeshProUGUI surveyTitle, TextMeshProUGUI surveyInstr, Button surveyDone,
             TextMeshProUGUI completeText)
@@ -454,14 +461,9 @@ namespace ARNavExperiment.EditorTools
             so.FindProperty("relocalizationPanel").objectReferenceValue = relocPanel;
             so.FindProperty("relocalizationUI").objectReferenceValue = relocUI;
             so.FindProperty("sessionSetupPanel").objectReferenceValue = setup;
-            so.FindProperty("practicePanel").objectReferenceValue = practice;
             so.FindProperty("conditionTransitionPanel").objectReferenceValue = transition;
             so.FindProperty("surveyPromptPanel").objectReferenceValue = survey;
             so.FindProperty("completionPanel").objectReferenceValue = completion;
-
-            so.FindProperty("practiceInstructionText").objectReferenceValue = practiceInstr;
-            so.FindProperty("practiceStartButton").objectReferenceValue = practiceStart;
-            so.FindProperty("practiceSkipButton").objectReferenceValue = practiceSkip;
 
             so.FindProperty("transitionTitleText").objectReferenceValue = transTitle;
             so.FindProperty("transitionDetailText").objectReferenceValue = transDetail;
@@ -477,7 +479,8 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireMappingModeUI(MappingModeUI ui, GameObject panel,
             TextMeshProUGUI title, TextMeshProUGUI qualityText,
-            Image qualityBar, Button createAnchorBtn, Button saveAllBtn, Button backBtn,
+            Image qualityBar, Button createAnchorBtn, Button mapZoomBtn,
+            Button saveAllBtn, Button backBtn,
             GameObject routeDropdown, Transform waypointListContent)
         {
             var so = new SerializedObject(ui);
@@ -486,6 +489,7 @@ namespace ARNavExperiment.EditorTools
             so.FindProperty("qualityText").objectReferenceValue = qualityText;
             so.FindProperty("qualityBar").objectReferenceValue = qualityBar;
             so.FindProperty("createAnchorButton").objectReferenceValue = createAnchorBtn;
+            so.FindProperty("mapZoomButton").objectReferenceValue = mapZoomBtn;
             so.FindProperty("saveAllButton").objectReferenceValue = saveAllBtn;
             so.FindProperty("backButton").objectReferenceValue = backBtn;
             so.FindProperty("routeDropdown").objectReferenceValue =

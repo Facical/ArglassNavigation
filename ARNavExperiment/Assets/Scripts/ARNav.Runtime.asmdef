@@ -1,0 +1,46 @@
+{
+    "name": "ARNav.Runtime",
+    "rootNamespace": "ARNavExperiment",
+    "references": [
+        "ARNav.Domain",
+        "Unity.XR.XREAL",
+        "Unity.InputSystem",
+        "Unity.XR.ARFoundation",
+        "Unity.XR.ARSubsystems",
+        "Unity.XR.Interaction.Toolkit",
+        "Unity.XR.Hands",
+        "Unity.XR.CoreUtils",
+        "Unity.XR.Management",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.xr.arfoundation",
+            "expression": "",
+            "define": "XR_ARFOUNDATION"
+        },
+        {
+            "name": "com.unity.xr.hands",
+            "expression": "",
+            "define": "XR_HANDS"
+        },
+        {
+            "name": "com.unity.xr.interaction.toolkit",
+            "expression": "",
+            "define": "XR_INTERACTION"
+        },
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "",
+            "define": "ENABLE_INPUT_SYSTEM"
+        }
+    ],
+    "noEngineReferences": false
+}

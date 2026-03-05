@@ -14,10 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardId: b_card_05
   cardType: comparison
-  title: "B104 vs B105 \uBE44\uAD50\uD45C"
-  content: "B104: \uCD5C\uD0DC\uD6C8 \uAD50\uC218\uC2E4\nB105: \uC1A1\uC601\uBBFC
-    \uAD50\uC218\uC2E4\n\u2192 \uBB38 \uC55E \uC548\uB0B4\uD310 \uC815\uBCF4 \uBE44\uAD50
-    (\uD604\uC7A5 \uD655\uC778 \uD544\uC694)"
+  title: B104 vs B105 Comparison
+  content: "B104: Prof. Choi's Office\nB105: Prof. Song's Office\n\u2192 Compare
+    door sign info (verify on-site)"
   image: {fileID: 0}
   triggerWaypointId: WP07
   autoShow: 1
+  titleKo: "B104 vs B105 \uBE44\uAD50"
+  contentKo: "B104: \uCD5C\uAD50\uC218 \uC5F0\uAD6C\uC2E4\nB105: \uC1A1\uAD50\uC218
+    \uC5F0\uAD6C\uC2E4\n\u2192 \uBB38\uD328 \uC815\uBCF4\uB97C \uBE44\uAD50\uD558\uC138\uC694
+    (\uD604\uC7A5\uC5D0\uC11C \uD655\uC778)"

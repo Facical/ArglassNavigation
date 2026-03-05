@@ -35,7 +35,7 @@ namespace ARNavExperiment.Logging
 
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string fileName = $"{participantId}_{condition}_{route}_{timestamp}.csv";
-            string path = Path.Combine(Application.persistentDataPath, "data", "raw", fileName);
+            string path = Path.Combine(UnityEngine.Application.persistentDataPath, "data", "raw", fileName);
 
             csvWriter = new CSVWriter(path, Headers);
             Debug.Log($"[EventLogger] Session started: {path}");

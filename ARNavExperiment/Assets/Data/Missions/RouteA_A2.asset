@@ -14,12 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   missionId: A2
   type: 0
-  briefingText: "\uB300\uD559\uC6D0 \uC804\uC6A9 \uAC15\uC758\uC2E4\uC744 \uCC3E\uC544\uAC00\uC138\uC694.
-    \uB3C4\uCC29 \uD6C4 \uAC15\uC758\uC2E4 \uBB38\uC758 \uD638\uC2E4 \uBC88\uD638\uB97C
-    \uD655\uC778\uD558\uC138\uC694."
+  briefingText: Find a graduate-only classroom. Upon arrival, check the room number
+    on the door.
   targetWaypointId: WP05
-  verificationQuestion: "\uBC29\uAE08 \uB3C4\uCC29\uD55C \uB300\uD559\uC6D0 \uAC15\uC758\uC2E4\uC758
-    \uD638\uC2E4 \uBC88\uD638\uB294 \uBB34\uC5C7\uC785\uB2C8\uAE4C?"
+  verificationQuestion: What is the room number of the graduate classroom you just
+    arrived at?
   answerOptions:
   - B128
   - B129
@@ -38,3 +37,13 @@ MonoBehaviour:
     attributes: []
     values: []
   referenceImages: []
+  briefingTextKo: "\uB300\uD559\uC6D0 \uC804\uC6A9 \uAC15\uC758\uC2E4\uC744 \uCC3E\uC73C\uC138\uC694.
+    \uB3C4\uCC29\uD558\uBA74 \uBB38\uC5D0 \uC801\uD78C \uD638\uC2E4 \uBC88\uD638\uB97C
+    \uD655\uC778\uD558\uC138\uC694."
+  verificationQuestionKo: "\uBC29\uAE08 \uB3C4\uCC29\uD55C \uB300\uD559\uC6D0 \uAC15\uC758\uC2E4\uC758
+    \uD638\uC2E4 \uBC88\uD638\uB294 \uBB34\uC5C7\uC785\uB2C8\uAE4C?"
+  answerOptionsKo:
+  - B128
+  - B129
+  - B130
+  - B131

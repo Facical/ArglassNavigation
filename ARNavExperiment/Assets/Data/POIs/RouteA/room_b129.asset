@@ -14,10 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b129
   poiType: grad_lecture
-  displayName: "B129 \uB300\uD559\uC6D0\uAC15\uC758\uC2E4"
-  description: "\uB300\uD559\uC6D0 \uC804\uC6A9 \uAC15\uC758\uC2E4"
+  displayName: B129 Graduate Classroom
+  description: Graduate-only classroom
   capacity: 30
   equipment:
-  - "\uBE54\uD504\uB85C\uC81D\uD130"
-  mapPosition: {x: 0, y: 0}
+  - Projector
+  mapPosition: {x: -20, y: 11}
   icon: {fileID: 0}
+  displayNameKo: "B129 \uB300\uD559\uC6D0 \uAC15\uC758\uC2E4"
+  descriptionKo: "\uB300\uD559\uC6D0 \uC804\uC6A9 \uAC15\uC758\uC2E4"
+  equipmentKo:
+  - "\uD504\uB85C\uC81D\uD130"

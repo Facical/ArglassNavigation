@@ -14,9 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b105
   poiType: professor_office
-  displayName: "B105 \uC1A1\uC601\uBBFC \uAD50\uC218\uC2E4"
-  description: "\uC1A1\uC601\uBBFC \uAD50\uC218 \uC5F0\uAD6C\uC2E4"
+  displayName: B105 Prof. Song's Office
+  description: Prof. Youngmin Song's office
   capacity: 2
   equipment: []
-  mapPosition: {x: 0, y: 0}
+  mapPosition: {x: 3, y: 25}
   icon: {fileID: 0}
+  displayNameKo: "B105 \uC1A1\uAD50\uC218 \uC5F0\uAD6C\uC2E4"
+  descriptionKo: "\uC1A1\uC601\uBBFC \uAD50\uC218 \uC5F0\uAD6C\uC2E4"
+  equipmentKo: []

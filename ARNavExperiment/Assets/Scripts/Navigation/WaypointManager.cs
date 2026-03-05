@@ -2,7 +2,8 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using ARNavExperiment.Core;
-using ARNavExperiment.Logging;
+using ARNavExperiment.Domain.Events;
+using ARNavExperiment.Application;
 
 namespace ARNavExperiment.Navigation
 {
@@ -96,7 +97,58 @@ namespace ARNavExperiment.Navigation
             // SpatialAnchorManager에서 앵커 Transform 바인딩
             BindAnchorTransforms(routeId);
 
-            Debug.Log($"[WaypointManager] Route {routeId} loaded with {activeRoute.waypoints.Count} waypoints");
+            // 앵커 바인딩 후 가장 가까운 웨이포인트를 시작 인덱스로 설정
+            int nearestIdx = FindNearestWaypointIndex();
+            if (nearestIdx > 0)
+            {
+                CurrentWaypointIndex = nearestIdx;
+                Debug.Log($"[WaypointManager] Start index adjusted to {nearestIdx} " +
+                    $"({activeRoute.waypoints[nearestIdx].waypointId}) — nearest to player position");
+            }
+
+            Debug.Log($"[WaypointManager] Route {routeId} loaded with {activeRoute.waypoints.Count} waypoints, " +
+                $"starting at index {CurrentWaypointIndex}");
+        }
+
+        /// <summary>
+        /// 플레이어 위치에서 가장 가까운 웨이포인트의 인덱스를 반환합니다.
+        /// 앵커가 바인딩된 웨이포인트만 고려합니다 (fallback 좌표는 SLAM과 무관).
+        /// </summary>
+        private int FindNearestWaypointIndex()
+        {
+            if (activeRoute == null || playerTransform == null) return 0;
+
+            float minDist = float.MaxValue;
+            int nearestIdx = 0;
+            bool hasAnyAnchor = false;
+
+            for (int i = 0; i < activeRoute.waypoints.Count; i++)
+            {
+                var wp = activeRoute.waypoints[i];
+                // 앵커 바인딩된 웨이포인트만 거리 계산 (fallback은 SLAM 좌표계와 무관)
+                if (wp.anchorTransform == null) continue;
+
+                hasAnyAnchor = true;
+                float dist = Vector3.Distance(
+                    new Vector3(playerTransform.position.x, 0, playerTransform.position.z),
+                    new Vector3(wp.Position.x, 0, wp.Position.z));
+
+                if (dist < minDist)
+                {
+                    minDist = dist;
+                    nearestIdx = i;
+                }
+            }
+
+            if (!hasAnyAnchor)
+            {
+                Debug.LogWarning("[WaypointManager] No anchored waypoints — using index 0");
+                return 0;
+            }
+
+            Debug.Log($"[WaypointManager] Nearest waypoint: [{nearestIdx}] " +
+                $"{activeRoute.waypoints[nearestIdx].waypointId} (dist={minDist:F1}m)");
+            return nearestIdx;
         }
 
         /// <summary>
@@ -106,7 +158,15 @@ namespace ARNavExperiment.Navigation
         private void BindAnchorTransforms(string routeId)
         {
             var anchorMgr = SpatialAnchorManager.Instance;
-            if (anchorMgr == null || !anchorMgr.IsRelocalized) return;
+            if (anchorMgr == null)
+            {
+                Debug.LogWarning("[WaypointManager] SpatialAnchorManager.Instance가 null — 모든 웨이포인트 fallback 사용");
+                return;
+            }
+
+            Debug.Log($"[WaypointManager] BindAnchorTransforms 시작 — Route={routeId}, " +
+                $"IsRelocalized={anchorMgr.IsRelocalized}, " +
+                $"SuccessCount={anchorMgr.SuccessfulAnchorCount}/{anchorMgr.TotalAnchorCount}");
 
             int boundCount = 0;
             int fallbackCount = 0;
@@ -118,19 +178,24 @@ namespace ARNavExperiment.Navigation
                 {
                     wp.anchorTransform = anchorTransform;
                     boundCount++;
-                    Debug.Log($"[WaypointManager] {wp.waypointId}: 앵커 바인딩 완료");
+                    Debug.Log($"[WaypointManager] {wp.waypointId}: 앵커 바인딩 완료 (pos={anchorTransform.position})");
                 }
                 else
                 {
                     fallbackCount++;
-                    Debug.LogWarning($"[WaypointManager] {wp.waypointId}: fallback 좌표 사용 ({wp.fallbackPosition}) — 수 미터 오차 가능");
-                    EventLogger.Instance?.LogEvent("WAYPOINT_FALLBACK_USED",
-                        waypointId: wp.waypointId,
-                        extraData: $"{{\"fallback_position\":\"{wp.fallbackPosition}\"}}");
+                    Debug.LogWarning($"[WaypointManager] {wp.waypointId}: fallback 좌표 사용 ({wp.fallbackPosition}) — SLAM 좌표계와 불일치 가능");
+                    DomainEventBus.Instance?.Publish(new WaypointFallbackUsed(
+                        wp.waypointId, wp.fallbackPosition.ToString()));
                 }
             }
 
             Debug.Log($"[WaypointManager] 바인딩 결과: 앵커={boundCount}, fallback={fallbackCount}, 전체={activeRoute.waypoints.Count}");
+
+            if (fallbackCount > 0)
+            {
+                Debug.LogWarning($"[WaypointManager] ⚠ {fallbackCount}개 웨이포인트 fallback 사용 — " +
+                    "화살표 방향이 부정확할 수 있음. 앵커 재매핑 권장.");
+            }
         }
 
         /// <summary>특정 웨이포인트가 fallback 사용 중인지 확인</summary>
@@ -160,9 +225,8 @@ namespace ARNavExperiment.Navigation
                     float drift = Vector3.Distance(oldPos, newPos);
 
                     Debug.Log($"[WaypointManager] 런타임 앵커 교체: {waypointId}, 드리프트={drift:F2}m");
-                    EventLogger.Instance?.LogEvent("WAYPOINT_LATE_ANCHOR_BOUND",
-                        waypointId: waypointId,
-                        extraData: $"{{\"drift_m\":{drift:F2},\"old_pos\":\"{oldPos}\",\"new_pos\":\"{newPos}\"}}");
+                    DomainEventBus.Instance?.Publish(new WaypointLateAnchorBound(
+                        waypointId, drift, oldPos.ToString(), newPos.ToString()));
                     break;
                 }
             }
@@ -187,7 +251,7 @@ namespace ARNavExperiment.Navigation
 
         private void ReachWaypoint(Waypoint wp)
         {
-            EventLogger.Instance?.LogEvent("WAYPOINT_REACHED", waypointId: wp.waypointId);
+            DomainEventBus.Instance?.Publish(new WaypointReached(wp.waypointId, false));
             OnWaypointReached?.Invoke(wp);
             Debug.Log($"[WaypointManager] Reached {wp.waypointId} ({wp.locationName})");
 
@@ -208,7 +272,42 @@ namespace ARNavExperiment.Navigation
                 ? activeRoute.waypoints[CurrentWaypointIndex]
                 : activeRoute.waypoints[activeRoute.waypoints.Count - 1];
 
-            return (target.Position - playerTransform.position).normalized;
+            if (target.anchorTransform != null)
+            {
+                // 앵커 바인딩 있음 → 정확한 SLAM 좌표 기반 방향
+                return (target.Position - playerTransform.position).normalized;
+            }
+            else
+            {
+                // Fallback: 절대 좌표 대신 이전 WP→현재 WP 의 상대 방향만 사용.
+                // fallback 좌표는 SLAM 좌표계와 무관하므로,
+                // playerTransform.position과 직접 연산하면 90° 이상 오차 발생.
+                Vector3 from;
+                if (CurrentWaypointIndex > 0)
+                {
+                    from = activeRoute.waypoints[CurrentWaypointIndex - 1].fallbackPosition;
+                }
+                else
+                {
+                    // 첫 웨이포인트: 경로 시작점(origin) 기준
+                    from = Vector3.zero;
+                }
+                Vector3 to = target.fallbackPosition;
+                Vector3 relativeDir = to - from;
+                relativeDir.y = 0f; // 수평 방향만
+                if (relativeDir.sqrMagnitude < 0.001f)
+                    return Vector3.forward;
+                return relativeDir.normalized;
+            }
+        }
+
+        /// <summary>웨이포인트 ID로 현재 경로에서 위치를 조회한다.</summary>
+        public Vector3? GetWaypointPosition(string waypointId)
+        {
+            if (activeRoute == null) return null;
+            foreach (var wp in activeRoute.waypoints)
+                if (wp.waypointId == waypointId) return wp.Position;
+            return null;
         }
 
         public float GetDistanceToNext()

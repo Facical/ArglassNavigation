@@ -11,9 +11,11 @@ namespace ARNavExperiment.DebugTools
     public class WaypointGizmoDrawer : MonoBehaviour
     {
         [Header("Display")]
+#pragma warning disable CS0414 // Android 빌드 시 미사용 경고 억제 (UNITY_EDITOR 내에서만 참조)
         [SerializeField] private bool showRouteA = true;
         [SerializeField] private bool showRouteB = true;
         [SerializeField] private bool showLabels = true;
+#pragma warning restore CS0414
 
         [Header("Colors")]
         [SerializeField] private Color routeAColor = new Color(0.2f, 0.6f, 1f, 0.8f);

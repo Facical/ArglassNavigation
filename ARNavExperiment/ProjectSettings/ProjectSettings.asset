@@ -669,8 +669,8 @@ PlayerSettings:
   webGLMemoryGeometricGrowthCap: 96
   webGLPowerPreference: 2
   scriptingDefineSymbols:
-    Android: ENABLE_INPUT_SYSTEM;ENABLE_LEGACY_INPUT_MANAGER;XR_HANDS
-    Standalone: ENABLE_INPUT_SYSTEM;ENABLE_LEGACY_INPUT_MANAGER
+    Android: ENABLE_INPUT_SYSTEM;ENABLE_LEGACY_INPUT_MANAGER;XR_HANDS;XR_ARFOUNDATION;XR_INTERACTION
+    Standalone: ENABLE_INPUT_SYSTEM;ENABLE_LEGACY_INPUT_MANAGER;XR_INTERACTION
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

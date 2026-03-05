@@ -14,10 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b131
   poiType: lecture_room
-  displayName: "B131 \uAC15\uC758\uC2E4"
-  description: "\uC11C\uCABD\uBCF5\uB3C4 \uC0C1\uB2E8 \uAC15\uC758\uC2E4"
+  displayName: B131 Classroom
+  description: Upper west corridor classroom
   capacity: 40
   equipment:
-  - "\uBE54\uD504\uB85C\uC81D\uD130"
-  mapPosition: {x: 0, y: 0}
+  - Projector
+  mapPosition: {x: -20, y: 18}
   icon: {fileID: 0}
+  displayNameKo: "B131 \uAC15\uC758\uC2E4"
+  descriptionKo: "\uC11C\uCABD \uBCF5\uB3C4 \uC0C1\uBD80 \uAC15\uC758\uC2E4"
+  equipmentKo:
+  - "\uD504\uB85C\uC81D\uD130"

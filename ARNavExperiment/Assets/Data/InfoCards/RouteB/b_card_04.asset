@@ -14,10 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardId: b_card_04
   cardType: landmark
-  title: "NE\uAD50\uCC28\uB85C \uC8FC\uBCC0 \uC2DC\uC124"
-  content: "\uB0A8\uCABD(\uB3D9\uCABD\uBCF5\uB3C4): B104-B106 \uAD50\uC218\uC2E4/\uC5F0\uAD6C\uC2E4\n\uC11C\uCABD(\uBD81\uCABD\uBCF5\uB3C4):
-    B102 \uB124\uD2B8\uC6CC\uD06C\uC5F0\uAD6C\uC2E4, B134 \uAC15\uC758\uC2E4\nNE
-    \uCF54\uB108: B101 \uC774\uC7AC\uBBFC \uAD50\uC218\uC2E4"
+  title: NE Junction Area Guide
+  content: 'South (East corridor): B104-B106 Offices/Labs
+
+    West (North corridor):
+    B102 Network Lab, B134 Classroom
+
+    NE corner: B101 Prof. Lee''s Office'
   image: {fileID: 0}
   triggerWaypointId: WP06
   autoShow: 1
+  titleKo: "\uBD81\uB3D9 \uAD50\uCC28\uB85C \uC548\uB0B4"
+  contentKo: "\uB0A8\uCABD (\uB3D9\uCABD \uBCF5\uB3C4): B104-B106 \uC5F0\uAD6C\uC2E4/\uAD50\uC218\uC2E4\n\uC11C\uCABD
+    (\uBD81\uCABD \uBCF5\uB3C4): B102 \uB124\uD2B8\uC6CC\uD06C \uC5F0\uAD6C\uC2E4,
+    B134 \uAC15\uC758\uC2E4\n\uBD81\uB3D9 \uBAA8\uC11C\uB9AC: B101 \uC774\uAD50\uC218
+    \uC5F0\uAD6C\uC2E4"

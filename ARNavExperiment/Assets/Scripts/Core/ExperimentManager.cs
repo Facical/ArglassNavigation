@@ -1,6 +1,8 @@
 using UnityEngine;
 using ARNavExperiment.Logging;
 using ARNavExperiment.Navigation;
+using ARNavExperiment.Domain.Events;
+using ARNavExperiment.Application;
 
 namespace ARNavExperiment.Core
 {
@@ -9,7 +11,6 @@ namespace ARNavExperiment.Core
         Idle,
         Relocalization,
         Setup,
-        Practice,
         Condition1,
         Survey1,
         Condition2,
@@ -44,15 +45,20 @@ namespace ARNavExperiment.Core
             Debug.Log($"[ExperimentManager] Session: {participantId}, Group: {orderGroup}, " +
                       $"Order: {session.FirstCondition}→{session.SecondCondition}, " +
                       $"Routes: {session.firstRoute}→{session.secondRoute}");
-        }
 
-        public void StartExperiment()
-        {
+            // 로거 시작 — Relocalization 경로에서도 기록되도록 여기서 초기화
             experimentStartTime = Time.time;
             string condStr = session.FirstCondition;
             EventLogger.Instance?.StartSession(session.participantId, condStr, session.firstRoute);
-            EventLogger.Instance?.LogEvent("EXPERIMENT_START",
-                extraData: $"{{\"order_group\":\"{session.orderGroup}\"}}");
+            DomainEventBus.Instance?.Publish(new SessionInitialized(
+                session.participantId, session.orderGroup, session.firstRoute, session.secondRoute));
+        }
+
+        /// <summary>
+        /// 매핑 데이터가 없을 때 직접 Setup으로 진입하는 fallback 경로.
+        /// </summary>
+        public void StartExperiment()
+        {
             TransitionTo(ExperimentState.Setup);
         }
 
@@ -67,32 +73,27 @@ namespace ARNavExperiment.Core
                 case ExperimentState.Relocalization:
                     StartRelocalization();
                     break;
-                case ExperimentState.Practice:
-                    StartPractice();
-                    break;
                 case ExperimentState.Condition1:
                     StartCondition(1);
                     break;
                 case ExperimentState.Survey1:
-                    EventLogger.Instance?.LogEvent("SURVEY_START",
-                        extraData: "{\"survey\":\"post_condition_1\"}");
+                    DomainEventBus.Instance?.Publish(new SurveyStarted("post_condition_1"));
                     break;
                 case ExperimentState.Condition2:
                     StartCondition(2);
                     break;
                 case ExperimentState.Survey2:
-                    EventLogger.Instance?.LogEvent("SURVEY_START",
-                        extraData: "{\"survey\":\"post_condition_2\"}");
+                    DomainEventBus.Instance?.Publish(new SurveyStarted("post_condition_2"));
                     break;
                 case ExperimentState.PostSurvey:
-                    EventLogger.Instance?.LogEvent("SURVEY_START",
-                        extraData: "{\"survey\":\"post_experiment\"}");
+                    DomainEventBus.Instance?.Publish(new SurveyStarted("post_experiment"));
                     break;
                 case ExperimentState.Complete:
                     CompleteExperiment();
                     break;
             }
 
+            DomainEventBus.Instance?.Publish(new ExperimentStateChanged(prev.ToString(), newState.ToString()));
             OnStateChanged?.Invoke(newState);
         }
 
@@ -102,8 +103,7 @@ namespace ARNavExperiment.Core
             {
                 case ExperimentState.Idle: TransitionTo(ExperimentState.Setup); break;
                 case ExperimentState.Relocalization: TransitionTo(ExperimentState.Setup); break;
-                case ExperimentState.Setup: TransitionTo(ExperimentState.Practice); break;
-                case ExperimentState.Practice: TransitionTo(ExperimentState.Condition1); break;
+                case ExperimentState.Setup: TransitionTo(ExperimentState.Condition1); break;
                 case ExperimentState.Condition1: TransitionTo(ExperimentState.Survey1); break;
                 case ExperimentState.Survey1: TransitionTo(ExperimentState.Condition2); break;
                 case ExperimentState.Condition2: TransitionTo(ExperimentState.Survey2); break;
@@ -117,26 +117,29 @@ namespace ARNavExperiment.Core
             // SpatialAnchorManager의 앵커 로드 시작
             // RelocalizationUI가 OnStateChanged 이벤트를 받아 UI를 표시하고
             // SpatialAnchorManager.LoadAllAnchors()를 호출
-            EventLogger.Instance?.LogEvent("RELOCALIZATION_START");
+            DomainEventBus.Instance?.Publish(RelocalizationStarted.Default);
             Debug.Log("[ExperimentManager] Relocalization 시작 — 앵커 재인식 대기 중");
-        }
-
-        private void StartPractice()
-        {
-            EventLogger.Instance?.LogEvent("PRACTICE_START");
         }
 
         private void StartCondition(int conditionNumber)
         {
+            // 이전 Condition의 미션 상태 초기화 (방어적 코딩)
+            Mission.MissionManager.Instance?.ResetState();
+
             string condition = conditionNumber == 1 ? session.FirstCondition : session.SecondCondition;
             string route = conditionNumber == 1 ? session.firstRoute : session.secondRoute;
 
             var cond = condition == "glass_only" ? ExperimentCondition.GlassOnly : ExperimentCondition.Hybrid;
             ConditionController.Instance?.SetCondition(cond);
 
-            EventLogger.Instance?.SetCondition(condition);
-            EventLogger.Instance?.LogEvent("ROUTE_START",
-                extraData: $"{{\"route\":\"{route}\",\"condition\":\"{condition}\"}}");
+            // Condition2: 추가 경로 앵커 로드 (WaypointManager.LoadRoute 전에 호출)
+            if (conditionNumber == 2)
+            {
+                SpatialAnchorManager.Instance?.LoadAdditionalRouteAnchors(route);
+            }
+
+            // SetCondition은 ObservationService.OnConditionChanged에서 처리
+            DomainEventBus.Instance?.Publish(new RouteStarted(route, condition));
 
             WaypointManager.Instance?.LoadRoute(route);
         }
@@ -144,9 +147,7 @@ namespace ARNavExperiment.Core
         private void CompleteExperiment()
         {
             float totalDuration = Time.time - experimentStartTime;
-            EventLogger.Instance?.LogEvent("EXPERIMENT_END",
-                extraData: $"{{\"total_duration_s\":{totalDuration:F0}}}");
-            EventLogger.Instance?.EndSession();
+            DomainEventBus.Instance?.Publish(new ExperimentCompleted(totalDuration));
             Debug.Log("[ExperimentManager] Experiment complete");
         }
     }

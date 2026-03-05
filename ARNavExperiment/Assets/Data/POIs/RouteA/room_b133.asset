@@ -14,11 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b133
   poiType: seminar_room
-  displayName: "B133 \uC138\uBBF8\uB098\uC2E4"
-  description: "\uC18C\uADDC\uBAA8 \uC138\uBBF8\uB098/\uD1A0\uB860\uC6A9 \uACF5\uAC04"
+  displayName: B133 Seminar Room
+  description: Small seminar/discussion room
   capacity: 15
   equipment:
+  - Whiteboard
+  - Monitor
+  mapPosition: {x: -3, y: 25}
+  icon: {fileID: 0}
+  displayNameKo: "B133 \uC138\uBBF8\uB098\uC2E4"
+  descriptionKo: "\uC18C\uADDC\uBAA8 \uC138\uBBF8\uB098/\uD1A0\uB860\uC2E4"
+  equipmentKo:
   - "\uD654\uC774\uD2B8\uBCF4\uB4DC"
   - "\uBAA8\uB2C8\uD130"
-  mapPosition: {x: 0, y: 0}
-  icon: {fileID: 0}

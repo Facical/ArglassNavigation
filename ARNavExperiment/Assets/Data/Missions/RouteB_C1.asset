@@ -14,18 +14,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   missionId: C1
   type: 2
-  briefingText: "B104 \uAD50\uC218\uC2E4\uACFC B105 \uAD50\uC218\uC2E4\uC744 \uAC01\uAC01
-    \uD655\uC778\uD558\uC138\uC694. \uB450 \uAD50\uC218\uC2E4 \uC911 \uBB38 \uC55E
-    \uC548\uB0B4\uD310\uC5D0 \uC5F0\uAD6C\uC2E4 \uC815\uBCF4\uAC00 \uB354 \uC0C1\uC138\uD558\uAC8C
-    \uAC8C\uC2DC\uB41C \uCABD\uC758 \uD638\uC2E4 \uBC88\uD638\uB97C \uC120\uD0DD\uD558\uC138\uC694."
+  briefingText: Check rooms B104 and B105 (professor offices). Select the one with
+    more detailed lab information posted on the door sign.
   targetWaypointId: WP08
-  verificationQuestion: "\uC548\uB0B4\uD310 \uC815\uBCF4\uAC00 \uB354 \uC0C1\uC138\uD55C
-    \uAD50\uC218\uC2E4\uC740?"
+  verificationQuestion: Which professor's office has more detailed sign info?
   answerOptions:
   - B104
   - B105
-  - "\uB458 \uB2E4 \uB3D9\uC77C"
-  - "\uB458 \uB2E4 \uC5C6\uC74C"
+  - Both equal
+  - Neither has info
   correctAnswerIndex: 0
   associatedTriggerId: 
   relevantPOIs:
@@ -36,20 +33,30 @@ MonoBehaviour:
   comparisonData:
     comparisonId: comp_b_b104_b105
     itemNames:
-    - "B104 \uCD5C\uD0DC\uD6C8 \uAD50\uC218\uC2E4"
-    - "B105 \uC1A1\uC601\uBBFC \uAD50\uC218\uC2E4"
+    - B104 Prof. Choi's Office
+    - B105 Prof. Song's Office
     attributes:
-    - "\uAD50\uC218\uBA85"
-    - "\uC804\uACF5 \uBD84\uC57C"
-    - "\uC548\uB0B4\uD310 \uC815\uBCF4\uB7C9"
-    - "\uC5F0\uAD6C\uC2E4 \uC704\uCE58"
+    - Professor
+    - Research Field
+    - Sign Detail Level
+    - Office Location
     values:
-    - "\uCD5C\uD0DC\uD6C8"
-    - "(\uD604\uC7A5 \uD655\uC778)"
-    - "\uC0C1\uC138 (\uD604\uC7A5 \uD655\uC778)"
-    - "\uB3D9\uCABD\uBCF5\uB3C4 \uBD81\uB2E8"
-    - "\uC1A1\uC601\uBBFC"
-    - "(\uD604\uC7A5 \uD655\uC778)"
-    - "\uAC04\uB7B5 (\uD604\uC7A5 \uD655\uC778)"
-    - "\uB3D9\uCABD\uBCF5\uB3C4 \uBD81\uB2E8"
+    - Prof. Choi
+    - (verify on-site)
+    - Detailed (verify on-site)
+    - North end of east corridor
+    - Prof. Song
+    - (verify on-site)
+    - Brief (verify on-site)
+    - North end of east corridor
   referenceImages: []
+  briefingTextKo: "B104\uC640 B105(\uAD50\uC218 \uC5F0\uAD6C\uC2E4)\uB97C \uD655\uC778\uD558\uC138\uC694.
+    \uBB38\uD328\uC5D0 \uB354 \uC0C1\uC138\uD55C \uC5F0\uAD6C\uC2E4 \uC815\uBCF4\uAC00
+    \uC788\uB294 \uCABD\uC744 \uC120\uD0DD\uD558\uC138\uC694."
+  verificationQuestionKo: "\uC5B4\uB290 \uAD50\uC218 \uC5F0\uAD6C\uC2E4\uC758 \uBB38\uD328
+    \uC815\uBCF4\uAC00 \uB354 \uC0C1\uC138\uD569\uB2C8\uAE4C?"
+  answerOptionsKo:
+  - B104
+  - B105
+  - "\uB458 \uB2E4 \uB3D9\uC77C"
+  - "\uB458 \uB2E4 \uC815\uBCF4 \uC5C6\uC74C"

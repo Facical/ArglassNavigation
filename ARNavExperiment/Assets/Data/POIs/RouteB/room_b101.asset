@@ -14,9 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b101
   poiType: professor_office
-  displayName: "B101 \uC774\uC7AC\uBBFC \uAD50\uC218\uC2E4"
-  description: "\uC774\uC7AC\uBBFC \uAD50\uC218 \uC5F0\uAD6C\uC2E4"
+  displayName: B101 Prof. Lee's Office
+  description: Prof. Jaemin Lee's office
   capacity: 2
   equipment: []
-  mapPosition: {x: 0, y: 0}
+  mapPosition: {x: 20, y: 25}
   icon: {fileID: 0}
+  displayNameKo: "B101 \uC774\uAD50\uC218 \uC5F0\uAD6C\uC2E4"
+  descriptionKo: "\uC774\uC7AC\uBBFC \uAD50\uC218 \uC5F0\uAD6C\uC2E4"
+  equipmentKo: []

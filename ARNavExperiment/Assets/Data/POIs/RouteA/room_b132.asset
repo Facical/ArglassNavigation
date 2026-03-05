@@ -14,11 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b132
   poiType: lecture_room
-  displayName: "B132 \uAC15\uC758\uC2E4"
-  description: "\uBD81\uCABD\uBCF5\uB3C4 \uAC15\uC758\uC2E4 (\uB300\uADDC\uBAA8)"
+  displayName: B132 Classroom
+  description: North corridor classroom (large)
   capacity: 60
   equipment:
-  - "\uBE54\uD504\uB85C\uC81D\uD130"
-  - "\uB9C8\uC774\uD06C"
-  mapPosition: {x: 0, y: 0}
+  - Projector
+  - Microphone
+  mapPosition: {x: -11, y: 25}
   icon: {fileID: 0}
+  displayNameKo: "B132 \uAC15\uC758\uC2E4"
+  descriptionKo: "\uBD81\uCABD \uBCF5\uB3C4 \uB300\uD615 \uAC15\uC758\uC2E4"
+  equipmentKo:
+  - "\uD504\uB85C\uC81D\uD130"
+  - "\uB9C8\uC774\uD06C"

@@ -25,14 +25,14 @@ namespace ARNavExperiment.EditorTools
             var wpA = routeA.FindPropertyRelative("waypoints");
             wpA.arraySize = 8;
 
-            SetWaypoint(wpA, 0, "WP01", new Vector3(-7f, 0f, 0f), 2.5f, "B123 강의실 앞 (남쪽복도)");
-            SetWaypoint(wpA, 1, "WP02", new Vector3(-20f, 0f, 4f), 2.5f, "B125 대강의실 앞 (서쪽)");
-            SetWaypoint(wpA, 2, "WP03", new Vector3(-20f, 0f, 0f), 3f, "SW교차로 (T1 트리거)");
-            SetWaypoint(wpA, 3, "WP04", new Vector3(-20f, 0f, 11f), 2.5f, "B129 대학원강의실 앞 (서쪽복도)");
-            SetWaypoint(wpA, 4, "WP05", new Vector3(-20f, 0f, 14f), 2.5f, "B130 대학원강의실 앞 (서쪽복도)");
-            SetWaypoint(wpA, 5, "WP06", new Vector3(-20f, 0f, 25f), 3f, "NW교차로 (T4 트리거)");
-            SetWaypoint(wpA, 6, "WP07", new Vector3(-11f, 0f, 25f), 2.5f, "B132 강의실 앞 (북쪽복도)");
-            SetWaypoint(wpA, 7, "WP08", new Vector3(-3f, 0f, 25f), 2.5f, "B133 세미나실 앞 (북쪽복도)");
+            SetWaypoint(wpA, 0, "WP01", new Vector3(-7f, 0f, 0f), 2.5f, "Near B123 Classroom (South corridor)");
+            SetWaypoint(wpA, 1, "WP02", new Vector3(-20f, 0f, 4f), 2.5f, "Near B125 Main Lecture Hall (West)");
+            SetWaypoint(wpA, 2, "WP03", new Vector3(-20f, 0f, 0f), 3f, "SW Junction (T1 trigger)");
+            SetWaypoint(wpA, 3, "WP04", new Vector3(-20f, 0f, 11f), 2.5f, "Near B129 Graduate Classroom (West corridor)");
+            SetWaypoint(wpA, 4, "WP05", new Vector3(-20f, 0f, 14f), 2.5f, "Near B130 Graduate Classroom (West corridor)");
+            SetWaypoint(wpA, 5, "WP06", new Vector3(-20f, 0f, 25f), 3f, "NW Junction (T4 trigger)");
+            SetWaypoint(wpA, 6, "WP07", new Vector3(-11f, 0f, 25f), 2.5f, "Near B132 Classroom (North corridor)");
+            SetWaypoint(wpA, 7, "WP08", new Vector3(-3f, 0f, 25f), 2.5f, "Near B133 Seminar Room (North corridor)");
 
             // === Route B (동쪽-북쪽 루프) ===
             // 계단 → 남쪽복도 동진 → SE교차로 → 동쪽복도 북상 → NE교차로 → 북쪽복도 서진
@@ -41,14 +41,14 @@ namespace ARNavExperiment.EditorTools
             var wpB = routeB.FindPropertyRelative("waypoints");
             wpB.arraySize = 8;
 
-            SetWaypoint(wpB, 0, "WP01", new Vector3(7f, 0f, 0f), 2.5f, "B121 PC실습실 앞 (남쪽복도)");
-            SetWaypoint(wpB, 1, "WP02", new Vector3(20f, 0f, 4f), 2.5f, "B116 앞 (동쪽복도 남단)");
-            SetWaypoint(wpB, 2, "WP03", new Vector3(20f, 0f, 8f), 3f, "E-T교차로 (T2 트리거)");
-            SetWaypoint(wpB, 3, "WP04", new Vector3(20f, 0f, 11f), 2.5f, "B110 앞 (동쪽복도)");
-            SetWaypoint(wpB, 4, "WP05", new Vector3(20f, 0f, 15f), 2.5f, "B107 전산지능연구실 앞 (동쪽복도)");
-            SetWaypoint(wpB, 5, "WP06", new Vector3(20f, 0f, 25f), 3f, "NE교차로 (T3 트리거)");
-            SetWaypoint(wpB, 6, "WP07", new Vector3(20f, 0f, 23f), 2.5f, "B104 교수실 앞 (동쪽복도 북단)");
-            SetWaypoint(wpB, 7, "WP08", new Vector3(20f, 0f, 22f), 2.5f, "B105 교수실 앞 (동쪽복도 북단)");
+            SetWaypoint(wpB, 0, "WP01", new Vector3(7f, 0f, 0f), 2.5f, "Near B121 Computer Lab (South corridor)");
+            SetWaypoint(wpB, 1, "WP02", new Vector3(20f, 0f, 4f), 2.5f, "Near B116 (East corridor south end)");
+            SetWaypoint(wpB, 2, "WP03", new Vector3(20f, 0f, 8f), 3f, "E-T Junction (T2 trigger)");
+            SetWaypoint(wpB, 3, "WP04", new Vector3(20f, 0f, 11f), 2.5f, "Near B110 (East corridor)");
+            SetWaypoint(wpB, 4, "WP05", new Vector3(20f, 0f, 15f), 2.5f, "Near B107 Computational Intelligence Lab (East corridor)");
+            SetWaypoint(wpB, 5, "WP06", new Vector3(20f, 0f, 25f), 3f, "NE Junction (T3 trigger)");
+            SetWaypoint(wpB, 6, "WP07", new Vector3(11f, 0f, 25f), 2.5f, "Near B104 Prof. Choi's Office (North corridor)");
+            SetWaypoint(wpB, 7, "WP08", new Vector3(3f, 0f, 25f), 2.5f, "Near B105 Prof. Song's Office (North corridor)");
 
             so.ApplyModifiedProperties();
             EditorUtility.SetDirty(wpMgr);

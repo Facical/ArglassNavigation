@@ -38,6 +38,11 @@ namespace ARNavExperiment.EditorTools
             WireBeamProCanvasController();
             WireMapZoomButtons();
             WireMappingGlassOverlay();
+            WireMappingMiniMap();
+            WireInteractiveMapController();
+            WireGlassModeStatusPanel();
+            WireHandJointVisualizer();
+            WireBeamProCoordinator();
 
             Debug.Log("[SceneWiring] 모든 참조 연결 완료!");
         }
@@ -74,14 +79,14 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireBeamProHub()
         {
-            var hub = Object.FindObjectOfType<BeamPro.BeamProHubController>();
+            var hub = Object.FindObjectOfType<Presentation.BeamPro.BeamProHubController>();
             if (hub == null) return;
             var so = new SerializedObject(hub);
             SetObjectRef(so, "hubRoot", FindGO("BeamProCanvas"));
             SetObjectRef(so, "lockedScreen", FindGO("LockedScreen"));
-            SetObjectRef(so, "mapController", FindComponent<BeamPro.InteractiveMapController>());
-            SetObjectRef(so, "infoCardManager", FindComponent<BeamPro.InfoCardManager>());
-            SetObjectRef(so, "missionRefPanel", FindComponent<BeamPro.MissionRefPanel>());
+            SetObjectRef(so, "mapController", FindComponent<Presentation.BeamPro.InteractiveMapController>());
+            SetObjectRef(so, "infoCardManager", FindComponent<Presentation.BeamPro.InfoCardManager>());
+            SetObjectRef(so, "missionRefPanel", FindComponent<Presentation.BeamPro.MissionRefPanel>());
 
             // tab panels
             var mapPanel = FindGO("MapPanel");
@@ -115,7 +120,7 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireMissionBriefingUI()
         {
-            var ui = Object.FindObjectOfType<Mission.MissionBriefingUI>();
+            var ui = Object.FindObjectOfType<Presentation.Glass.MissionBriefingUI>();
             if (ui == null) return;
             var panel = ui.gameObject;
             var so = new SerializedObject(ui);
@@ -136,7 +141,7 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireVerificationUI()
         {
-            var ui = Object.FindObjectOfType<Mission.VerificationUI>();
+            var ui = Object.FindObjectOfType<Presentation.Glass.VerificationUI>();
             if (ui == null) return;
             var panel = ui.gameObject;
             var so = new SerializedObject(ui);
@@ -177,7 +182,7 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireConfidenceRatingUI()
         {
-            var ui = Object.FindObjectOfType<UI.ConfidenceRatingUI>();
+            var ui = Object.FindObjectOfType<Presentation.Glass.ConfidenceRatingUI>();
             if (ui == null) return;
             var panel = ui.gameObject;
             var so = new SerializedObject(ui);
@@ -220,10 +225,44 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireDifficultyRatingUI()
         {
-            var ui = Object.FindObjectOfType<UI.DifficultyRatingUI>();
+            var ui = Object.FindObjectOfType<Presentation.Glass.DifficultyRatingUI>();
             if (ui == null) return;
+            var panel = ui.gameObject;
             var so = new SerializedObject(ui);
-            SetObjectRef(so, "panel", ui.gameObject);
+            SetObjectRef(so, "panel", panel);
+
+            var texts = panel.GetComponentsInChildren<TextMeshProUGUI>(true);
+            foreach (var t in texts)
+            {
+                if (t.gameObject.name == "PromptText") SetObjectRef(so, "promptText", t);
+                if (t.gameObject.name == "CurrentRatingText") SetObjectRef(so, "currentRatingText", t);
+            }
+
+            // Rating buttons (7 buttons inside RatingButtons container)
+            var ratingBar = FindChildRecursive(panel.transform, "RatingButtons");
+            if (ratingBar != null)
+            {
+                var btns = ratingBar.GetComponentsInChildren<Button>(true);
+                var btnsProp = so.FindProperty("ratingButtons");
+                if (btnsProp != null)
+                {
+                    btnsProp.arraySize = btns.Length;
+                    for (int i = 0; i < btns.Length; i++)
+                        btnsProp.GetArrayElementAtIndex(i).objectReferenceValue = btns[i];
+                }
+            }
+
+            // Confirm button
+            var allBtns = panel.GetComponentsInChildren<Button>(true);
+            foreach (var btn in allBtns)
+            {
+                if (btn.gameObject.name == "ConfirmRatingBtn")
+                {
+                    SetObjectRef(so, "confirmButton", btn);
+                    break;
+                }
+            }
+
             so.ApplyModifiedProperties();
         }
 
@@ -232,17 +271,18 @@ namespace ARNavExperiment.EditorTools
             var mgr = Object.FindObjectOfType<Mission.MissionManager>();
             if (mgr == null) return;
             var so = new SerializedObject(mgr);
-            SetObjectRef(so, "briefingUI", FindComponent<Mission.MissionBriefingUI>());
-            SetObjectRef(so, "verificationUI", FindComponent<Mission.VerificationUI>());
-            SetObjectRef(so, "confidenceRatingUI", FindComponent<UI.ConfidenceRatingUI>());
-            SetObjectRef(so, "difficultyRatingUI", FindComponent<UI.DifficultyRatingUI>());
+            SetObjectRef(so, "briefingUI", FindComponent<Presentation.Glass.MissionBriefingUI>());
+            SetObjectRef(so, "verificationUI", FindComponent<Presentation.Glass.VerificationUI>());
+            SetObjectRef(so, "confidenceRatingUI", FindComponent<Presentation.Glass.ConfidenceRatingUI>());
+            SetObjectRef(so, "difficultyRatingUI", FindComponent<Presentation.Glass.DifficultyRatingUI>());
             SetObjectRef(so, "arrowRenderer", FindComponent<Navigation.ARArrowRenderer>());
+
             so.ApplyModifiedProperties();
         }
 
         private static void WireExperimentHUD()
         {
-            var hud = Object.FindObjectOfType<UI.ExperimentHUD>();
+            var hud = Object.FindObjectOfType<Presentation.Glass.ExperimentHUD>();
             if (hud == null) return;
             var panel = hud.gameObject;
             var so = new SerializedObject(hud);
@@ -264,7 +304,7 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireExperimenterHUD()
         {
-            var hud = Object.FindObjectOfType<UI.ExperimenterHUD>(true);
+            var hud = Object.FindObjectOfType<Presentation.Experimenter.ExperimenterHUD>(true);
             if (hud == null) return;
             var panel = hud.gameObject;
             var so = new SerializedObject(hud);
@@ -280,6 +320,7 @@ namespace ARNavExperiment.EditorTools
                     case "MissionText": SetObjectRef(so, "missionText", t); break;
                     case "WPText": SetObjectRef(so, "waypointText", t); break;
                     case "AnchorText": SetObjectRef(so, "anchorStatusText", t); break;
+                    case "CaptureStatusText": SetObjectRef(so, "captureStatusText", t); break;
                 }
             }
 
@@ -291,6 +332,7 @@ namespace ARNavExperiment.EditorTools
                 {
                     case "AdvanceBtn": SetObjectRef(so, "advanceButton", btn); break;
                     case "NextMissionBtn": SetObjectRef(so, "nextMissionButton", btn); break;
+                    case "CaptureBtn": SetObjectRef(so, "captureToggleButton", btn); break;
                 }
             }
 
@@ -299,16 +341,16 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireInfoCardManager()
         {
-            var mgr = Object.FindObjectOfType<BeamPro.InfoCardManager>();
+            var mgr = Object.FindObjectOfType<Presentation.BeamPro.InfoCardManager>();
             if (mgr == null) return;
             var so = new SerializedObject(mgr);
-            SetObjectRef(so, "comparisonCard", FindComponent<BeamPro.ComparisonCardUI>());
+            SetObjectRef(so, "comparisonCard", FindComponent<Presentation.BeamPro.ComparisonCardUI>());
             so.ApplyModifiedProperties();
         }
 
         private static void WirePOIDetailPanel()
         {
-            var panel = Object.FindObjectOfType<BeamPro.POIDetailPanel>(true);
+            var panel = Object.FindObjectOfType<Presentation.BeamPro.POIDetailPanel>(true);
             if (panel == null) return;
             var so = new SerializedObject(panel);
             SetObjectRef(so, "panel", panel.gameObject);
@@ -332,7 +374,7 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireAppModeSelector()
         {
-            var selector = Object.FindObjectOfType<UI.AppModeSelector>(true);
+            var selector = Object.FindObjectOfType<Presentation.Shared.AppModeSelector>(true);
             if (selector == null) return;
             var so = new SerializedObject(selector);
 
@@ -340,15 +382,27 @@ namespace ARNavExperiment.EditorTools
             SetObjectRef(so, "mappingModeButton", FindComponent<Button>("MappingModeBtn"));
             SetObjectRef(so, "experimentModeButton", FindComponent<Button>("ExperimentModeBtn"));
             SetObjectRef(so, "statusText", FindComponent<TextMeshProUGUI>("MappingStatusText"));
-            SetObjectRef(so, "mappingModeUI", FindComponent<UI.MappingModeUI>());
+            SetObjectRef(so, "mappingModeUI", FindComponent<Presentation.Mapping.MappingModeUI>());
             SetObjectRef(so, "sessionSetupPanel", FindGO("SessionSetupPanel"));
+            SetObjectRef(so, "glassModeStatus", FindComponent<Presentation.Glass.GlassModeStatusPanel>());
+
+            // Language button
+            var langBtn = FindComponent<Button>("LanguageBtn");
+            SetObjectRef(so, "languageButton", langBtn);
+            if (langBtn != null)
+                SetObjectRef(so, "languageButtonText", langBtn.GetComponentInChildren<TextMeshProUGUI>());
+
+            // Language popup
+            SetObjectRef(so, "languagePopup", FindGO("LanguagePopup"));
+            SetObjectRef(so, "langKoButton", FindComponent<Button>("LangKoBtn"));
+            SetObjectRef(so, "langEnButton", FindComponent<Button>("LangEnBtn"));
 
             so.ApplyModifiedProperties();
         }
 
         private static void WireRelocalizationUI()
         {
-            var ui = Object.FindObjectOfType<UI.RelocalizationUI>(true);
+            var ui = Object.FindObjectOfType<Presentation.Experimenter.RelocalizationUI>(true);
             if (ui == null) return;
             var so = new SerializedObject(ui);
             var panel = FindGO("RelocalizationPanel");
@@ -410,7 +464,7 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireBeamProUIAdapters()
         {
-            var adapters = Object.FindObjectsOfType<UI.BeamProUIAdapter>(true);
+            var adapters = Object.FindObjectsOfType<Presentation.Shared.BeamProUIAdapter>(true);
             foreach (var adapter in adapters)
             {
                 var canvasGO = adapter.gameObject;
@@ -466,7 +520,7 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireBeamProCanvasController()
         {
-            var ctrl = Object.FindObjectOfType<UI.BeamProCanvasController>(true);
+            var ctrl = Object.FindObjectOfType<Presentation.BeamPro.BeamProCanvasController>(true);
             if (ctrl == null) return;
             var so = new SerializedObject(ctrl);
             SetObjectRef(so, "zoomButtonPanel", FindGO("ZoomButtonPanel"));
@@ -475,18 +529,57 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireMapZoomButtons()
         {
-            var zoom = Object.FindObjectOfType<UI.MapZoomButtons>(true);
+            var zoom = Object.FindObjectOfType<Presentation.BeamPro.MapZoomButtons>(true);
             if (zoom == null) return;
             var so = new SerializedObject(zoom);
-            SetObjectRef(so, "mapController", FindComponent<BeamPro.InteractiveMapController>());
+            SetObjectRef(so, "mapController", FindComponent<Presentation.BeamPro.InteractiveMapController>());
             SetObjectRef(so, "zoomInButton", FindComponent<Button>("ZoomInBtn"));
             SetObjectRef(so, "zoomOutButton", FindComponent<Button>("ZoomOutBtn"));
             so.ApplyModifiedProperties();
         }
 
+        private static void WireInteractiveMapController()
+        {
+            var ctrl = Object.FindObjectOfType<Presentation.BeamPro.InteractiveMapController>(true);
+            if (ctrl == null) return;
+            var so = new SerializedObject(ctrl);
+
+            var mapPanel = FindGO("MapPanel");
+            SetObjectRef(so, "mapPanel", mapPanel);
+
+            if (mapPanel != null)
+            {
+                var floorPlanImage = FindChildRecursive(mapPanel.transform, "FloorPlanImage");
+                if (floorPlanImage != null)
+                {
+                    SetObjectRef(so, "floorPlanImage", floorPlanImage.GetComponent<Image>());
+
+                    // 도면 Sprite 설정
+                    var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(
+                        "Assets/Data/FloorPlan/KIT_B1F_FloorPlan.png");
+                    if (sprite != null)
+                    {
+                        var img = floorPlanImage.GetComponent<Image>();
+                        if (img != null) img.sprite = sprite;
+                    }
+                }
+
+                var mapContainer = FindChildRecursive(mapPanel.transform, "MapContainer");
+                if (mapContainer != null)
+                    SetObjectRef(so, "markerContainer", mapContainer.GetComponent<RectTransform>());
+
+                var destPin = FindChildRecursive(mapPanel.transform, "DestinationPin");
+                if (destPin != null)
+                    SetObjectRef(so, "destinationPin", destPin.GetComponent<RectTransform>());
+            }
+
+            SetObjectRef(so, "poiDetailPanel", FindComponent<Presentation.BeamPro.POIDetailPanel>());
+            so.ApplyModifiedProperties();
+        }
+
         private static void WireMappingGlassOverlay()
         {
-            var overlay = Object.FindObjectOfType<UI.MappingGlassOverlay>(true);
+            var overlay = Object.FindObjectOfType<Presentation.Mapping.MappingGlassOverlay>(true);
             if (overlay == null) return;
             var panel = overlay.gameObject;
             var so = new SerializedObject(overlay);
@@ -503,7 +596,9 @@ namespace ARNavExperiment.EditorTools
                     case "MG_ProgressText": SetObjectRef(so, "progressText", t); break;
                     case "MG_WaypointText": SetObjectRef(so, "waypointText", t); break;
                     case "MG_QualityText": SetObjectRef(so, "qualityText", t); break;
+                    case "MG_GuidanceText": SetObjectRef(so, "guidanceText", t); break;
                     case "MG_FlashText": SetObjectRef(so, "flashText", t); break;
+                    case "MG_SlamStatusText": SetObjectRef(so, "slamStatusText", t); break;
                 }
             }
 
@@ -513,6 +608,87 @@ namespace ARNavExperiment.EditorTools
                 if (img.gameObject.name == "MG_QualityIcon")
                     SetObjectRef(so, "qualityIcon", img);
             }
+
+            // MappingMiniMap 연결
+            var miniMap = FindComponent<Presentation.Mapping.MappingMiniMap>();
+            SetObjectRef(so, "miniMap", miniMap);
+
+            so.ApplyModifiedProperties();
+        }
+
+        private static void WireMappingMiniMap()
+        {
+            var miniMap = Object.FindObjectOfType<Presentation.Mapping.MappingMiniMap>(true);
+            if (miniMap == null) return;
+            var panel = miniMap.gameObject;
+            var so = new SerializedObject(miniMap);
+
+            SetObjectRef(so, "mapPanel", panel);
+
+            var markerContainer = FindChildRecursive(panel.transform, "MG_MarkerContainer");
+            if (markerContainer != null)
+                SetObjectRef(so, "markerContainer", markerContainer.GetComponent<RectTransform>());
+
+            var images = panel.GetComponentsInChildren<Image>(true);
+            foreach (var img in images)
+            {
+                if (img.gameObject.name == "MG_FloorPlanImage")
+                {
+                    SetObjectRef(so, "floorPlanImage", img);
+                    // 도면 Sprite 설정
+                    var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(
+                        "Assets/Data/FloorPlan/KIT_B1F_FloorPlan.png");
+                    if (sprite != null)
+                        img.sprite = sprite;
+                    break;
+                }
+            }
+
+            so.ApplyModifiedProperties();
+        }
+
+        private static void WireGlassModeStatusPanel()
+        {
+            var panel = Object.FindObjectOfType<Presentation.Glass.GlassModeStatusPanel>(true);
+            if (panel == null) return;
+            var panelGO = panel.gameObject;
+            var so = new SerializedObject(panel);
+
+            SetObjectRef(so, "statusPanel", panelGO);
+
+            var texts = panelGO.GetComponentsInChildren<TextMeshProUGUI>(true);
+            foreach (var t in texts)
+            {
+                switch (t.gameObject.name)
+                {
+                    case "GMS_TitleText": SetObjectRef(so, "titleText", t); break;
+                    case "GMS_StatusText": SetObjectRef(so, "statusText", t); break;
+                    case "GMS_InstructionText": SetObjectRef(so, "instructionText", t); break;
+                }
+            }
+
+            so.ApplyModifiedProperties();
+        }
+
+        private static void WireHandJointVisualizer()
+        {
+            var mgr = Object.FindObjectOfType<Core.HandTrackingManager>(true);
+            if (mgr == null) return;
+            var so = new SerializedObject(mgr);
+            var visualizer = FindGO("HandJointVisualizer");
+            SetObjectRef(so, "handJointVisualizer", visualizer);
+            so.ApplyModifiedProperties();
+        }
+
+        private static void WireBeamProCoordinator()
+        {
+            var coord = Object.FindObjectOfType<Application.BeamProCoordinator>(true);
+            if (coord == null) return;
+            var so = new SerializedObject(coord);
+
+            var floorPlanSprite = AssetDatabase.LoadAssetAtPath<Sprite>(
+                "Assets/Data/FloorPlan/KIT_B1F_FloorPlan.png");
+            SetObjectRef(so, "floorPlanSprite", floorPlanSprite);
 
             so.ApplyModifiedProperties();
         }

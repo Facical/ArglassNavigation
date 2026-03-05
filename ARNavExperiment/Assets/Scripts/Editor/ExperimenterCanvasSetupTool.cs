@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 
 namespace ARNavExperiment.EditorTools
@@ -39,18 +40,18 @@ namespace ARNavExperiment.EditorTools
             canvas.sortingOrder = 10;
             var scaler = canvasGO.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(960, 540);
+            scaler.referenceResolution = new Vector2(1200, 540);
             scaler.matchWidthOrHeight = 0.5f;
             canvasGO.AddComponent<GraphicRaycaster>();
-            canvasGO.AddComponent<UI.BeamProUIAdapter>();
+            canvasGO.AddComponent<Presentation.Shared.BeamProUIAdapter>();
 
             // ExperimenterHUD 패널 (하단 12%)
             var hudPanel = CreatePanel("ExperimenterHUD", canvasGO.transform,
                 new Color(0.05f, 0.05f, 0.1f, 0.85f));
-            hudPanel.AddComponent<UI.ExperimenterHUD>();
+            hudPanel.AddComponent<Presentation.Experimenter.ExperimenterHUD>();
             var hudRect = hudPanel.GetComponent<RectTransform>();
             hudRect.anchorMin = new Vector2(0, 0);
-            hudRect.anchorMax = new Vector2(1, 0.15f);
+            hudRect.anchorMax = new Vector2(1, 0.12f);
             hudRect.offsetMin = new Vector2(10, 10);
             hudRect.offsetMax = new Vector2(-10, 0);
 
@@ -59,7 +60,7 @@ namespace ARNavExperiment.EditorTools
             statusArea.transform.SetParent(hudPanel.transform, false);
             var statusRect = statusArea.AddComponent<RectTransform>();
             statusRect.anchorMin = new Vector2(0, 0);
-            statusRect.anchorMax = new Vector2(0.6f, 1);
+            statusRect.anchorMax = new Vector2(0.65f, 1);
             statusRect.offsetMin = new Vector2(10, 5);
             statusRect.offsetMax = new Vector2(0, -5);
             var statusLayout = statusArea.AddComponent<HorizontalLayoutGroup>();
@@ -74,13 +75,12 @@ namespace ARNavExperiment.EditorTools
             CreateStatusText("ConditionText", statusArea.transform, "Condition: \u2014");
             CreateStatusText("MissionText", statusArea.transform, "Mission: \u2014");
             CreateStatusText("WPText", statusArea.transform, "WP: \u2014");
-            CreateStatusText("AnchorText", statusArea.transform, "Anchors: OK");
 
             // Button area (right side)
             var btnArea = new GameObject("ButtonArea");
             btnArea.transform.SetParent(hudPanel.transform, false);
             var btnRect = btnArea.AddComponent<RectTransform>();
-            btnRect.anchorMin = new Vector2(0.6f, 0);
+            btnRect.anchorMin = new Vector2(0.65f, 0);
             btnRect.anchorMax = new Vector2(1, 1);
             btnRect.offsetMin = new Vector2(10, 5);
             btnRect.offsetMax = new Vector2(-10, -5);
@@ -90,23 +90,70 @@ namespace ARNavExperiment.EditorTools
             btnLayout.childForceExpandHeight = true;
             btnLayout.childControlWidth = true;
             btnLayout.childControlHeight = true;
-            btnLayout.padding = new RectOffset(5, 5, 8, 8);
+            btnLayout.padding = new RectOffset(5, 5, 4, 4);
 
             CreateControlButton("AdvanceBtn", btnArea.transform,
                 "Advance State", new Color(0.2f, 0.5f, 0.2f, 1f));
             CreateControlButton("NextMissionBtn", btnArea.transform,
                 "Next Mission", new Color(0.2f, 0.4f, 0.6f, 1f));
+            CreateControlButton("CaptureBtn", btnArea.transform,
+                "Capture", new Color(0.5f, 0.3f, 0.1f, 1f));
 
             // FlowPanelArea 컨테이너 (HUD 위 전체 영역)
             var flowPanelArea = new GameObject("FlowPanelArea");
             flowPanelArea.transform.SetParent(canvasGO.transform, false);
             var flowRect = flowPanelArea.AddComponent<RectTransform>();
-            flowRect.anchorMin = new Vector2(0, 0.15f);
+            flowRect.anchorMin = new Vector2(0, 0.12f);
             flowRect.anchorMax = new Vector2(1, 1);
             flowRect.offsetMin = Vector2.zero;
             flowRect.offsetMax = Vector2.zero;
 
+            // === EventSystem 입력 모듈 검증 ===
+            ValidateEventSystemInputModule();
+
             Debug.Log("[ExperimenterCanvasSetup] ExperimenterCanvas 구성 완료!");
+        }
+
+        /// <summary>EventSystem에 입력 모듈이 존재하는지 검증</summary>
+        private static void ValidateEventSystemInputModule()
+        {
+            var eventSystem = Object.FindObjectOfType<EventSystem>();
+            if (eventSystem == null)
+            {
+                Debug.LogError(
+                    "[ExperimenterCanvasSetup] EventSystem이 씬에 없습니다!\n" +
+                    "터치/마우스 입력이 작동하지 않습니다.\n" +
+                    "ARNav > Setup XR Origin (XREAL)을 먼저 실행하세요.");
+                return;
+            }
+
+            var inputModule = eventSystem.GetComponent<BaseInputModule>();
+            if (inputModule == null)
+            {
+                Debug.LogError(
+                    "[ExperimenterCanvasSetup] EventSystem에 입력 모듈이 없습니다!\n" +
+                    "XRUIInputModule 또는 InputSystemUIInputModule이 필요합니다.\n" +
+                    "ARNav > Setup XR Origin (XREAL)을 먼저 실행하세요.");
+                return;
+            }
+
+#if XR_INTERACTION
+            var xrUIModule = eventSystem.GetComponent<UnityEngine.XR.Interaction.Toolkit.UI.XRUIInputModule>();
+            if (xrUIModule == null)
+            {
+                Debug.LogWarning(
+                    "[ExperimenterCanvasSetup] EventSystem에 XRUIInputModule이 없습니다.\n" +
+                    "핸드트래킹 UI 인터랙션이 작동하지 않을 수 있습니다.");
+            }
+            else if (!xrUIModule.enableTouchInput)
+            {
+                Debug.LogWarning(
+                    "[ExperimenterCanvasSetup] XRUIInputModule.enableTouchInput이 false입니다.\n" +
+                    "Beam Pro 터치 입력이 작동하지 않을 수 있습니다.");
+            }
+#endif
+
+            Debug.Log("[ExperimenterCanvasSetup] EventSystem 입력 모듈 검증 통과");
         }
 
         private static GameObject CreatePanel(string name, Transform parent, Color color)
@@ -131,6 +178,9 @@ namespace ARNavExperiment.EditorTools
             var tmp = go.AddComponent<TextMeshProUGUI>();
             tmp.text = text;
             tmp.fontSize = 14;
+            tmp.enableAutoSizing = true;
+            tmp.fontSizeMin = 7;
+            tmp.fontSizeMax = 14;
             tmp.color = Color.white;
             tmp.alignment = TextAlignmentOptions.MidlineLeft;
         }
@@ -155,6 +205,9 @@ namespace ARNavExperiment.EditorTools
             var tmp = textGO.AddComponent<TextMeshProUGUI>();
             tmp.text = label;
             tmp.fontSize = 16;
+            tmp.enableAutoSizing = true;
+            tmp.fontSizeMin = 11;
+            tmp.fontSizeMax = 16;
             tmp.color = Color.white;
             tmp.alignment = TextAlignmentOptions.Center;
         }

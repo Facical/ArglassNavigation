@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEngine.EventSystems;
 using Unity.XR.CoreUtils;
+using ARNavExperiment.Logging;
 using ARNavExperiment.DebugTools;
 using ARNavExperiment.Navigation;
 
@@ -15,14 +16,32 @@ namespace ARNavExperiment.EditorTools
             int added = 0;
 
             // 1. Ensure EventSystem exists (UI 클릭에 필수)
-            if (Object.FindObjectOfType<EventSystem>() == null)
+            var existingES = Object.FindObjectOfType<EventSystem>();
+            if (existingES == null)
             {
                 var esGO = new GameObject("EventSystem");
                 Undo.RegisterCreatedObjectUndo(esGO, "Create EventSystem");
                 esGO.AddComponent<EventSystem>();
+#if XR_INTERACTION
+                esGO.AddComponent<UnityEngine.XR.Interaction.Toolkit.UI.XRUIInputModule>();
+#else
                 esGO.AddComponent<StandaloneInputModule>();
+#endif
                 added++;
                 Debug.Log("[DebugSetup] EventSystem 생성");
+            }
+            else
+            {
+                // 기존 EventSystem에 XRUIInputModule 확보
+#if XR_INTERACTION
+                if (existingES.GetComponent<UnityEngine.XR.Interaction.Toolkit.UI.XRUIInputModule>() == null)
+                {
+                    var standalone = existingES.GetComponent<StandaloneInputModule>();
+                    if (standalone) Object.DestroyImmediate(standalone);
+                    Undo.AddComponent<UnityEngine.XR.Interaction.Toolkit.UI.XRUIInputModule>(existingES.gameObject);
+                    Debug.Log("[DebugSetup] EventSystem에 XRUIInputModule 추가");
+                }
+#endif
             }
 
             // 2. Add EditorPlayerController to Main Camera
@@ -95,7 +114,35 @@ namespace ARNavExperiment.EditorTools
                 Debug.Log("[DebugSetup] 테스트 환경 생성 (바닥 + 웨이포인트 마커)");
             }
 
-            // 5. Fix camera for editor testing
+            // 5. Add GlassViewCapture
+            var expSystem = GameObject.Find("--- Experiment System ---");
+            if (expSystem != null)
+            {
+                var captureGO = expSystem.transform.Find("GlassViewCapture");
+                if (captureGO == null)
+                {
+                    var go = new GameObject("GlassViewCapture");
+                    Undo.RegisterCreatedObjectUndo(go, "Create GlassViewCapture");
+                    go.transform.SetParent(expSystem.transform);
+                    go.AddComponent<GlassViewCapture>();
+                    added++;
+                    Debug.Log("[DebugSetup] GlassViewCapture → Experiment System");
+                }
+            }
+            else
+            {
+                // Experiment System이 없으면 독립 오브젝트로 생성
+                if (Object.FindObjectOfType<GlassViewCapture>() == null)
+                {
+                    var go = new GameObject("GlassViewCapture");
+                    Undo.RegisterCreatedObjectUndo(go, "Create GlassViewCapture");
+                    go.AddComponent<GlassViewCapture>();
+                    added++;
+                    Debug.Log("[DebugSetup] GlassViewCapture 독립 생성");
+                }
+            }
+
+            // 6. Fix camera for editor testing
             if (cam != null)
             {
                 cam.clearFlags = CameraClearFlags.SolidColor;
@@ -130,7 +177,7 @@ namespace ARNavExperiment.EditorTools
                 }
             }
 
-            // 7. Disable hand ray interactors in editor (마우스 클릭 사용)
+            // 8. Disable hand ray interactors in editor (마우스 클릭 사용)
             var rightHandRay = GameObject.Find("Right Hand Ray");
             if (rightHandRay != null) rightHandRay.SetActive(false);
             var leftHandRay = GameObject.Find("Left Hand Ray");

@@ -167,7 +167,62 @@ namespace ARNavExperiment.EditorTools
                 issues.AppendLine("[O] Input System: 활성화됨");
             }
 
-            // 8. XR Plugin
+            // 8. XREAL Settings 검증
+            var xrealSettings = Unity.XR.XREAL.XREALSettings.GetSettings();
+            if (xrealSettings == null)
+            {
+                issues.AppendLine("[ ] XREAL Settings를 찾을 수 없습니다.");
+                issues.AppendLine("    → XR Plug-in Management > Android > XREAL 활성화 필요");
+                issueCount++;
+            }
+            else
+            {
+                // 8a. Stereo Rendering (Multi-view = SinglePassInstanced)
+                if (xrealSettings.StereoRendering != Unity.XR.XREAL.StereoRenderingMode.SinglePassInstanced)
+                {
+                    issues.AppendLine($"[ ] Stereo Rendering이 Multi-view가 아닙니다 ({xrealSettings.StereoRendering}).");
+                    xrealSettings.StereoRendering = Unity.XR.XREAL.StereoRenderingMode.SinglePassInstanced;
+                    EditorUtility.SetDirty(xrealSettings);
+                    issues.AppendLine("    → 자동 수정: Multi-view (SinglePassInstanced) 적용됨");
+                    issueCount++;
+                }
+                else
+                {
+                    issues.AppendLine("[O] Stereo Rendering: Multi-view");
+                }
+
+#if UNITY_ANDROID || UNITY_IOS
+                // 8b. Initial Input Source (ControllerAndHands: SDK 네이티브 HandRay 데이터 파이프라인 완전 활성화)
+                if (xrealSettings.InitialInputSource != Unity.XR.XREAL.InputSource.ControllerAndHands)
+                {
+                    issues.AppendLine($"[ ] Initial Input Source가 ControllerAndHands가 아닙니다 ({xrealSettings.InitialInputSource}).");
+                    xrealSettings.InitialInputSource = Unity.XR.XREAL.InputSource.ControllerAndHands;
+                    EditorUtility.SetDirty(xrealSettings);
+                    issues.AppendLine("    → 자동 수정: ControllerAndHands 적용됨");
+                    issueCount++;
+                }
+                else
+                {
+                    issues.AppendLine("[O] Input Source: ControllerAndHands");
+                }
+
+                // 8c. Multi Resume
+                if (!xrealSettings.SupportMultiResume)
+                {
+                    issues.AppendLine("[ ] Multi Resume이 비활성 상태입니다 (Beam Pro 듀얼 스크린 필수).");
+                    xrealSettings.SupportMultiResume = true;
+                    EditorUtility.SetDirty(xrealSettings);
+                    issues.AppendLine("    → 자동 수정: 활성화됨");
+                    issueCount++;
+                }
+                else
+                {
+                    issues.AppendLine("[O] Multi Resume: 활성화됨");
+                }
+#endif
+            }
+
+            // 9. XR Plugin (수동 확인)
             issues.AppendLine("\n[수동 확인 필요]");
             issues.AppendLine("- XR Plug-in Management > Android > XREAL 활성화 여부");
             issues.AppendLine("- XREAL SDK 3.1.0 설치 여부");

@@ -14,10 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardId: a_card_02
   cardType: poi_detail
-  title: "SW\uAD50\uCC28\uB85C \uC8FC\uBCC0 \uC2DC\uC124 \uC548\uB0B4"
-  content: "\uC88C\uCE21(\uC11C\uCABD): B125 \uB300\uAC15\uC758\uC2E4, B127 \uC2DC\uCCAD\uAC01\uC2E4\n\uC6B0\uCE21(\uB0A8\uCABD):
-    B123 \uAC15\uC758\uC2E4, \uC911\uC559 \uACC4\uB2E8\n\uC9C1\uC9C4(\uBD81\uCABD):
-    B128 \uD559\uC0DD\uC0C1\uB2F4\uC2E4, B129-B131 \uAC15\uC758\uC2E4"
+  title: SW Junction Area Guide
+  content: 'Left (West): B125 Main Lecture Hall, B127 AV Room
+
+    Right (South):
+    B123 Classroom, Central Stairs
+
+    Straight (North): B128 Student Counseling,
+    B129-B131 Classrooms'
   image: {fileID: 0}
   triggerWaypointId: WP03
   autoShow: 1
+  titleKo: "\uB0A8\uC11C \uAD50\uCC28\uB85C \uC548\uB0B4"
+  contentKo: "\uC67C\uCABD (\uC11C\uCABD): B125 \uB300\uAC15\uC758\uC2E4, B127 \uC2DC\uCCAD\uAC01\uC2E4\n\uC624\uB978\uCABD
+    (\uB0A8\uCABD): B123 \uAC15\uC758\uC2E4, \uC911\uC559 \uACC4\uB2E8\n\uC9C1\uC9C4
+    (\uBD81\uCABD): B128 \uD559\uC0DD \uC0C1\uB2F4\uC2E4, B129-B131 \uAC15\uC758\uC2E4"

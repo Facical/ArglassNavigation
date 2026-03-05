@@ -14,10 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardId: a_card_05
   cardType: comparison
-  title: "B132 vs B133 \uBE44\uAD50\uD45C"
-  content: "B132: \uAC15\uC758\uC2E4 (60\uBA85), \uBE54\uD504\uB85C\uC81D\uD130/\uB9C8\uC774\uD06C\nB133:
-    \uC138\uBBF8\uB098\uC2E4 (15\uBA85), \uD654\uC774\uD2B8\uBCF4\uB4DC/\uBAA8\uB2C8\uD130\n\u2192
-    \uC18C\uADDC\uBAA8 \uD1A0\uB860\uC5D0\uB294 B133\uC774 \uC801\uD569"
+  title: B132 vs B133 Comparison
+  content: "B132: Classroom (60), Projector/Microphone\nB133: Seminar Room (15),
+    Whiteboard/Monitor\n\u2192 B133 is suitable for small group discussions"
   image: {fileID: 0}
   triggerWaypointId: WP07
   autoShow: 1
+  titleKo: "B132 vs B133 \uBE44\uAD50"
+  contentKo: "B132: \uAC15\uC758\uC2E4 (60\uBA85), \uD504\uB85C\uC81D\uD130/\uB9C8\uC774\uD06C\nB133:
+    \uC138\uBBF8\uB098\uC2E4 (15\uBA85), \uD654\uC774\uD2B8\uBCF4\uB4DC/\uBAA8\uB2C8\uD130\n\u2192
+    B133\uC774 \uC18C\uADF8\uB8F9 \uD1A0\uB860\uC5D0 \uC801\uD569"

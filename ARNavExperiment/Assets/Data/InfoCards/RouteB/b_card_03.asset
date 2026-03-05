@@ -14,10 +14,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardId: b_card_03
   cardType: sign_card
-  title: "B107 \uC804\uC0B0\uC9C0\uB2A5\uC5F0\uAD6C\uC2E4 \uC548\uB0B4"
-  content: "\uC5F0\uAD6C \uBD84\uC57C: \uC804\uC0B0 \uC9C0\uB2A5\n\uC218\uC6A9\uC778\uC6D0:
-    10\uBA85\n\uC8FC\uC694 \uC7A5\uBE44: \uC11C\uBC84, \uC6CC\uD06C\uC2A4\uD14C\uC774\uC158\n\uC704\uCE58:
-    \uB3D9\uCABD\uBCF5\uB3C4 \uC911\uB2E8"
+  title: B107 Computational Intelligence Lab Guide
+  content: 'Research area: Computational Intelligence
+
+    Capacity: 10
+
+    Equipment:
+    Server, Workstation
+
+    Location: Mid-section of east corridor'
   image: {fileID: 0}
   triggerWaypointId: WP05
   autoShow: 1
+  titleKo: "B107 \uC804\uC0B0\uC9C0\uB2A5\uC5F0\uAD6C\uC2E4 \uC548\uB0B4"
+  contentKo: "\uC5F0\uAD6C \uBD84\uC57C: \uC804\uC0B0\uC9C0\uB2A5\n\uC218\uC6A9\uC778\uC6D0:
+    10\n\uC7A5\uBE44: \uC11C\uBC84, \uC6CC\uD06C\uC2A4\uD14C\uC774\uC158\n\uC704\uCE58:
+    \uB3D9\uCABD \uBCF5\uB3C4 \uC911\uAC04"

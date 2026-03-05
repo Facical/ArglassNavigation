@@ -14,11 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b106
   poiType: research_lab
-  displayName: "B106 \uC9C0\uB2A5\uACF5\uD559\uC5F0\uAD6C\uC2E4"
-  description: "\uC9C0\uB2A5\uACF5\uD559 \uC5F0\uAD6C\uC2E4"
+  displayName: B106 Intelligent Engineering Lab
+  description: Intelligent engineering lab
   capacity: 10
   equipment:
+  - Server
+  - Workstation
+  mapPosition: {x: 20, y: 18}
+  icon: {fileID: 0}
+  displayNameKo: "B106 \uC9C0\uB2A5\uACF5\uD559\uC5F0\uAD6C\uC2E4"
+  descriptionKo: "\uC9C0\uB2A5\uACF5\uD559 \uC5F0\uAD6C\uC2E4"
+  equipmentKo:
   - "\uC11C\uBC84"
   - "\uC6CC\uD06C\uC2A4\uD14C\uC774\uC158"
-  mapPosition: {x: 0, y: 0}
-  icon: {fileID: 0}

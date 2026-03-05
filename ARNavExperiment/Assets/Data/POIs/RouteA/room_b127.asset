@@ -14,12 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b127
   poiType: av_room
-  displayName: "B127 \uC2DC\uCCAD\uAC01\uC2E4"
-  description: "\uC2DC\uCCAD\uAC01 \uC7A5\uBE44 \uAC16\uCD98 \uB2E4\uBAA9\uC801 \uACF5\uAC04"
+  displayName: B127 AV Room
+  description: Multi-purpose room with AV equipment
   capacity: 50
   equipment:
+  - Large Screen
+  - Audio System
+  - Projector
+  mapPosition: {x: -20, y: 0}
+  icon: {fileID: 0}
+  displayNameKo: "B127 \uC2DC\uCCAD\uAC01\uC2E4"
+  descriptionKo: "\uC2DC\uCCAD\uAC01 \uC124\uBE44\uAC00 \uAC16\uCDB0\uC9C4 \uB2E4\uBAA9\uC801\uC2E4"
+  equipmentKo:
   - "\uB300\uD615 \uC2A4\uD06C\uB9B0"
   - "\uC74C\uD5A5 \uC2DC\uC2A4\uD15C"
-  - "\uBE54\uD504\uB85C\uC81D\uD130"
-  mapPosition: {x: 0, y: 0}
-  icon: {fileID: 0}
+  - "\uD504\uB85C\uC81D\uD130"
