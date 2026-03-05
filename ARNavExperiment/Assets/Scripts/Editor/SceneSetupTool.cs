@@ -756,6 +756,7 @@ namespace ARNavExperiment.EditorTools
         public static void CleanupExistingObjects()
         {
             string[] rootObjects = {
+                "--- Application ---",
                 "--- Experiment System ---",
                 "--- Logging ---",
                 "--- AR System ---",
