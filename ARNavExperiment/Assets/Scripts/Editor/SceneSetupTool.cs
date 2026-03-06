@@ -520,8 +520,8 @@ namespace ARNavExperiment.EditorTools
             var hud = CreatePanel("ExperimentHUD", expCanvas.transform, BG_HUD);
             hud.AddComponent<Presentation.Glass.ExperimentHUD>();
             var hudRect = hud.GetComponent<RectTransform>();
-            hudRect.anchorMin = new Vector2(0.08f, 0.80f);
-            hudRect.anchorMax = new Vector2(0.45f, 0.97f);
+            hudRect.anchorMin = new Vector2(0.08f, 0.74f);
+            hudRect.anchorMax = new Vector2(0.45f, 0.91f);
             hudRect.pivot = new Vector2(0.5f, 0.5f);
             hudRect.sizeDelta = Vector2.zero;
             hudRect.anchoredPosition = Vector2.zero;
@@ -750,6 +750,163 @@ namespace ARNavExperiment.EditorTools
             gmsInstrRect.offsetMin = Vector2.zero;
             gmsInstrRect.offsetMax = Vector2.zero;
 
+            // === GlassFlowUI (GlassOnly 조건 전용 플로우 제어) ===
+            CreateGlassFlowPanels(expCanvas.transform);
+
+        }
+
+        private static void CreateGlassFlowPanels(Transform canvasTransform)
+        {
+            // --- GlassFlowUI 컴포넌트 ---
+            var flowUIGO = CreateGameObject("GlassFlowUI", canvasTransform);
+            flowUIGO.AddComponent<Presentation.Glass.GlassFlowUI>();
+
+            // --- GlassRelocPanel ---
+            var relocPanel = CreateGlassFlowPanel("GlassRelocPanel", canvasTransform);
+
+            var relocProgressText = CreateTMPText("GF_RelocProgressText", relocPanel.transform, "Scanning...");
+            relocProgressText.fontSize = FS_BODY;
+            relocProgressText.alignment = TextAlignmentOptions.Center;
+            var relocProgressTextRect = relocProgressText.GetComponent<RectTransform>();
+            relocProgressTextRect.anchorMin = new Vector2(0.1f, 0.55f);
+            relocProgressTextRect.anchorMax = new Vector2(0.9f, 0.75f);
+            relocProgressTextRect.offsetMin = Vector2.zero;
+            relocProgressTextRect.offsetMax = Vector2.zero;
+
+            // Progress bar background
+            var relocBarBG = CreateGameObject("GF_RelocBarBG", relocPanel.transform);
+            var relocBarBGRect = relocBarBG.AddComponent<RectTransform>();
+            relocBarBGRect.anchorMin = new Vector2(0.2f, 0.42f);
+            relocBarBGRect.anchorMax = new Vector2(0.8f, 0.48f);
+            relocBarBGRect.offsetMin = Vector2.zero;
+            relocBarBGRect.offsetMax = Vector2.zero;
+            var relocBarBGImg = relocBarBG.AddComponent<Image>();
+            relocBarBGImg.color = new Color(0.2f, 0.2f, 0.2f);
+
+            var relocBarFill = CreateGameObject("GF_RelocProgressBar", relocBarBG.transform);
+            var relocBarFillRect = relocBarFill.AddComponent<RectTransform>();
+            relocBarFillRect.anchorMin = Vector2.zero;
+            relocBarFillRect.anchorMax = Vector2.one;
+            relocBarFillRect.offsetMin = Vector2.zero;
+            relocBarFillRect.offsetMax = Vector2.zero;
+            var relocBarFillImg = relocBarFill.AddComponent<Image>();
+            relocBarFillImg.color = new Color(0.2f, 0.6f, 1f);
+            relocBarFillImg.type = Image.Type.Filled;
+            relocBarFillImg.fillMethod = Image.FillMethod.Horizontal;
+            relocBarFillImg.fillAmount = 0f;
+
+            var relocStatusText = CreateTMPText("GF_RelocStatusText", relocPanel.transform, "");
+            relocStatusText.fontSize = FS_HUD;
+            relocStatusText.alignment = TextAlignmentOptions.Center;
+            relocStatusText.color = new Color(0.7f, 0.7f, 0.7f);
+            var relocStatusRect = relocStatusText.GetComponent<RectTransform>();
+            relocStatusRect.anchorMin = new Vector2(0.1f, 0.3f);
+            relocStatusRect.anchorMax = new Vector2(0.9f, 0.4f);
+            relocStatusRect.offsetMin = Vector2.zero;
+            relocStatusRect.offsetMax = Vector2.zero;
+
+            var relocProceedBtn = CreateUIButton("GF_RelocProceedBtn", relocPanel.transform, "Proceed");
+            relocProceedBtn.GetComponent<Image>().color = BTN_PRIMARY;
+            var relocBtnText = relocProceedBtn.GetComponentInChildren<TextMeshProUGUI>();
+            if (relocBtnText) relocBtnText.fontSize = FS_CONFIRM_BTN;
+            var relocBtnRect = relocProceedBtn.GetComponent<RectTransform>();
+            relocBtnRect.anchorMin = new Vector2(0.25f, 0.12f);
+            relocBtnRect.anchorMax = new Vector2(0.75f, 0.25f);
+            relocBtnRect.offsetMin = Vector2.zero;
+            relocBtnRect.offsetMax = Vector2.zero;
+            relocProceedBtn.gameObject.SetActive(false);
+
+            relocPanel.SetActive(false);
+
+            // --- GlassSetupPanel ---
+            var setupPanel = CreateGlassFlowPanel("GlassSetupPanel", canvasTransform);
+            CreateGlassFlowContent(setupPanel, "GF_SetupTitle", "Experiment Setup",
+                "GF_SetupDetail", "", "GF_SetupContinueBtn", "Continue");
+            setupPanel.SetActive(false);
+
+            // --- GlassRunningStartPanel ---
+            var runningPanel = CreateGlassFlowPanel("GlassRunningStartPanel", canvasTransform);
+            CreateGlassFlowContent(runningPanel, "GF_RunningTitle", "Start Navigation",
+                "GF_RunningDetail", "", "GF_RunningStartBtn", "Start");
+            runningPanel.SetActive(false);
+
+            // --- GlassSurveyPanel ---
+            var surveyPanel = CreateGlassFlowPanel("GlassSurveyPanel", canvasTransform);
+            CreateGlassFlowContent(surveyPanel, "GF_SurveyTitle", "Survey Time",
+                "GF_SurveyInstr", "", "GF_SurveyDoneBtn", "Done");
+            surveyPanel.SetActive(false);
+
+            // --- GlassCompletionPanel ---
+            var completionPanel = CreateGlassFlowPanel("GlassCompletionPanel", canvasTransform);
+
+            var compTitle = CreateTMPText("GF_CompletionTitle", completionPanel.transform, "Complete!");
+            compTitle.fontSize = FS_TITLE;
+            compTitle.fontStyle = FontStyles.Bold;
+            compTitle.alignment = TextAlignmentOptions.Center;
+            var compTitleRect = compTitle.GetComponent<RectTransform>();
+            compTitleRect.anchorMin = new Vector2(0.1f, 0.6f);
+            compTitleRect.anchorMax = new Vector2(0.9f, 0.8f);
+            compTitleRect.offsetMin = Vector2.zero;
+            compTitleRect.offsetMax = Vector2.zero;
+
+            var compDetail = CreateTMPText("GF_CompletionDetail", completionPanel.transform, "Experiment complete!\nThank you.");
+            compDetail.fontSize = FS_BODY;
+            compDetail.alignment = TextAlignmentOptions.Center;
+            var compDetailRect = compDetail.GetComponent<RectTransform>();
+            compDetailRect.anchorMin = new Vector2(0.1f, 0.3f);
+            compDetailRect.anchorMax = new Vector2(0.9f, 0.55f);
+            compDetailRect.offsetMin = Vector2.zero;
+            compDetailRect.offsetMax = Vector2.zero;
+
+            completionPanel.SetActive(false);
+        }
+
+        private static GameObject CreateGlassFlowPanel(string name, Transform parent)
+        {
+            var panel = CreatePanel(name, parent, BG_PANEL);
+            var rect = panel.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.1f, 0.12f);
+            rect.anchorMax = new Vector2(0.9f, 0.88f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            panel.AddComponent<Presentation.Shared.PanelFader>();
+            return panel;
+        }
+
+        private static void CreateGlassFlowContent(GameObject panel,
+            string titleName, string titleText,
+            string detailName, string detailText,
+            string btnName, string btnLabel)
+        {
+            var title = CreateTMPText(titleName, panel.transform, titleText);
+            title.fontSize = FS_TITLE;
+            title.fontStyle = FontStyles.Bold;
+            title.alignment = TextAlignmentOptions.Center;
+            var titleRect = title.GetComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0.1f, 0.7f);
+            titleRect.anchorMax = new Vector2(0.9f, 0.88f);
+            titleRect.offsetMin = Vector2.zero;
+            titleRect.offsetMax = Vector2.zero;
+
+            var detail = CreateTMPText(detailName, panel.transform, detailText);
+            detail.fontSize = FS_BODY;
+            detail.alignment = TextAlignmentOptions.Center;
+            detail.enableWordWrapping = true;
+            var detailRect = detail.GetComponent<RectTransform>();
+            detailRect.anchorMin = new Vector2(0.1f, 0.3f);
+            detailRect.anchorMax = new Vector2(0.9f, 0.65f);
+            detailRect.offsetMin = Vector2.zero;
+            detailRect.offsetMax = Vector2.zero;
+
+            var btn = CreateUIButton(btnName, panel.transform, btnLabel);
+            btn.GetComponent<Image>().color = BTN_PRIMARY;
+            var btnText = btn.GetComponentInChildren<TextMeshProUGUI>();
+            if (btnText) btnText.fontSize = FS_CONFIRM_BTN;
+            var btnRect = btn.GetComponent<RectTransform>();
+            btnRect.anchorMin = new Vector2(0.25f, 0.12f);
+            btnRect.anchorMax = new Vector2(0.75f, 0.25f);
+            btnRect.offsetMin = Vector2.zero;
+            btnRect.offsetMax = Vector2.zero;
         }
 
         /// <summary>기존 ARNav 오브젝트를 모두 삭제하여 중복 방지</summary>

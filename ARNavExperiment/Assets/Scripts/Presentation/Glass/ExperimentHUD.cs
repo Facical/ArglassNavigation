@@ -60,7 +60,7 @@ namespace ARNavExperiment.Presentation.Glass
             if (stateText) stateText.text = string.Format(LocalizationManager.Get("hud.state"), state);
             if (conditionText)
             {
-                if (state == ExperimentState.Condition1 || state == ExperimentState.Condition2)
+                if (state == ExperimentState.Running)
                     conditionText.text = string.Format(LocalizationManager.Get("hud.condition"), ConditionController.Instance?.CurrentCondition);
                 else
                     conditionText.text = LocalizationManager.Get("hud.condition_none");

@@ -11,11 +11,8 @@ namespace ARNavExperiment.Core
         Idle,
         Relocalization,
         Setup,
-        Condition1,
-        Survey1,
-        Condition2,
-        Survey2,
-        PostSurvey,
+        Running,
+        Survey,
         Complete
     }
 
@@ -41,19 +38,14 @@ namespace ARNavExperiment.Core
             DontDestroyOnLoad(gameObject);
         }
 
-        public void InitializeSession(string participantId, string orderGroup)
+        public void InitializeSession(string participantId, string condition, string route)
         {
-            session = new ParticipantSession(participantId, orderGroup);
-            Debug.Log($"[ExperimentManager] Session: {participantId}, Group: {orderGroup}, " +
-                      $"Order: {session.FirstCondition}→{session.SecondCondition}, " +
-                      $"Routes: {session.firstRoute}→{session.secondRoute}");
+            session = new ParticipantSession(participantId, condition, route);
+            Debug.Log($"[ExperimentManager] Session: {participantId}, Condition: {condition}, Route: {route}");
 
-            // 로거 시작 — Relocalization 경로에서도 기록되도록 여기서 초기화
             experimentStartTime = Time.time;
-            string condStr = session.FirstCondition;
-            EventLogger.Instance?.StartSession(session.participantId, condStr, session.firstRoute);
-            DomainEventBus.Instance?.Publish(new SessionInitialized(
-                session.participantId, session.orderGroup, session.firstRoute, session.secondRoute));
+            EventLogger.Instance?.StartSession(participantId, condition, route);
+            DomainEventBus.Instance?.Publish(new SessionInitialized(participantId, condition, route));
         }
 
         /// <summary>
@@ -75,20 +67,11 @@ namespace ARNavExperiment.Core
                 case ExperimentState.Relocalization:
                     StartRelocalization();
                     break;
-                case ExperimentState.Condition1:
-                    StartCondition(1);
+                case ExperimentState.Running:
+                    StartCondition();
                     break;
-                case ExperimentState.Survey1:
-                    DomainEventBus.Instance?.Publish(new SurveyStarted("post_condition_1"));
-                    break;
-                case ExperimentState.Condition2:
-                    StartCondition(2);
-                    break;
-                case ExperimentState.Survey2:
-                    DomainEventBus.Instance?.Publish(new SurveyStarted("post_condition_2"));
-                    break;
-                case ExperimentState.PostSurvey:
-                    DomainEventBus.Instance?.Publish(new SurveyStarted("post_experiment"));
+                case ExperimentState.Survey:
+                    DomainEventBus.Instance?.Publish(new SurveyStarted("post_condition"));
                     break;
                 case ExperimentState.Complete:
                     CompleteExperiment();
@@ -108,48 +91,35 @@ namespace ARNavExperiment.Core
             {
                 case ExperimentState.Idle: TransitionTo(ExperimentState.Setup); break;
                 case ExperimentState.Relocalization: TransitionTo(ExperimentState.Setup); break;
-                case ExperimentState.Setup: TransitionTo(ExperimentState.Condition1); break;
-                case ExperimentState.Condition1: TransitionTo(ExperimentState.Survey1); break;
-                case ExperimentState.Survey1: TransitionTo(ExperimentState.Condition2); break;
-                case ExperimentState.Condition2: TransitionTo(ExperimentState.Survey2); break;
-                case ExperimentState.Survey2: TransitionTo(ExperimentState.PostSurvey); break;
-                case ExperimentState.PostSurvey: TransitionTo(ExperimentState.Complete); break;
+                case ExperimentState.Setup: TransitionTo(ExperimentState.Running); break;
+                case ExperimentState.Running: TransitionTo(ExperimentState.Survey); break;
+                case ExperimentState.Survey: TransitionTo(ExperimentState.Complete); break;
             }
         }
 
         private void StartRelocalization()
         {
-            // SpatialAnchorManager의 앵커 로드 시작
-            // RelocalizationUI가 OnStateChanged 이벤트를 받아 UI를 표시하고
-            // SpatialAnchorManager.LoadAllAnchors()를 호출
+            // GlassOnly 시 Beam Pro를 즉시 비활성화하기 위해 조건 조기 적용
+            var cond = session.condition == "glass_only" ? ExperimentCondition.GlassOnly : ExperimentCondition.Hybrid;
+            ConditionController.Instance?.SetCondition(cond);
+
             DomainEventBus.Instance?.Publish(RelocalizationStarted.Default);
             Debug.Log("[ExperimentManager] Relocalization 시작 — 앵커 재인식 대기 중");
         }
 
-        private void StartCondition(int conditionNumber)
+        private void StartCondition()
         {
-            // 이전 Condition의 미션 상태 초기화 (방어적 코딩)
             Mission.MissionManager.Instance?.ResetState();
 
-            string condition = conditionNumber == 1 ? session.FirstCondition : session.SecondCondition;
-            string route = conditionNumber == 1 ? session.firstRoute : session.secondRoute;
+            ActiveCondition = session.condition;
+            ActiveRoute = session.route;
 
-            ActiveCondition = condition;
-            ActiveRoute = route;
-
-            var cond = condition == "glass_only" ? ExperimentCondition.GlassOnly : ExperimentCondition.Hybrid;
+            var cond = session.condition == "glass_only" ? ExperimentCondition.GlassOnly : ExperimentCondition.Hybrid;
             ConditionController.Instance?.SetCondition(cond);
 
-            // Condition2: 추가 경로 앵커 로드 (WaypointManager.LoadRoute 전에 호출)
-            if (conditionNumber == 2)
-            {
-                SpatialAnchorManager.Instance?.LoadAdditionalRouteAnchors(route);
-            }
+            DomainEventBus.Instance?.Publish(new RouteStarted(session.route, session.condition));
 
-            // SetCondition은 ObservationService.OnConditionChanged에서 처리
-            DomainEventBus.Instance?.Publish(new RouteStarted(route, condition));
-
-            WaypointManager.Instance?.LoadRoute(route);
+            WaypointManager.Instance?.LoadRoute(session.route);
         }
 
         private void WriteTransitionSnapshot(ExperimentState prev, ExperimentState next)

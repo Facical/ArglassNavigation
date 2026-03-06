@@ -251,12 +251,21 @@ namespace ARNavExperiment.Presentation.Experimenter
         {
             var mgr = SpatialAnchorManager.Instance;
 
+            Debug.Log($"[RelocalizationUI] OnCompleteWithRate — rate={successRate:F4}, " +
+                      $"success={mgr?.SuccessfulAnchorCount}, timedOut={mgr?.TimedOutAnchorCount}, " +
+                      $"failed={mgr?.FailedAnchorCount}, total={mgr?.TotalAnchorCount}");
+
             if (successRate >= 1f)
             {
                 if (instructionText != null)
                     instructionText.text = LocalizationManager.Get("reloc.complete");
                 if (progressText != null)
-                    progressText.text = LocalizationManager.Get("reloc.all_recognized");
+                {
+                    progressText.text = string.Format(
+                        LocalizationManager.Get("reloc.all_recognized_detail"),
+                        mgr?.SuccessfulAnchorCount ?? 0,
+                        mgr?.TotalAnchorCount ?? 0);
+                }
                 if (progressBar != null)
                     progressBar.fillAmount = 1f;
             }

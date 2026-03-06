@@ -51,6 +51,9 @@ namespace ARNavExperiment.Presentation.Experimenter
 
             TryBindCaptureEvent();
             UpdateCaptureUI(false);
+
+            // Idle(모드 선택) 상태에서는 HUD 숨김
+            gameObject.SetActive(false);
         }
 
         private void Update()
@@ -109,10 +112,22 @@ namespace ARNavExperiment.Presentation.Experimenter
 
         private void UpdateStateDisplay(ExperimentState state)
         {
+            // GlassOnly: Beam Pro에 표시하지 않음
+            if (ConditionController.Instance != null &&
+                ConditionController.Instance.CurrentCondition == ExperimentCondition.GlassOnly)
+            {
+                if (gameObject.activeSelf) gameObject.SetActive(false);
+                return;
+            }
+
+            bool shouldShow = state != ExperimentState.Idle;
+            if (gameObject.activeSelf != shouldShow)
+                gameObject.SetActive(shouldShow);
+
             if (stateText) stateText.text = string.Format(LocalizationManager.Get("hud.state"), state);
             if (conditionText)
             {
-                if (state == ExperimentState.Condition1 || state == ExperimentState.Condition2)
+                if (state == ExperimentState.Running)
                     conditionText.text = string.Format(LocalizationManager.Get("hud.condition"), ConditionController.Instance?.CurrentCondition);
                 else
                     conditionText.text = LocalizationManager.Get("hud.condition_none");

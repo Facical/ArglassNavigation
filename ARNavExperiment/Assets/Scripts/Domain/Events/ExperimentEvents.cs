@@ -35,17 +35,14 @@ namespace ARNavExperiment.Domain.Events
     public readonly struct SessionInitialized : IDomainEvent
     {
         public readonly string ParticipantId;
-        public readonly string OrderGroup;
-        public readonly string FirstRoute;
-        public readonly string SecondRoute;
+        public readonly string Condition;
+        public readonly string Route;
 
-        public SessionInitialized(string participantId, string orderGroup,
-            string firstRoute, string secondRoute)
+        public SessionInitialized(string pid, string cond, string route)
         {
-            ParticipantId = participantId;
-            OrderGroup = orderGroup;
-            FirstRoute = firstRoute;
-            SecondRoute = secondRoute;
+            ParticipantId = pid;
+            Condition = cond;
+            Route = route;
         }
     }
 

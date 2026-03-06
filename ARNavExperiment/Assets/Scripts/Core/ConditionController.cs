@@ -1,4 +1,5 @@
 using UnityEngine;
+using TMPro;
 using ARNavExperiment.Domain.Events;
 using ARNavExperiment.Application;
 using ARNavExperiment.Logging;
@@ -19,6 +20,7 @@ namespace ARNavExperiment.Core
 
         [SerializeField] private GameObject beamProUI;
         [SerializeField] private GameObject lockedScreenUI;
+        [SerializeField] private GameObject experimenterCanvas;
 
         public event System.Action<ExperimentCondition> OnConditionChanged;
 
@@ -30,9 +32,10 @@ namespace ARNavExperiment.Core
 
         private void Start()
         {
-            // 조건 설정 전에는 BeamPro UI 숨기기
-            if (beamProUI) beamProUI.SetActive(false);
-            if (lockedScreenUI) lockedScreenUI.SetActive(false);
+            // 조건 설정 전: BeamProCanvas 활성 + LockedScreen 표시
+            // ScreenSpaceOverlay가 없으면 XREAL SDK가 글래스 스테레오 뷰를 폰에 미러링함
+            if (beamProUI) beamProUI.SetActive(true);
+            if (lockedScreenUI) lockedScreenUI.SetActive(true);
         }
 
         public void SetCondition(ExperimentCondition condition)
@@ -42,15 +45,20 @@ namespace ARNavExperiment.Core
             switch (condition)
             {
                 case ExperimentCondition.GlassOnly:
-                    if (beamProUI) beamProUI.SetActive(true);      // 글래스 WorldSpace로 표시
-                    if (lockedScreenUI) lockedScreenUI.SetActive(false); // 잠금화면 불필요
-                    // DeviceStateTracker 잠금 해제 — 폰 사용 시도 감지용으로 유지
+                    // GlassOnly: BeamProCanvas 활성 유지 + LockedScreen으로 폰 화면 가림
+                    // ScreenSpaceOverlay 캔버스가 없으면 글래스 스테레오 뷰가 폰에 미러링됨
+                    if (beamProUI) beamProUI.SetActive(true);
+                    if (lockedScreenUI) lockedScreenUI.SetActive(true);
+                    if (experimenterCanvas) experimenterCanvas.SetActive(false);
+                    else Debug.LogError("[ConditionCtrl] experimenterCanvas is NULL — Wire Scene References 재실행 필요!");
+                    DeviceStateTracker.Instance?.SetLocked(true);
                     HandTrackingManager.Instance?.ActivateHandRays();  // GlassOnly: 핸드트래킹으로 UI 조작
                     break;
 
                 case ExperimentCondition.Hybrid:
                     if (lockedScreenUI) lockedScreenUI.SetActive(false);
                     if (beamProUI) beamProUI.SetActive(true);
+                    if (experimenterCanvas) experimenterCanvas.SetActive(true);
                     DeviceStateTracker.Instance?.SetLocked(false);
                     HandTrackingManager.Instance?.DeactivateHandRays(); // Hybrid: 터치로 UI 조작
                     break;

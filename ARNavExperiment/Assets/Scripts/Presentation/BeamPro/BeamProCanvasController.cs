@@ -78,9 +78,15 @@ namespace ARNavExperiment.Presentation.BeamPro
         private void ApplyCondition(ExperimentCondition condition)
         {
             if (condition == ExperimentCondition.GlassOnly)
-                SwitchToWorldSpace();
-            else
+            {
+                // GlassOnly: ScreenSpaceOverlay 유지 → 폰에 잠금 화면 표시
+                // WorldSpace 전환 불필요 (정보 허브를 글래스에 표시하지 않음)
                 SwitchToScreenSpace();
+            }
+            else
+            {
+                SwitchToScreenSpace();  // Hybrid: 폰 화면에 정보 허브
+            }
         }
 
         private void SwitchToWorldSpace()

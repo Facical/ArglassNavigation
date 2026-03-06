@@ -144,7 +144,7 @@ namespace ARNavExperiment.Application
         private void OnSessionInitialized(SessionInitialized e)
         {
             EventLogger.Instance?.LogEvent("EXPERIMENT_START",
-                extraData: $"{{\"order_group\":\"{e.OrderGroup}\"}}");
+                extraData: $"{{\"condition\":\"{e.Condition}\",\"route\":\"{e.Route}\"}}");
         }
 
         private void OnRouteStarted(RouteStarted e)

@@ -16,14 +16,15 @@ namespace ARNavExperiment.EditorTools
         {
             string[] targets = {
                 "AppModeSelectorPanel", "MappingModePanel", "RelocalizationPanel",
-                "SessionSetupPanel", "ConditionTransitionPanel",
-                "SurveyPromptPanel", "CompletionPanel", "ExperimentFlowUI"
+                "ConditionTransitionPanel",
+                "SurveyPromptPanel", "CompletionPanel", "ExperimentFlowUI",
+                "GlassRelocPanel", "GlassSetupPanel", "GlassRunningStartPanel",
+                "GlassSurveyPanel", "GlassCompletionPanel", "GlassFlowUI"
             };
 
             int removed = 0;
             foreach (var name in targets)
             {
-                // 같은 이름의 오브젝트를 모두 찾아서 전부 삭제
                 GameObject found;
                 while ((found = GameObject.Find(name)) != null)
                 {
@@ -47,7 +48,6 @@ namespace ARNavExperiment.EditorTools
         [MenuItem("ARNav/Setup Experiment Flow UI")]
         public static void SetupFlowUI()
         {
-            // 플로우 패널(실험자 제어)은 ExperimenterCanvas의 FlowPanelArea에 배치
             var experimenterCanvas = GameObject.Find("ExperimenterCanvas");
             if (experimenterCanvas == null)
             {
@@ -55,45 +55,75 @@ namespace ARNavExperiment.EditorTools
                 return;
             }
 
-            // FlowPanelArea가 있으면 그 안에, 없으면 Canvas 직접 자식으로 배치
             var flowPanelArea = experimenterCanvas.transform.Find("FlowPanelArea");
             var canvasTransform = flowPanelArea != null ? flowPanelArea : experimenterCanvas.transform;
 
-            // === App Mode Selector Panel ===
+            // === App Mode Selector Panel (새 레이아웃) ===
             var modeSelectorPanel = CreatePanel("AppModeSelectorPanel", canvasTransform,
                 new Color(0.05f, 0.05f, 0.1f, 0.98f));
             var modeSelectorUI = modeSelectorPanel.AddComponent<AppModeSelector>();
 
-            // Mode Selector Title
+            // Title
             var modeTitleText = CreateTMP("ModeTitle", modeSelectorPanel.transform,
                 "AR Navigation Experiment", 36, TextAlignmentOptions.Center);
-            SetRect(modeTitleText.gameObject, new Vector2(0.1f, 0.75f), new Vector2(0.9f, 0.9f));
+            SetRect(modeTitleText.gameObject, new Vector2(0.1f, 0.88f), new Vector2(0.9f, 0.97f));
 
-            // Mode Selector Subtitle
-            var modeSubtitle = CreateTMP("ModeSubtitle", modeSelectorPanel.transform,
-                "Select a mode", 20, TextAlignmentOptions.Center);
-            SetRect(modeSubtitle.gameObject, new Vector2(0.1f, 0.67f), new Vector2(0.9f, 0.75f));
-            modeSubtitle.color = new Color(0.7f, 0.7f, 0.7f);
+            // PID Label
+            CreateTMP("PIDLabel", modeSelectorPanel.transform,
+                "Participant ID:", 16, TextAlignmentOptions.Left,
+                new Vector2(0.12f, 0.77f), new Vector2(0.35f, 0.85f));
 
-            // Mapping Mode Button
-            var mappingBtn = CreateButton("MappingModeBtn", modeSelectorPanel.transform,
-                "Mapping Mode (Preparation)", new Color(0.2f, 0.4f, 0.6f, 1f), 22);
-            SetRect(mappingBtn.gameObject, new Vector2(0.15f, 0.52f), new Vector2(0.85f, 0.65f));
+            // PID Input
+            var pidInputGO = CreateInputField("ParticipantIdInput", modeSelectorPanel.transform, "P01");
+            SetRect(pidInputGO, new Vector2(0.38f, 0.77f), new Vector2(0.88f, 0.85f));
 
-            // Experiment Mode Button
-            var expBtn = CreateButton("ExperimentModeBtn", modeSelectorPanel.transform,
-                "Experiment Mode (Participant)", new Color(0.2f, 0.5f, 0.2f, 1f), 22);
-            SetRect(expBtn.gameObject, new Vector2(0.15f, 0.34f), new Vector2(0.85f, 0.47f));
+            // Route A Button
+            var routeABtn = CreateButton("RouteABtn", modeSelectorPanel.transform,
+                "Route A", new Color(0.2f, 0.5f, 0.8f, 1f), 18);
+            SetRect(routeABtn.gameObject, new Vector2(0.12f, 0.66f), new Vector2(0.48f, 0.75f));
+
+            // Route B Button
+            var routeBBtn = CreateButton("RouteBBtn", modeSelectorPanel.transform,
+                "Route B", new Color(0.3f, 0.3f, 0.35f, 1f), 18);
+            SetRect(routeBBtn.gameObject, new Vector2(0.52f, 0.66f), new Vector2(0.88f, 0.75f));
+
+            // Glass Only Button (파란색)
+            var glassOnlyBtn = CreateButton("GlassOnlyBtn", modeSelectorPanel.transform,
+                "Glass Only", new Color(0.15f, 0.35f, 0.65f, 1f), 22);
+            SetRect(glassOnlyBtn.gameObject, new Vector2(0.12f, 0.48f), new Vector2(0.88f, 0.63f));
+
+            // Hybrid Button (초록색)
+            var hybridBtn = CreateButton("HybridBtn", modeSelectorPanel.transform,
+                "Hybrid", new Color(0.15f, 0.5f, 0.25f, 1f), 22);
+            SetRect(hybridBtn.gameObject, new Vector2(0.12f, 0.30f), new Vector2(0.88f, 0.45f));
+
+            // Error Text (기본 숨김)
+            var errorText = CreateTMP("ErrorText", modeSelectorPanel.transform,
+                "", 14, TextAlignmentOptions.Center,
+                new Vector2(0.12f, 0.22f), new Vector2(0.88f, 0.29f));
+            errorText.color = new Color(1f, 0.4f, 0.4f);
+            errorText.gameObject.SetActive(false);
+
+            // Mapping Status Text
+            var mappingStatusText = CreateTMP("MappingStatusText", modeSelectorPanel.transform,
+                "Mapping status: checking...", 14, TextAlignmentOptions.Center,
+                new Vector2(0.1f, 0.14f), new Vector2(0.9f, 0.22f));
+            mappingStatusText.color = new Color(0.7f, 0.7f, 0.7f);
 
             // Language Button
             var langBtn = CreateButton("LanguageBtn", modeSelectorPanel.transform,
-                "Language", new Color(0.4f, 0.35f, 0.5f, 1f), 18);
-            SetRect(langBtn.gameObject, new Vector2(0.35f, 0.10f), new Vector2(0.65f, 0.20f));
+                "Language", new Color(0.4f, 0.35f, 0.5f, 1f), 16);
+            SetRect(langBtn.gameObject, new Vector2(0.12f, 0.03f), new Vector2(0.45f, 0.12f));
+
+            // Mapping Button
+            var mappingBtn = CreateButton("MappingBtn", modeSelectorPanel.transform,
+                "Mapping", new Color(0.3f, 0.3f, 0.4f, 1f), 16);
+            SetRect(mappingBtn.gameObject, new Vector2(0.55f, 0.03f), new Vector2(0.88f, 0.12f));
 
             // Language Popup (기본 비활성)
             var langPopup = CreatePanel("LanguagePopup", modeSelectorPanel.transform,
                 new Color(0.12f, 0.12f, 0.18f, 0.95f));
-            SetRect(langPopup, new Vector2(0.20f, 0.22f), new Vector2(0.80f, 0.32f));
+            SetRect(langPopup, new Vector2(0.12f, 0.12f), new Vector2(0.88f, 0.22f));
 
             var langKoBtn = CreateButton("LangKoBtn", langPopup.transform,
                 "\ud55c\uad6d\uc5b4", new Color(0.3f, 0.3f, 0.5f, 1f), 18);
@@ -104,12 +134,6 @@ namespace ARNavExperiment.EditorTools
             SetRect(langEnBtn.gameObject, new Vector2(0.05f, 0.05f), new Vector2(0.95f, 0.45f));
 
             langPopup.SetActive(false);
-
-            // Mapping Status Text
-            var mappingStatusText = CreateTMP("MappingStatusText", modeSelectorPanel.transform,
-                "Mapping status: checking...", 14, TextAlignmentOptions.Center,
-                new Vector2(0.1f, 0.22f), new Vector2(0.9f, 0.30f));
-            mappingStatusText.color = new Color(0.7f, 0.7f, 0.7f);
 
             // === Mapping Mode Panel ===
             var mappingPanel = CreatePanel("MappingModePanel", canvasTransform,
@@ -146,7 +170,7 @@ namespace ARNavExperiment.EditorTools
             qbImg.fillMethod = Image.FillMethod.Horizontal;
             qbImg.fillAmount = 0f;
 
-            // Route Dropdown (오른쪽 상단)
+            // Route Dropdown
             var routeDropdown = CreateDropdown("RouteDropdown", mappingPanel.transform);
             SetRect(routeDropdown, new Vector2(0.76f, 0.84f), new Vector2(0.97f, 0.91f));
 
@@ -158,7 +182,6 @@ namespace ARNavExperiment.EditorTools
             var wlImg = waypointListGO.AddComponent<Image>();
             wlImg.color = new Color(0.08f, 0.08f, 0.12f, 0.9f);
 
-            // Viewport (Mask로 스크롤 영역 클리핑)
             var viewportGO = new GameObject("Viewport");
             viewportGO.transform.SetParent(waypointListGO.transform, false);
             var vpRect2 = viewportGO.AddComponent<RectTransform>();
@@ -193,27 +216,22 @@ namespace ARNavExperiment.EditorTools
             sr.horizontal = false;
             sr.movementType = ScrollRect.MovementType.Clamped;
 
-            // Row 1: Create Anchor Button (full width for variable-length status text)
             var createAnchorBtn = CreateButton("CreateAnchorBtn", mappingPanel.transform,
                 "Select a waypoint", new Color(0.3f, 0.5f, 0.7f, 1f), 16);
             SetRect(createAnchorBtn.gameObject, new Vector2(0.03f, 0.11f), new Vector2(0.97f, 0.18f));
 
-            // Row 2: Map Zoom Button
             var mapZoomBtn = CreateButton("MapZoomBtn", mappingPanel.transform,
                 "Zoom Map", new Color(0.35f, 0.25f, 0.55f, 1f), 16);
             SetRect(mapZoomBtn.gameObject, new Vector2(0.03f, 0.02f), new Vector2(0.34f, 0.09f));
 
-            // Row 2: Save All Button
             var saveAllBtn = CreateButton("SaveAllBtn", mappingPanel.transform,
                 "Save All", new Color(0.2f, 0.5f, 0.2f, 1f), 16);
             SetRect(saveAllBtn.gameObject, new Vector2(0.35f, 0.02f), new Vector2(0.66f, 0.09f));
 
-            // Row 2: Back Button
             var backBtn = CreateButton("BackBtn", mappingPanel.transform,
                 "Back", new Color(0.4f, 0.4f, 0.4f, 1f), 16);
             SetRect(backBtn.gameObject, new Vector2(0.67f, 0.02f), new Vector2(0.97f, 0.09f));
 
-            // Wire MappingModeUI
             WireMappingModeUI(mappingUI, mappingPanel, mappingTitle, qualityText,
                 qbImg, createAnchorBtn, mapZoomBtn, saveAllBtn, backBtn, routeDropdown, contentGO.transform);
 
@@ -223,22 +241,18 @@ namespace ARNavExperiment.EditorTools
             var relocUI = relocPanel.AddComponent<RelocalizationUI>();
             relocPanel.SetActive(false);
 
-            // Relocalization Instruction
             var relocInstr = CreateTMP("RelocInstructionText", relocPanel.transform,
                 "Scanning the environment...\nPlease look around slowly.", 24, TextAlignmentOptions.Center);
             SetRect(relocInstr.gameObject, new Vector2(0.1f, 0.6f), new Vector2(0.9f, 0.8f));
 
-            // Relocalization Progress Text
             var relocProgress = CreateTMP("RelocProgressText", relocPanel.transform,
                 "Preparing...", 18, TextAlignmentOptions.Center);
             SetRect(relocProgress.gameObject, new Vector2(0.1f, 0.5f), new Vector2(0.9f, 0.58f));
 
-            // Relocalization Progress Bar Background
             var relocBarBG = CreatePanel("RelocBarBG", relocPanel.transform,
                 new Color(0.2f, 0.2f, 0.2f));
             SetRect(relocBarBG, new Vector2(0.2f, 0.4f), new Vector2(0.8f, 0.45f));
 
-            // Relocalization Progress Bar Fill
             var relocBarFill = new GameObject("RelocProgressBar");
             relocBarFill.transform.SetParent(relocBarBG.transform, false);
             var rbRect = relocBarFill.AddComponent<RectTransform>();
@@ -252,13 +266,11 @@ namespace ARNavExperiment.EditorTools
             rbImg.fillMethod = Image.FillMethod.Horizontal;
             rbImg.fillAmount = 0f;
 
-            // Relocalization Status
             var relocStatus = CreateTMP("RelocStatusText", relocPanel.transform,
                 "", 14, TextAlignmentOptions.Center);
             SetRect(relocStatus.gameObject, new Vector2(0.2f, 0.32f), new Vector2(0.8f, 0.38f));
             relocStatus.color = new Color(0.7f, 0.7f, 0.7f);
 
-            // Success Bar Background (녹색 프로그레스 바)
             var successBarBG = CreatePanel("SuccessBarBG", relocPanel.transform,
                 new Color(0.2f, 0.2f, 0.2f));
             SetRect(successBarBG, new Vector2(0.2f, 0.25f), new Vector2(0.8f, 0.3f));
@@ -276,7 +288,6 @@ namespace ARNavExperiment.EditorTools
             sbImg.fillMethod = Image.FillMethod.Horizontal;
             sbImg.fillAmount = 0f;
 
-            // Success/Failed Count Texts
             var relocSuccessText = CreateTMP("RelocSuccessText", relocPanel.transform,
                 "", 14, TextAlignmentOptions.Left,
                 new Vector2(0.2f, 0.19f), new Vector2(0.5f, 0.25f));
@@ -287,7 +298,6 @@ namespace ARNavExperiment.EditorTools
                 new Vector2(0.5f, 0.19f), new Vector2(0.8f, 0.25f));
             relocFailedText.color = new Color(1f, 0.4f, 0.4f);
 
-            // Result Panel (기본 비활성)
             var resultPanel = CreatePanel("ResultPanel", relocPanel.transform,
                 new Color(0.1f, 0.1f, 0.15f, 0.95f));
             SetRect(resultPanel, new Vector2(0.1f, 0.02f), new Vector2(0.9f, 0.28f));
@@ -307,66 +317,8 @@ namespace ARNavExperiment.EditorTools
 
             resultPanel.SetActive(false);
 
-            // Wire RelocalizationUI
             WireRelocalizationUI(relocUI, relocPanel, relocInstr, relocProgress, rbImg, relocStatus,
                 relocSuccessText, relocFailedText, sbImg, resultPanel, proceedBtn, retryBtn, relocWarningText);
-
-            // === Session Setup Panel ===
-            var setupPanel = CreatePanel("SessionSetupPanel", canvasTransform,
-                new Color(0.08f, 0.08f, 0.12f, 0.98f));
-            var setupUI = setupPanel.AddComponent<SessionSetupUI>();
-            setupPanel.SetActive(false);
-
-            // Title
-            var titleText = CreateTMP("TitleText", setupPanel.transform,
-                "AR Navigation Experiment", 32, TextAlignmentOptions.Center);
-            SetRect(titleText.gameObject, new Vector2(0.1f, 0.8f), new Vector2(0.9f, 0.92f));
-
-            // Subtitle
-            var subtitleText = CreateTMP("SubtitleText", setupPanel.transform,
-                "Experimenter Setup", 18, TextAlignmentOptions.Center);
-            SetRect(subtitleText.gameObject, new Vector2(0.1f, 0.73f), new Vector2(0.9f, 0.8f));
-            subtitleText.color = new Color(0.7f, 0.7f, 0.7f);
-
-            // Participant ID Label
-            CreateTMP("PIDLabel", setupPanel.transform,
-                "Participant ID:", 16, TextAlignmentOptions.Left,
-                new Vector2(0.2f, 0.6f), new Vector2(0.45f, 0.67f));
-
-            // Participant ID Input
-            var pidInputGO = CreateInputField("ParticipantIdInput", setupPanel.transform, "P01");
-            SetRect(pidInputGO, new Vector2(0.45f, 0.6f), new Vector2(0.8f, 0.67f));
-
-            // Order Group Label
-            CreateTMP("GroupLabel", setupPanel.transform,
-                "Order Group:", 16, TextAlignmentOptions.Left,
-                new Vector2(0.2f, 0.5f), new Vector2(0.45f, 0.57f));
-
-            // Order Group Dropdown
-            var dropdownGO = CreateDropdown("OrderGroupDropdown", setupPanel.transform);
-            SetRect(dropdownGO, new Vector2(0.45f, 0.5f), new Vector2(0.8f, 0.57f));
-
-            // Preview Text
-            var previewText = CreateTMP("PreviewText", setupPanel.transform,
-                "Participant: P01\nGroup: S1\n1st: Glass Only + Route A\n2nd: Hybrid + Route B",
-                14, TextAlignmentOptions.Left,
-                new Vector2(0.2f, 0.28f), new Vector2(0.8f, 0.47f));
-            previewText.color = new Color(0.6f, 0.8f, 1f);
-
-            // Error Text
-            var errorText = CreateTMP("ErrorText", setupPanel.transform,
-                "", 14, TextAlignmentOptions.Center,
-                new Vector2(0.2f, 0.2f), new Vector2(0.8f, 0.27f));
-            errorText.color = new Color(1f, 0.4f, 0.4f);
-            errorText.gameObject.SetActive(false);
-
-            // Start Button
-            var startBtn = CreateButton("StartButton", setupPanel.transform, "Start Experiment",
-                new Color(0.2f, 0.5f, 0.2f, 1f), 22);
-            SetRect(startBtn.gameObject, new Vector2(0.3f, 0.08f), new Vector2(0.7f, 0.18f));
-
-            // Wire SessionSetupUI references
-            WireSessionSetup(setupUI, setupPanel);
 
             // === Condition Transition Panel ===
             var transPanel = CreatePanel("ConditionTransitionPanel", canvasTransform,
@@ -413,44 +365,162 @@ namespace ARNavExperiment.EditorTools
                 "", 20, TextAlignmentOptions.Center,
                 new Vector2(0.1f, 0.3f), new Vector2(0.9f, 0.75f));
 
-            // === ExperimentFlowUI Component (비시각적 컨트롤러 — Canvas 직접 자식) ===
+            // === ExperimentFlowUI Component ===
             var flowUIGO = new GameObject("ExperimentFlowUI");
             Undo.RegisterCreatedObjectUndo(flowUIGO, "Create ExperimentFlowUI");
             flowUIGO.transform.SetParent(experimenterCanvas.transform, false);
             var flowUI = flowUIGO.AddComponent<ExperimentFlowUI>();
 
-            // Wire ExperimentFlowUI references
             WireFlowUI(flowUI,
                 modeSelectorPanel, relocPanel, relocUI,
-                setupPanel, transPanel, surveyPanel, completePanel,
+                transPanel, surveyPanel, completePanel,
                 transTitle, transDetail, transContinueBtn,
                 surveyTitle, surveyInstr, surveyDoneBtn,
                 completeText);
 
+            // === GlassFlowUI (GlassOnly 조건 전용 — ExperimentCanvas에 배치) ===
+            CreateGlassFlowPanels();
+
             Debug.Log("[FlowUISetup] 실험 플로우 UI 구성 완료!");
+        }
+
+        /// <summary>
+        /// ExperimentCanvas에 GlassFlowUI 컴포넌트 + 5개 패널 생성.
+        /// SceneWiringTool.WireGlassFlowUI()가 이름 기반으로 와이어링.
+        /// </summary>
+        private static void CreateGlassFlowPanels()
+        {
+            var expCanvas = GameObject.Find("ExperimentCanvas");
+            if (expCanvas == null)
+            {
+                Debug.LogWarning("[FlowUISetup] ExperimentCanvas를 찾을 수 없어 GlassFlowUI를 생성하지 않습니다.");
+                return;
+            }
+
+            // 이미 존재하면 스킵
+            if (expCanvas.GetComponentInChildren<GlassFlowUI>(true) != null)
+            {
+                Debug.Log("[FlowUISetup] GlassFlowUI가 이미 존재합니다. 스킵.");
+                return;
+            }
+
+            var canvasTransform = expCanvas.transform;
+
+            // --- GlassFlowUI 컴포넌트 ---
+            var flowUIGO = new GameObject("GlassFlowUI");
+            Undo.RegisterCreatedObjectUndo(flowUIGO, "Create GlassFlowUI");
+            flowUIGO.transform.SetParent(canvasTransform, false);
+            flowUIGO.AddComponent<GlassFlowUI>();
+
+            // --- GlassRelocPanel ---
+            var gRelocPanel = CreateGlassFlowPanel("GlassRelocPanel", canvasTransform);
+
+            var gfRelocProgressText = CreateTMP("GF_RelocProgressText", gRelocPanel.transform,
+                "Scanning...", 38, TextAlignmentOptions.Center,
+                new Vector2(0.1f, 0.55f), new Vector2(0.9f, 0.75f));
+
+            // Progress bar background
+            var gfRelocBarBG = CreatePanel("GF_RelocBarBG", gRelocPanel.transform,
+                new Color(0.2f, 0.2f, 0.2f));
+            SetRect(gfRelocBarBG, new Vector2(0.2f, 0.42f), new Vector2(0.8f, 0.48f));
+
+            var gfRelocBarFill = new GameObject("GF_RelocProgressBar");
+            gfRelocBarFill.transform.SetParent(gfRelocBarBG.transform, false);
+            var gfRbRect = gfRelocBarFill.AddComponent<RectTransform>();
+            gfRbRect.anchorMin = Vector2.zero;
+            gfRbRect.anchorMax = Vector2.one;
+            gfRbRect.offsetMin = Vector2.zero;
+            gfRbRect.offsetMax = Vector2.zero;
+            var gfRbImg = gfRelocBarFill.AddComponent<Image>();
+            gfRbImg.color = new Color(0.2f, 0.6f, 1f);
+            gfRbImg.type = Image.Type.Filled;
+            gfRbImg.fillMethod = Image.FillMethod.Horizontal;
+            gfRbImg.fillAmount = 0f;
+
+            var gfRelocStatusText = CreateTMP("GF_RelocStatusText", gRelocPanel.transform,
+                "", 32, TextAlignmentOptions.Center,
+                new Vector2(0.1f, 0.3f), new Vector2(0.9f, 0.4f));
+            gfRelocStatusText.color = new Color(0.7f, 0.7f, 0.7f);
+
+            var gfRelocProceedBtn = CreateButton("GF_RelocProceedBtn", gRelocPanel.transform,
+                "Proceed", new Color(0.2f, 0.55f, 0.25f, 1f), 34);
+            SetRect(gfRelocProceedBtn.gameObject, new Vector2(0.25f, 0.12f), new Vector2(0.75f, 0.25f));
+            gfRelocProceedBtn.gameObject.SetActive(false);
+
+            gRelocPanel.SetActive(false);
+
+            // --- GlassSetupPanel ---
+            var gSetupPanel = CreateGlassFlowPanel("GlassSetupPanel", canvasTransform);
+            CreateGlassFlowContent(gSetupPanel, "GF_SetupTitle", "Experiment Setup",
+                "GF_SetupDetail", "", "GF_SetupContinueBtn", "Continue");
+            gSetupPanel.SetActive(false);
+
+            // --- GlassRunningStartPanel ---
+            var gRunningPanel = CreateGlassFlowPanel("GlassRunningStartPanel", canvasTransform);
+            CreateGlassFlowContent(gRunningPanel, "GF_RunningTitle", "Start Navigation",
+                "GF_RunningDetail", "", "GF_RunningStartBtn", "Start");
+            gRunningPanel.SetActive(false);
+
+            // --- GlassSurveyPanel ---
+            var gSurveyPanel = CreateGlassFlowPanel("GlassSurveyPanel", canvasTransform);
+            CreateGlassFlowContent(gSurveyPanel, "GF_SurveyTitle", "Survey Time",
+                "GF_SurveyInstr", "", "GF_SurveyDoneBtn", "Done");
+            gSurveyPanel.SetActive(false);
+
+            // --- GlassCompletionPanel ---
+            var gCompletionPanel = CreateGlassFlowPanel("GlassCompletionPanel", canvasTransform);
+
+            var gfCompTitle = CreateTMP("GF_CompletionTitle", gCompletionPanel.transform,
+                "Complete!", 48, TextAlignmentOptions.Center,
+                new Vector2(0.1f, 0.6f), new Vector2(0.9f, 0.8f));
+
+            var gfCompDetail = CreateTMP("GF_CompletionDetail", gCompletionPanel.transform,
+                "Experiment complete!\nThank you.", 38, TextAlignmentOptions.Center,
+                new Vector2(0.1f, 0.3f), new Vector2(0.9f, 0.55f));
+
+            gCompletionPanel.SetActive(false);
+
+            Debug.Log("[FlowUISetup] GlassFlowUI 패널 생성 완료 (ExperimentCanvas)");
+        }
+
+        /// <summary>
+        /// 글래스 플로우 패널 공통 생성 (반투명 배경 + PanelFader + anchorMin/Max 설정)
+        /// </summary>
+        private static GameObject CreateGlassFlowPanel(string name, Transform parent)
+        {
+            var panel = CreatePanel(name, parent, new Color(0.08f, 0.08f, 0.12f, 0.92f));
+            SetRect(panel, new Vector2(0.1f, 0.12f), new Vector2(0.9f, 0.88f));
+            panel.AddComponent<PanelFader>();
+            return panel;
+        }
+
+        /// <summary>
+        /// 글래스 플로우 패널 공통 콘텐츠 (타이틀 + 상세 + 버튼)
+        /// </summary>
+        private static void CreateGlassFlowContent(GameObject panel,
+            string titleName, string titleText,
+            string detailName, string detailText,
+            string btnName, string btnLabel)
+        {
+            var title = CreateTMP(titleName, panel.transform, titleText,
+                48, TextAlignmentOptions.Center,
+                new Vector2(0.1f, 0.7f), new Vector2(0.9f, 0.88f));
+
+            var detail = CreateTMP(detailName, panel.transform, detailText,
+                38, TextAlignmentOptions.Center,
+                new Vector2(0.1f, 0.3f), new Vector2(0.9f, 0.65f));
+            detail.enableWordWrapping = true;
+
+            var btn = CreateButton(btnName, panel.transform, btnLabel,
+                new Color(0.2f, 0.55f, 0.25f, 1f), 34);
+            SetRect(btn.gameObject, new Vector2(0.25f, 0.12f), new Vector2(0.75f, 0.25f));
         }
 
         // === Wiring Methods ===
 
-        private static void WireSessionSetup(SessionSetupUI ui, GameObject panel)
-        {
-            var so = new SerializedObject(ui);
-            so.FindProperty("participantIdInput").objectReferenceValue =
-                panel.transform.Find("ParticipantIdInput")?.GetComponent<TMP_InputField>();
-            so.FindProperty("orderGroupDropdown").objectReferenceValue =
-                panel.transform.Find("OrderGroupDropdown")?.GetComponent<TMP_Dropdown>();
-            so.FindProperty("previewText").objectReferenceValue =
-                panel.transform.Find("PreviewText")?.GetComponent<TextMeshProUGUI>();
-            so.FindProperty("errorText").objectReferenceValue =
-                panel.transform.Find("ErrorText")?.GetComponent<TextMeshProUGUI>();
-            so.FindProperty("startButton").objectReferenceValue =
-                panel.transform.Find("StartButton")?.GetComponent<Button>();
-            so.ApplyModifiedProperties();
-        }
-
         private static void WireFlowUI(ExperimentFlowUI flowUI,
             GameObject modeSelector, GameObject relocPanel, RelocalizationUI relocUI,
-            GameObject setup, GameObject transition,
+            GameObject transition,
             GameObject survey, GameObject completion,
             TextMeshProUGUI transTitle, TextMeshProUGUI transDetail, Button transContinue,
             TextMeshProUGUI surveyTitle, TextMeshProUGUI surveyInstr, Button surveyDone,
@@ -460,7 +530,6 @@ namespace ARNavExperiment.EditorTools
             so.FindProperty("appModeSelectorPanel").objectReferenceValue = modeSelector;
             so.FindProperty("relocalizationPanel").objectReferenceValue = relocPanel;
             so.FindProperty("relocalizationUI").objectReferenceValue = relocUI;
-            so.FindProperty("sessionSetupPanel").objectReferenceValue = setup;
             so.FindProperty("conditionTransitionPanel").objectReferenceValue = transition;
             so.FindProperty("surveyPromptPanel").objectReferenceValue = survey;
             so.FindProperty("completionPanel").objectReferenceValue = completion;
@@ -580,7 +649,6 @@ namespace ARNavExperiment.EditorTools
             img.color = bgColor;
             var btn = go.AddComponent<Button>();
 
-            // Button label
             var textGO = new GameObject("Text");
             textGO.transform.SetParent(go.transform, false);
             var textRect = textGO.AddComponent<RectTransform>();
@@ -605,7 +673,6 @@ namespace ARNavExperiment.EditorTools
             var img = go.AddComponent<Image>();
             img.color = new Color(0.2f, 0.2f, 0.25f, 1f);
 
-            // Text Area
             var textAreaGO = new GameObject("Text Area");
             textAreaGO.transform.SetParent(go.transform, false);
             var taRect = textAreaGO.AddComponent<RectTransform>();
@@ -614,7 +681,6 @@ namespace ARNavExperiment.EditorTools
             taRect.offsetMin = new Vector2(10, 0);
             taRect.offsetMax = new Vector2(-10, 0);
 
-            // Text
             var textGO = new GameObject("Text");
             textGO.transform.SetParent(textAreaGO.transform, false);
             var tRect = textGO.AddComponent<RectTransform>();
@@ -626,7 +692,6 @@ namespace ARNavExperiment.EditorTools
             textComp.fontSize = 16;
             textComp.color = Color.white;
 
-            // Placeholder
             var phGO = new GameObject("Placeholder");
             phGO.transform.SetParent(textAreaGO.transform, false);
             var phRect = phGO.AddComponent<RectTransform>();
@@ -640,7 +705,6 @@ namespace ARNavExperiment.EditorTools
             phText.color = new Color(0.5f, 0.5f, 0.5f);
             phText.fontStyle = FontStyles.Italic;
 
-            // Input Field component
             var input = go.AddComponent<TMP_InputField>();
             input.textViewport = taRect;
             input.textComponent = textComp;
@@ -658,7 +722,6 @@ namespace ARNavExperiment.EditorTools
             var img = go.AddComponent<Image>();
             img.color = new Color(0.2f, 0.2f, 0.25f, 1f);
 
-            // Label
             var labelGO = new GameObject("Label");
             labelGO.transform.SetParent(go.transform, false);
             var labelRect = labelGO.AddComponent<RectTransform>();
@@ -670,7 +733,6 @@ namespace ARNavExperiment.EditorTools
             labelTMP.fontSize = 14;
             labelTMP.color = Color.white;
 
-            // Arrow
             var arrowGO = new GameObject("Arrow");
             arrowGO.transform.SetParent(go.transform, false);
             var arrowRect = arrowGO.AddComponent<RectTransform>();
@@ -681,7 +743,6 @@ namespace ARNavExperiment.EditorTools
             var arrowImg = arrowGO.AddComponent<Image>();
             arrowImg.color = Color.white;
 
-            // Template
             var templateGO = new GameObject("Template");
             templateGO.transform.SetParent(go.transform, false);
             var tmplRect = templateGO.AddComponent<RectTransform>();
@@ -691,44 +752,40 @@ namespace ARNavExperiment.EditorTools
             tmplRect.sizeDelta = new Vector2(0, 120);
             var tmplImg = templateGO.AddComponent<Image>();
             tmplImg.color = new Color(0.15f, 0.15f, 0.2f, 1f);
-            templateGO.AddComponent<CanvasGroup>(); // TMP_Dropdown AlphaFade에 필수
+            templateGO.AddComponent<CanvasGroup>();
             var scrollRect = templateGO.AddComponent<ScrollRect>();
 
-            // Viewport
-            var viewportGO = new GameObject("Viewport");
-            viewportGO.transform.SetParent(templateGO.transform, false);
-            var vpRect = viewportGO.AddComponent<RectTransform>();
+            var viewportGO2 = new GameObject("Viewport");
+            viewportGO2.transform.SetParent(templateGO.transform, false);
+            var vpRect = viewportGO2.AddComponent<RectTransform>();
             vpRect.anchorMin = Vector2.zero;
             vpRect.anchorMax = Vector2.one;
             vpRect.offsetMin = Vector2.zero;
             vpRect.offsetMax = Vector2.zero;
-            var vpMask = viewportGO.AddComponent<Mask>();
-            var vpImg = viewportGO.AddComponent<Image>();
+            var vpMask = viewportGO2.AddComponent<Mask>();
+            var vpImg = viewportGO2.AddComponent<Image>();
             vpImg.color = Color.white;
             vpMask.showMaskGraphic = false;
 
-            // Content
-            var contentGO = new GameObject("Content");
-            contentGO.transform.SetParent(viewportGO.transform, false);
-            var contentRect = contentGO.AddComponent<RectTransform>();
-            contentRect.anchorMin = new Vector2(0, 1);
-            contentRect.anchorMax = new Vector2(1, 1);
-            contentRect.pivot = new Vector2(0.5f, 1);
-            contentRect.sizeDelta = new Vector2(0, 28);
+            var contentGO2 = new GameObject("Content");
+            contentGO2.transform.SetParent(viewportGO2.transform, false);
+            var contentRect2 = contentGO2.AddComponent<RectTransform>();
+            contentRect2.anchorMin = new Vector2(0, 1);
+            contentRect2.anchorMax = new Vector2(1, 1);
+            contentRect2.pivot = new Vector2(0.5f, 1);
+            contentRect2.sizeDelta = new Vector2(0, 28);
 
             scrollRect.viewport = vpRect;
-            scrollRect.content = contentRect;
+            scrollRect.content = contentRect2;
 
-            // Item
             var itemGO = new GameObject("Item");
-            itemGO.transform.SetParent(contentGO.transform, false);
+            itemGO.transform.SetParent(contentGO2.transform, false);
             var itemRect = itemGO.AddComponent<RectTransform>();
             itemRect.anchorMin = new Vector2(0, 0.5f);
             itemRect.anchorMax = new Vector2(1, 0.5f);
             itemRect.sizeDelta = new Vector2(0, 28);
             var itemToggle = itemGO.AddComponent<Toggle>();
 
-            // Item Label
             var itemLabelGO = new GameObject("Item Label");
             itemLabelGO.transform.SetParent(itemGO.transform, false);
             var ilRect = itemLabelGO.AddComponent<RectTransform>();
@@ -740,7 +797,6 @@ namespace ARNavExperiment.EditorTools
             ilTMP.fontSize = 14;
             ilTMP.color = Color.white;
 
-            // Dropdown component
             var dropdown = go.AddComponent<TMP_Dropdown>();
             dropdown.captionText = labelTMP;
             dropdown.itemText = ilTMP;

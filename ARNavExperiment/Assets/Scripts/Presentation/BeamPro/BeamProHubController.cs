@@ -69,14 +69,32 @@ namespace ARNavExperiment.Presentation.BeamPro
         private void OnConditionChanged(ExperimentCondition condition)
         {
             conditionActivated = true;
-            if (hubRoot) hubRoot.SetActive(true);
-            if (lockedScreen) lockedScreen.SetActive(false);
 
-            // 초기 탭 활성화 보장
-            activeTabIndex = -1; // SwitchTab 내부 동일 인덱스 체크 우회
+            if (condition == ExperimentCondition.GlassOnly)
+            {
+                // GlassOnly: Beam Pro 완전 비활성화
+                if (hubRoot) hubRoot.SetActive(false);
+                Debug.Log("[BeamProHub] GlassOnly — hubRoot disabled");
+                return;
+            }
+
+            // Hybrid: 기존 동작 복원
+            if (lockedScreen) lockedScreen.SetActive(false);
+            if (hubRoot) hubRoot.SetActive(true);
+
+            // TabBar 복원
+            if (hubRoot)
+            {
+                var tabBar = hubRoot.transform.Find("TabBar");
+                if (tabBar) tabBar.gameObject.SetActive(true);
+            }
+            foreach (var btn in tabButtons)
+                if (btn) btn.gameObject.SetActive(true);
+
+            activeTabIndex = -1;
             SwitchTab(0);
 
-            Debug.Log($"[BeamProHub] OnConditionChanged({condition}) — hubRoot active, tab=0");
+            Debug.Log($"[BeamProHub] Hybrid — hub active, tab=0");
         }
 
         private void OnScreenOn()

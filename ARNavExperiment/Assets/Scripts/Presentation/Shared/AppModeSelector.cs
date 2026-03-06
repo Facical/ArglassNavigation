@@ -11,9 +11,20 @@ namespace ARNavExperiment.Presentation.Shared
     {
         [Header("UI References")]
         [SerializeField] private GameObject modeSelectorPanel;
-        [SerializeField] private Button mappingModeButton;
-        [SerializeField] private Button experimentModeButton;
+        [SerializeField] private TMP_InputField participantIdInput;
+        [SerializeField] private TextMeshProUGUI errorText;
         [SerializeField] private TextMeshProUGUI statusText;
+
+        [Header("Route Selection")]
+        [SerializeField] private Button routeAButton;
+        [SerializeField] private Button routeBButton;
+
+        [Header("Condition Buttons")]
+        [SerializeField] private Button glassOnlyButton;
+        [SerializeField] private Button hybridButton;
+
+        [Header("Bottom Buttons")]
+        [SerializeField] private Button mappingButton;
 
         [Header("Language")]
         [SerializeField] private Button languageButton;
@@ -24,104 +35,129 @@ namespace ARNavExperiment.Presentation.Shared
 
         [Header("Panels")]
         [SerializeField] private MappingModeUI mappingModeUI;
-        [SerializeField] private GameObject sessionSetupPanel;
 
         [Header("Glass Status")]
         [SerializeField] private GlassModeStatusPanel glassModeStatus;
 
+        private string selectedRoute = "A";
         private TextMeshProUGUI titleText;
-        private TextMeshProUGUI subtitleText;
-        private TextMeshProUGUI mappingBtnText;
-        private TextMeshProUGUI expBtnText;
 
         private void Start()
         {
-            mappingModeButton?.onClick.AddListener(OnMappingModeSelected);
-            experimentModeButton?.onClick.AddListener(OnExperimentModeSelected);
+            glassOnlyButton?.onClick.AddListener(OnGlassOnlySelected);
+            hybridButton?.onClick.AddListener(OnHybridSelected);
+            routeAButton?.onClick.AddListener(OnRouteASelected);
+            routeBButton?.onClick.AddListener(OnRouteBSelected);
+            mappingButton?.onClick.AddListener(OnMappingModeSelected);
             languageButton?.onClick.AddListener(OnLanguageToggle);
             langKoButton?.onClick.AddListener(OnKoreanSelected);
             langEnButton?.onClick.AddListener(OnEnglishSelected);
 
-            if (mappingModeButton != null)
-                mappingBtnText = mappingModeButton.GetComponentInChildren<TextMeshProUGUI>();
-            if (experimentModeButton != null)
-                expBtnText = experimentModeButton.GetComponentInChildren<TextMeshProUGUI>();
             if (modeSelectorPanel != null)
             {
                 foreach (var t in modeSelectorPanel.GetComponentsInChildren<TextMeshProUGUI>(true))
                 {
                     if (t.gameObject.name == "ModeTitle") titleText = t;
-                    else if (t.gameObject.name == "ModeSubtitle") subtitleText = t;
                 }
             }
+
+            if (errorText != null)
+                errorText.gameObject.SetActive(false);
+
+            if (participantIdInput != null)
+                participantIdInput.text = "P01";
 
             if (LocalizationManager.Instance != null)
                 LocalizationManager.Instance.OnLanguageChanged += OnLanguageChanged;
 
             RefreshLocalization();
+            UpdateRouteButtonColors();
 
             if (glassModeStatus != null)
                 glassModeStatus.ShowModeSelection();
         }
 
-        private void OnLanguageToggle()
+        // === Condition Selection ===
+
+        private void OnGlassOnlySelected()
         {
-            if (languagePopup != null)
-                languagePopup.SetActive(!languagePopup.activeSelf);
+            StartWithCondition("glass_only");
         }
 
-        private void OnKoreanSelected()
+        private void OnHybridSelected()
         {
-            LocalizationManager.Instance?.SetLanguage(Language.KO);
-            if (languagePopup != null) languagePopup.SetActive(false);
+            StartWithCondition("hybrid");
         }
 
-        private void OnEnglishSelected()
+        private void StartWithCondition(string condition)
         {
-            LocalizationManager.Instance?.SetLanguage(Language.EN);
-            if (languagePopup != null) languagePopup.SetActive(false);
-        }
+            string pid = participantIdInput?.text?.Trim() ?? "";
+            if (string.IsNullOrEmpty(pid) || pid.Length < 2)
+            {
+                ShowError(LocalizationManager.Get("session.error_no_id"));
+                return;
+            }
 
-        private void OnLanguageChanged(Language lang)
-        {
-            RefreshLocalization();
-        }
+            if (errorText != null)
+                errorText.gameObject.SetActive(false);
 
-        private void RefreshLocalization()
-        {
-            if (titleText != null) titleText.text = LocalizationManager.Get("appmode.title");
-            if (subtitleText != null) subtitleText.text = LocalizationManager.Get("appmode.subtitle");
-            if (mappingBtnText != null) mappingBtnText.text = LocalizationManager.Get("appmode.mapping_btn");
-            if (expBtnText != null) expBtnText.text = LocalizationManager.Get("appmode.experiment_btn");
-            UpdateLanguageButtonText();
-            UpdateStatus();
-        }
+            ExperimentManager.Instance?.InitializeSession(pid, condition, selectedRoute);
 
-        private void UpdateLanguageButtonText()
-        {
-            if (languageButtonText == null) return;
-            languageButtonText.text = "Language";
-        }
+            if (glassModeStatus != null) glassModeStatus.Hide();
 
-        private void UpdateStatus()
-        {
-            if (statusText == null) return;
-
+            // 매핑 데이터가 있으면 Relocalization, 없으면 직접 실험 시작
             var anchorMgr = SpatialAnchorManager.Instance;
             if (anchorMgr != null && anchorMgr.HasMappingData())
             {
-                var routeA = anchorMgr.GetRouteMappings("A");
-                var routeB = anchorMgr.GetRouteMappings("B");
-                statusText.text = string.Format(LocalizationManager.Get("appmode.mapping_status"),
-                    routeA.Count, routeB.Count);
-                statusText.color = new Color(0.6f, 1f, 0.6f);
+                ExperimentManager.Instance?.TransitionTo(ExperimentState.Relocalization);
             }
             else
             {
-                statusText.text = LocalizationManager.Get("appmode.no_mapping");
-                statusText.color = new Color(1f, 0.8f, 0.4f);
+                Debug.LogWarning("[AppModeSelector] 매핑 데이터 없음 — fallback 좌표로 진행");
+                ExperimentManager.Instance?.StartExperiment();
+            }
+
+            if (modeSelectorPanel != null)
+                modeSelectorPanel.SetActive(false);
+
+            Debug.Log($"[AppModeSelector] 실험 시작: PID={pid}, Condition={condition}, Route={selectedRoute}");
+        }
+
+        // === Route Selection ===
+
+        private void OnRouteASelected()
+        {
+            selectedRoute = "A";
+            UpdateRouteButtonColors();
+        }
+
+        private void OnRouteBSelected()
+        {
+            selectedRoute = "B";
+            UpdateRouteButtonColors();
+        }
+
+        private void UpdateRouteButtonColors()
+        {
+            if (routeAButton != null)
+            {
+                var img = routeAButton.GetComponent<Image>();
+                if (img != null)
+                    img.color = selectedRoute == "A"
+                        ? new Color(0.2f, 0.5f, 0.8f, 1f)
+                        : new Color(0.3f, 0.3f, 0.35f, 1f);
+            }
+            if (routeBButton != null)
+            {
+                var img = routeBButton.GetComponent<Image>();
+                if (img != null)
+                    img.color = selectedRoute == "B"
+                        ? new Color(0.2f, 0.5f, 0.8f, 1f)
+                        : new Color(0.3f, 0.3f, 0.35f, 1f);
             }
         }
+
+        // === Mapping Mode ===
 
         private void OnMappingModeSelected()
         {
@@ -152,17 +188,67 @@ namespace ARNavExperiment.Presentation.Shared
             Debug.Log("[AppModeSelector] 매핑 모드 진입");
         }
 
-        private void OnExperimentModeSelected()
+        // === Language ===
+
+        private void OnLanguageToggle()
         {
-            if (languagePopup != null) languagePopup.SetActive(false);
-            if (glassModeStatus != null) glassModeStatus.Hide();
-            if (modeSelectorPanel != null) modeSelectorPanel.SetActive(false);
-
-            if (sessionSetupPanel != null)
-                sessionSetupPanel.SetActive(true);
-
-            Debug.Log("[AppModeSelector] 실험 모드 — 세션 설정 먼저 표시");
+            if (languagePopup != null)
+                languagePopup.SetActive(!languagePopup.activeSelf);
         }
+
+        private void OnKoreanSelected()
+        {
+            LocalizationManager.Instance?.SetLanguage(Language.KO);
+            if (languagePopup != null) languagePopup.SetActive(false);
+        }
+
+        private void OnEnglishSelected()
+        {
+            LocalizationManager.Instance?.SetLanguage(Language.EN);
+            if (languagePopup != null) languagePopup.SetActive(false);
+        }
+
+        private void OnLanguageChanged(Language lang)
+        {
+            RefreshLocalization();
+        }
+
+        // === Localization ===
+
+        private void RefreshLocalization()
+        {
+            if (titleText != null) titleText.text = LocalizationManager.Get("appmode.title");
+            UpdateLanguageButtonText();
+            UpdateStatus();
+        }
+
+        private void UpdateLanguageButtonText()
+        {
+            if (languageButtonText == null) return;
+            languageButtonText.text = "Language";
+        }
+
+        private void UpdateStatus()
+        {
+            if (statusText == null) return;
+
+            var anchorMgr = SpatialAnchorManager.Instance;
+            if (anchorMgr != null && anchorMgr.HasMappingData())
+            {
+                var routeA = anchorMgr.GetRouteMappings("A");
+                var routeB = anchorMgr.GetRouteMappings("B");
+                statusText.text = string.Format(LocalizationManager.Get("appmode.mapping_status"),
+                    routeA.Count, routeB.Count);
+                statusText.color = new Color(0.6f, 1f, 0.6f);
+            }
+            else
+            {
+                statusText.text = LocalizationManager.Get("appmode.no_mapping");
+                statusText.color = new Color(1f, 0.8f, 0.4f);
+            }
+        }
+
+        // === Utility ===
 
         public void ReturnToModeSelector()
         {
@@ -183,6 +269,13 @@ namespace ARNavExperiment.Presentation.Shared
                 glassModeStatus.ShowModeSelection();
 
             RefreshLocalization();
+        }
+
+        private void ShowError(string msg)
+        {
+            if (errorText == null) return;
+            errorText.text = msg;
+            errorText.gameObject.SetActive(true);
         }
 
         private void OnDestroy()

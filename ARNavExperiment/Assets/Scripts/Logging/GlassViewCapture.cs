@@ -220,7 +220,7 @@ namespace ARNavExperiment.Logging
             string fileName = Path.GetFileName(currentFilePath);
             if (result.resultType == Unity.XR.XREAL.CaptureResultType.Success)
             {
-                Debug.Log($"[GlassViewCapture] 녹화 중지: {fileName}");
+                Debug.Log($"[GlassViewCapture] 녹화 중지 완료 (moov 기록됨): {fileName}");
                 DomainEventBus.Instance?.Publish(new GlassCaptureStateChanged("stop", fileName));
             }
             else
@@ -229,10 +229,13 @@ namespace ARNavExperiment.Logging
                 DomainEventBus.Instance?.Publish(new GlassCaptureStateChanged("error"));
             }
 
+            // StopRecording 완료 시점에서 moov atom은 이미 기록됨 → 즉시 signal
+            // StopVideoMode는 비동기로 진행 (파일 안전성에 영향 없음)
+            stopCompleteEvent.Set();
+
             videoCapture.StopVideoModeAsync((_) =>
             {
                 Debug.Log("[GlassViewCapture] VideoMode 종료");
-                stopCompleteEvent.Set();
             });
         }
 #endif
@@ -241,10 +244,12 @@ namespace ARNavExperiment.Logging
         {
             if (pauseStatus)
             {
+                // Android: 앱 종료 시에도 OnApplicationPause(true)가 먼저 호출됨
+                // 여기서 반드시 녹화를 중지해야 moov atom이 기록됨
                 if (IsRecording)
                 {
                     isPausedWhileRecording = true;
-                    Debug.Log("[GlassViewCapture] 앱 일시정지 → 녹화 동기 중지");
+                    Debug.Log("[GlassViewCapture] 앱 일시정지/종료 → 녹화 동기 중지");
                     StopCapture(synchronous: true);
                 }
             }
@@ -261,6 +266,7 @@ namespace ARNavExperiment.Logging
 
         private void OnApplicationQuit()
         {
+            // OnApplicationPause(true)에서 이미 중지했을 수 있지만, 안전장치
             if (IsRecording)
             {
                 Debug.Log("[GlassViewCapture] 앱 종료 → 녹화 동기 저장");

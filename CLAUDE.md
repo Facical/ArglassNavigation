@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 프로젝트 개요
 
-스마트 글래스(XReal Air2 Ultra)와 스마트폰(XReal Beam Pro)을 활용한 하이브리드 실내 내비게이션 HCI 연구 프로젝트. **2가지 조건(Glass Only / Hybrid)**을 피험자 내 설계(within-subjects design)로 24명 대상 비교 실험. 미션 기반 길찾기 태스크와 4종 불확실성 트리거를 통해 교차검증 행동을 유도. 문서는 주로 한국어로 작성.
+스마트 글래스(XReal Air2 Ultra)와 스마트폰(XReal Beam Pro)을 활용한 하이브리드 실내 내비게이션 HCI 연구 프로젝트. **2가지 조건(Glass Only / Hybrid)**을 단일 조건 직접 선택 방식으로 24명 대상 비교 실험. 실험자가 메인 화면에서 참가자 ID, 경로, 조건을 선택하여 단일 조건만 실행. 미션 기반 길찾기 태스크와 4종 불확실성 트리거를 통해 교차검증 행동을 유도. 문서는 주로 한국어로 작성.
 
 ## 저장소 구조
 
@@ -111,16 +111,18 @@ WASD(이동), Shift(달리기), 우클릭 드래그(시점), N(상태전환), M(
 
 ### 실험 상태머신 (2중 구조)
 
-**ExperimentManager** (외부): `Idle → Relocalization → Setup → Condition1 → Survey1 → Condition2 → Survey2 → PostSurvey → Complete`
+**ExperimentManager** (외부, 6상태): `Idle → Relocalization → Setup → Running → Survey → Complete`
 
-**MissionManager** (내부, Condition1/2 동안 반복): `Idle → Briefing → Navigation → Arrival → Verification → ConfidenceRating → DifficultyRating → Scored`
+단일 조건 실행 방식: 실험자가 메인 화면(AppModeSelector)에서 PID, Route, Condition을 직접 선택 → 해당 조건 1회만 실행.
+
+**MissionManager** (내부, Running 동안 반복): `Idle → Briefing → Navigation → Arrival → Verification → ConfidenceRating → DifficultyRating → Scored`
 
 미션 타입: A_DirectionVerify, B_AmbiguousDecision, C_InfoIntegration (Route당 5개: A1→B1→A2→B2→C1)
 
 ### 카운터밸런싱 규칙
 
-- **조건 순서(S1/S2)**: `CounterbalanceConfig.asset`에서 설정 (S1: GlassOnly 먼저, S2: Hybrid 먼저)
-- **경로 순서**: 참가자 번호에 의해 **암묵적** 결정 — 홀수(P01, P03...): Route A 먼저, 짝수(P02, P04...): Route B 먼저
+- **조건/경로**: 실험자가 메인 화면에서 직접 선택 (Glass Only / Hybrid, Route A / Route B)
+- **CounterbalanceConfig.asset**: 참조용으로 유지 (레거시). 실제 선택은 AppModeSelector UI에서 수행
 
 ### DDD 아키텍처 (Onion Architecture)
 
@@ -150,7 +152,7 @@ Publish/Subscribe 패턴:
 
 | 이벤트 파일 | 이벤트 | 발행자 |
 |------------|--------|--------|
-| **ExperimentEvents** | SessionInitialized, ExperimentStateChanged, ConditionChanged, RouteStarted, SurveyStarted, ExperimentCompleted | ExperimentManager, ConditionController |
+| **ExperimentEvents** | SessionInitialized(pid,cond,route), ExperimentStateChanged, ConditionChanged, RouteStarted, SurveyStarted, ExperimentCompleted | ExperimentManager, ConditionController |
 | **MissionEvents** | MissionStarted/Arrived/Completed, VerificationAnswered, ConfidenceRated, DifficultyRated, BriefingForced, ArrivalForced, MissionForceSkipped, AllMissionsCompleted | MissionManager |
 | **NavigationEvents** | WaypointReached, TriggerActivated/Deactivated, ArrowShown/Hidden/Offset, WaypointFallbackUsed, WaypointLateAnchorBound | WaypointManager, TriggerController, ARArrowRenderer |
 | **SpatialEvents** | RelocalizationStarted/Progress/Completed, AnchorLateRecovered, AnchorSaved, AnchorDiagnostics | SpatialAnchorManager |
@@ -177,7 +179,7 @@ Publish/Subscribe 패턴:
 | **Mission** (5) | 미션 FSM, SO 데이터 | MissionManager, MissionData, POIData, InfoCardData |
 | **Presentation/Glass** (7) | 글래스 전용 UI | GlassCanvasController, ExperimentHUD, MissionBriefingUI, VerificationUI, ConfidenceRatingUI, DifficultyRatingUI |
 | **Presentation/BeamPro** (9) | 3탭 정보 허브 | BeamProHubController, InteractiveMapController, InfoCardManager, BeamProCanvasController |
-| **Presentation/Experimenter** (4) | 실험자 UI | ExperimenterHUD, ExperimentFlowUI, SessionSetupUI, RelocalizationUI |
+| **Presentation/Experimenter** (3) | 실험자 UI | ExperimenterHUD, ExperimentFlowUI, RelocalizationUI |
 | **Presentation/Mapping** (4) | 매핑 모드 UI | MappingModeUI, MappingGlassOverlay, MappingMiniMap, MappingAnchorVisualizer |
 | **Presentation/Shared** (4) | 공통 UI | AppModeSelector, FloorPlanMapBase, PanelFader, BeamProUIAdapter |
 | **Logging** (3) | CSV 이벤트 로거 | EventLogger, DeviceStateTracker, HeadTracker |
@@ -224,7 +226,7 @@ DontDestroyOnLoad 적용: **ExperimentManager**, **EventLogger** (세션 수명)
 | **GameObject 이름** | SceneWiringTool 재실행 필수 (이름 기반 리플렉션 와이어링, 경고 없이 실패) |
 | **웨이포인트 ID/fallbackPosition** | WaypointGizmoDrawer, WaypointDataGenerator, EditorPlayerController |
 | **이벤트 시그니처** 변경 | "이벤트 통신 흐름" 섹션의 구독자 전체 확인 |
-| **ExperimentState enum** 추가 | ExperimentManager, ExperimentFlowUI, ExperimentHUD, ExperimenterHUD |
+| **ExperimentState enum** 추가 | ExperimentManager (6상태: Idle/Relocalization/Setup/Running/Survey/Complete), ExperimentFlowUI, ExperimentHUD, ExperimenterHUD |
 | **MissionState enum** 추가 | MissionManager + 해당 상태의 UI 패널 |
 | **ScriptableObject 필드** 추가 | 해당 SO의 Editor Generator + Inspector 사용처 |
 | **BeamPro 탭** 추가/제거 | BeamProHubController.tabPanels/tabButtons 배열 + SceneWiringTool 와이어링 순서 |

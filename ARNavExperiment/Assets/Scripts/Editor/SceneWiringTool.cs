@@ -43,6 +43,7 @@ namespace ARNavExperiment.EditorTools
             WireGlassModeStatusPanel();
             WireHandJointVisualizer();
             WireBeamProCoordinator();
+            WireGlassFlowUI();
 
             Debug.Log("[SceneWiring] 모든 참조 연결 완료!");
         }
@@ -54,6 +55,7 @@ namespace ARNavExperiment.EditorTools
             var so = new SerializedObject(cc);
             SetObjectRef(so, "beamProUI", FindGO("BeamProCanvas"));
             SetObjectRef(so, "lockedScreenUI", FindGO("LockedScreen"));
+            SetObjectRef(so, "experimenterCanvas", FindGO("ExperimenterCanvas"));
             so.ApplyModifiedProperties();
         }
 
@@ -379,11 +381,15 @@ namespace ARNavExperiment.EditorTools
             var so = new SerializedObject(selector);
 
             SetObjectRef(so, "modeSelectorPanel", FindGO("AppModeSelectorPanel"));
-            SetObjectRef(so, "mappingModeButton", FindComponent<Button>("MappingModeBtn"));
-            SetObjectRef(so, "experimentModeButton", FindComponent<Button>("ExperimentModeBtn"));
+            SetObjectRef(so, "participantIdInput", FindComponent<TMP_InputField>("ParticipantIdInput"));
+            SetObjectRef(so, "errorText", FindComponent<TextMeshProUGUI>("ErrorText"));
             SetObjectRef(so, "statusText", FindComponent<TextMeshProUGUI>("MappingStatusText"));
+            SetObjectRef(so, "routeAButton", FindComponent<Button>("RouteABtn"));
+            SetObjectRef(so, "routeBButton", FindComponent<Button>("RouteBBtn"));
+            SetObjectRef(so, "glassOnlyButton", FindComponent<Button>("GlassOnlyBtn"));
+            SetObjectRef(so, "hybridButton", FindComponent<Button>("HybridBtn"));
+            SetObjectRef(so, "mappingButton", FindComponent<Button>("MappingBtn"));
             SetObjectRef(so, "mappingModeUI", FindComponent<Presentation.Mapping.MappingModeUI>());
-            SetObjectRef(so, "sessionSetupPanel", FindGO("SessionSetupPanel"));
             SetObjectRef(so, "glassModeStatus", FindComponent<Presentation.Glass.GlassModeStatusPanel>());
 
             // Language button
@@ -689,6 +695,127 @@ namespace ARNavExperiment.EditorTools
             var floorPlanSprite = AssetDatabase.LoadAssetAtPath<Sprite>(
                 "Assets/Data/FloorPlan/KIT_B1F_FloorPlan.png");
             SetObjectRef(so, "floorPlanSprite", floorPlanSprite);
+
+            so.ApplyModifiedProperties();
+        }
+
+        private static void WireGlassFlowUI()
+        {
+            var ui = Object.FindObjectOfType<Presentation.Glass.GlassFlowUI>(true);
+            if (ui == null) return;
+            var so = new SerializedObject(ui);
+
+            // Reloc Panel
+            var relocPanel = FindGO("GlassRelocPanel");
+            SetObjectRef(so, "relocPanel", relocPanel);
+            if (relocPanel != null)
+            {
+                var texts = relocPanel.GetComponentsInChildren<TextMeshProUGUI>(true);
+                foreach (var t in texts)
+                {
+                    switch (t.gameObject.name)
+                    {
+                        case "GF_RelocProgressText": SetObjectRef(so, "relocProgressText", t); break;
+                        case "GF_RelocStatusText": SetObjectRef(so, "relocStatusText", t); break;
+                    }
+                }
+
+                var images = relocPanel.GetComponentsInChildren<Image>(true);
+                foreach (var img in images)
+                {
+                    if (img.gameObject.name == "GF_RelocProgressBar")
+                        SetObjectRef(so, "relocProgressBar", img);
+                }
+
+                var btns = relocPanel.GetComponentsInChildren<Button>(true);
+                foreach (var btn in btns)
+                {
+                    if (btn.gameObject.name == "GF_RelocProceedBtn")
+                        SetObjectRef(so, "relocProceedButton", btn);
+                }
+            }
+
+            // Setup Panel
+            var setupPanel = FindGO("GlassSetupPanel");
+            SetObjectRef(so, "setupPanel", setupPanel);
+            if (setupPanel != null)
+            {
+                var texts = setupPanel.GetComponentsInChildren<TextMeshProUGUI>(true);
+                foreach (var t in texts)
+                {
+                    switch (t.gameObject.name)
+                    {
+                        case "GF_SetupTitle": SetObjectRef(so, "setupTitleText", t); break;
+                        case "GF_SetupDetail": SetObjectRef(so, "setupDetailText", t); break;
+                    }
+                }
+                var btns = setupPanel.GetComponentsInChildren<Button>(true);
+                foreach (var btn in btns)
+                {
+                    if (btn.gameObject.name == "GF_SetupContinueBtn")
+                        SetObjectRef(so, "setupContinueButton", btn);
+                }
+            }
+
+            // Running Start Panel
+            var runningPanel = FindGO("GlassRunningStartPanel");
+            SetObjectRef(so, "runningStartPanel", runningPanel);
+            if (runningPanel != null)
+            {
+                var texts = runningPanel.GetComponentsInChildren<TextMeshProUGUI>(true);
+                foreach (var t in texts)
+                {
+                    switch (t.gameObject.name)
+                    {
+                        case "GF_RunningTitle": SetObjectRef(so, "runningTitleText", t); break;
+                        case "GF_RunningDetail": SetObjectRef(so, "runningDetailText", t); break;
+                    }
+                }
+                var btns = runningPanel.GetComponentsInChildren<Button>(true);
+                foreach (var btn in btns)
+                {
+                    if (btn.gameObject.name == "GF_RunningStartBtn")
+                        SetObjectRef(so, "runningStartButton", btn);
+                }
+            }
+
+            // Survey Panel
+            var surveyPanel = FindGO("GlassSurveyPanel");
+            SetObjectRef(so, "surveyPanel", surveyPanel);
+            if (surveyPanel != null)
+            {
+                var texts = surveyPanel.GetComponentsInChildren<TextMeshProUGUI>(true);
+                foreach (var t in texts)
+                {
+                    switch (t.gameObject.name)
+                    {
+                        case "GF_SurveyTitle": SetObjectRef(so, "surveyTitleText", t); break;
+                        case "GF_SurveyInstr": SetObjectRef(so, "surveyInstrText", t); break;
+                    }
+                }
+                var btns = surveyPanel.GetComponentsInChildren<Button>(true);
+                foreach (var btn in btns)
+                {
+                    if (btn.gameObject.name == "GF_SurveyDoneBtn")
+                        SetObjectRef(so, "surveyDoneButton", btn);
+                }
+            }
+
+            // Completion Panel
+            var completionPanel = FindGO("GlassCompletionPanel");
+            SetObjectRef(so, "completionPanel", completionPanel);
+            if (completionPanel != null)
+            {
+                var texts = completionPanel.GetComponentsInChildren<TextMeshProUGUI>(true);
+                foreach (var t in texts)
+                {
+                    switch (t.gameObject.name)
+                    {
+                        case "GF_CompletionTitle": SetObjectRef(so, "completionTitleText", t); break;
+                        case "GF_CompletionDetail": SetObjectRef(so, "completionDetailText", t); break;
+                    }
+                }
+            }
 
             so.ApplyModifiedProperties();
         }
