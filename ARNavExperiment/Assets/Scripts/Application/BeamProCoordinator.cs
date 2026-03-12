@@ -79,8 +79,15 @@ namespace ARNavExperiment.Application
             {
                 if (floorPlanSprite != null) mapCtrl.SetFloorPlan(floorPlanSprite);
                 if (mission.relevantPOIs != null) mapCtrl.LoadPOIs(mission.relevantPOIs);
-                var targetPos = WaypointManager.Instance?.GetWaypointPosition(mission.targetWaypointId);
-                if (targetPos.HasValue) mapCtrl.SetDestination(targetPos.Value);
+                var wm = WaypointManager.Instance;
+                var targetPos = wm?.GetWaypointPosition(mission.targetWaypointId);
+                if (targetPos.HasValue)
+                {
+                    if (wm.IsUsingFallback(mission.targetWaypointId))
+                        mapCtrl.SetDestinationFloorPlan(new Vector2(targetPos.Value.x, targetPos.Value.z));
+                    else
+                        mapCtrl.SetDestination(targetPos.Value);
+                }
                 mapCtrl.StartPositionTracking();
             }
         }

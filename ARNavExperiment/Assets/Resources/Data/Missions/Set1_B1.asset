@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   missionId: B1
   type: 1
-  briefingText: Move toward the direction of the professors' offices.
+  briefingText: Walk along the corridor and find the first professor's office you
+    encounter.
   targetWaypointId: WP03
   verificationQuestion: What is the room number of the first professor's office you
     encountered?
@@ -33,7 +34,8 @@ MonoBehaviour:
     attributes: []
     values: []
   referenceImages: []
-  briefingTextKo: "\uAD50\uC218 \uC5F0\uAD6C\uC2E4 \uBC29\uD5A5\uC73C\uB85C \uC774\uB3D9\uD558\uC138\uC694."
+  briefingTextKo: "\uBCF5\uB3C4\uB97C \uB530\uB77C \uC774\uB3D9\uD558\uBA74\uC11C
+    \uCC98\uC74C \uB9CC\uB098\uB294 \uAD50\uC218 \uC5F0\uAD6C\uC2E4\uC744 \uCC3E\uC73C\uC138\uC694."
   verificationQuestionKo: "\uCC98\uC74C \uB9CC\uB09C \uAD50\uC218 \uC5F0\uAD6C\uC2E4\uC758
     \uD638\uC2E4 \uBC88\uD638\uB294 \uBB34\uC5C7\uC785\uB2C8\uAE4C?"
   answerOptionsKo:

@@ -27,7 +27,7 @@ namespace ARNavExperiment.EditorTools
 
             SetWaypoint(wpB, 0, "WP00", new Vector3(36f, 0f, 24f), 2.5f, "Near B110 (Calibration anchor)");
             SetWaypoint(wpB, 1, "WP01", new Vector3(36f, 0f, 18f), 2.5f, "Near B111 (Start, East corridor mid)");
-            SetWaypoint(wpB, 2, "WP02", new Vector3(36f, 0f, 33f), 2.5f, "Near B107 Computational Intelligence Lab (East corridor)");
+            SetWaypoint(wpB, 2, "WP02", new Vector3(36f, 0f, 33f), 0.5f, "Near B107 Computational Intelligence Lab (East corridor)");
             SetWaypoint(wpB, 3, "WP03", new Vector3(36f, 0f, 45f), 3f, "Near B105 Prof. Song's Office (T2 trigger)");
             SetWaypoint(wpB, 4, "WP04", new Vector3(36f, 0f, 57f), 2.5f, "Near B103 (East corridor north)");
             SetWaypoint(wpB, 5, "WP05", new Vector3(36f, 0f, 69f), 2.5f, "Near B101 Prof. Lee's Office (East corridor end)");

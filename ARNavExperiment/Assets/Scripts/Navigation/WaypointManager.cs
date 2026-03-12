@@ -514,27 +514,41 @@ namespace ARNavExperiment.Navigation
             }
             else
             {
-                // Fallback: 절대 좌표 대신 이전 WP→현재 WP 의 상대 방향만 사용.
-                // fallback 좌표는 SLAM 좌표계와 무관하므로,
-                // playerTransform.position과 직접 연산하면 90° 이상 오차 발생.
-                Vector3 from;
-                if (CurrentWaypointIndex > 0)
+                if (hasMapCalibration)
                 {
-                    from = activeRoute.waypoints[CurrentWaypointIndex - 1].fallbackPosition;
+                    // 맵 보정 있음 → 플레이어 SLAM 좌표를 도면 좌표로 변환하여 동적 방향 계산
+                    var playerXZ = new Vector2(playerTransform.position.x, playerTransform.position.z);
+                    var playerFloorPlan = SlamToFloorPlan(playerXZ);
+
+                    var wpXZ = new Vector2(target.fallbackPosition.x, target.fallbackPosition.z);
+                    Vector2 dirFloorPlan = wpXZ - playerFloorPlan;
+
+                    if (dirFloorPlan.sqrMagnitude < 0.001f)
+                        return Vector3.forward;
+
+                    // 역회전 (도면→SLAM): R^T × dir (직교행렬이므로 전치 = 역)
+                    float slamX = dirFloorPlan.x * mapCalibCos + dirFloorPlan.y * mapCalibSin;
+                    float slamZ = -dirFloorPlan.x * mapCalibSin + dirFloorPlan.y * mapCalibCos;
+
+                    return new Vector3(slamX, 0, slamZ).normalized;
                 }
                 else
                 {
-                    // 첫 웨이포인트: 경로 시작점(origin) 기준
-                    from = Vector3.zero;
+                    // 보정 불가: 이전 WP→현재 WP 상대 방향 + heading 회전 (기존 로직)
+                    Vector3 from;
+                    if (CurrentWaypointIndex > 0)
+                        from = activeRoute.waypoints[CurrentWaypointIndex - 1].fallbackPosition;
+                    else
+                        from = Vector3.zero;
+
+                    Vector3 to = target.fallbackPosition;
+                    Vector3 relativeDir = to - from;
+                    relativeDir.y = 0f;
+                    if (relativeDir.sqrMagnitude < 0.001f)
+                        return Vector3.forward;
+                    relativeDir = Quaternion.Euler(0, headingCalibrationOffset, 0) * relativeDir;
+                    return relativeDir.normalized;
                 }
-                Vector3 to = target.fallbackPosition;
-                Vector3 relativeDir = to - from;
-                relativeDir.y = 0f; // 수평 방향만
-                if (relativeDir.sqrMagnitude < 0.001f)
-                    return Vector3.forward;
-                // Heading 보정 오프셋 적용 (도면→SLAM 좌표계 회전)
-                relativeDir = Quaternion.Euler(0, headingCalibrationOffset, 0) * relativeDir;
-                return relativeDir.normalized;
             }
         }
 

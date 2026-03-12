@@ -183,6 +183,17 @@ namespace ARNavExperiment.Presentation.BeamPro
             destinationPin.anchoredPosition = Vector2.zero;
         }
 
+        /// <summary>도면 좌표(fallback)로 목적지 핀을 배치한다. SLAM 변환 없이 직접 배치.</summary>
+        public void SetDestinationFloorPlan(Vector2 floorPlanXZ)
+        {
+            if (destinationPin == null) return;
+            destinationPin.gameObject.SetActive(true);
+            var normalized = AdjustForPreserveAspect(WorldToNormalized(floorPlanXZ));
+            destinationPin.anchorMin = normalized;
+            destinationPin.anchorMax = normalized;
+            destinationPin.anchoredPosition = Vector2.zero;
+        }
+
         public void HideDestination()
         {
             if (destinationPin != null)
