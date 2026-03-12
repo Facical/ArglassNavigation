@@ -6,6 +6,9 @@
 - 트리거-기기 전환 연관 분석 (Hybrid 조건)
 """
 
+import sys
+import json
+import argparse
 import warnings
 from pathlib import Path
 
@@ -14,6 +17,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 from scipy import stats
+
+from parse_utils import parse_extra
 
 matplotlib.rcParams["font.family"] = "AppleGothic"
 matplotlib.rcParams["axes.unicode_minus"] = False
@@ -58,14 +63,17 @@ TRIGGER_EXPECTED_CONTENT = {
 # 2. 데이터 로드 / 데모 생성
 # ──────────────────────────────────────────────
 
-def load_events() -> pd.DataFrame:
+def load_events(allow_demo: bool = False) -> pd.DataFrame:
     """이벤트 로그 로드 또는 데모 생성."""
     csv_files = sorted(RAW_DIR.glob("P*_*.csv"))
     if csv_files:
         frames = [pd.read_csv(f, parse_dates=["timestamp"]) for f in csv_files]
         return pd.concat(frames, ignore_index=True)
-    print("[경고] 이벤트 로그 없음. 데모 데이터 생성.")
-    return generate_demo_data()
+    if allow_demo:
+        print("[경고] 이벤트 로그 없음. 데모 데이터 생성.")
+        return generate_demo_data()
+    print(f"[오류] {RAW_DIR}에 이벤트 로그 없음. 데모로 실행하려면 --demo 플래그를 사용하세요.")
+    sys.exit(1)
 
 
 def generate_demo_data() -> pd.DataFrame:
@@ -169,7 +177,7 @@ def generate_demo_data() -> pd.DataFrame:
                                    trigger_type=ttype, duration_s=round(rt + rng.uniform(2, 5), 1)))
 
                 # 오방향 선택 여부
-                wrong_dir = rng.random() < wrong_dir_base[cond][ttype]
+                wrong_dir = bool(rng.random() < wrong_dir_base[cond][ttype])
                 if wrong_dir:
                     rows.append(_event(t, participant_id, cond, "WAYPOINT_SKIPPED", wp,
                                        reason="wrong_turn"))
@@ -198,6 +206,8 @@ def _prev_wp(wp: str) -> str:
 
 
 def _event(t, pid, cond, etype, wp, **extra) -> dict:
+    extra_filtered = {k: v for k, v in extra.items()
+                      if k not in ("confidence", "beam_content_type")}
     row = {
         "timestamp": t.isoformat(),
         "participant_id": pid,
@@ -210,19 +220,13 @@ def _event(t, pid, cond, etype, wp, **extra) -> dict:
         "device_active": "glass" if cond == "glass_only" else "both",
         "confidence_rating": extra.get("confidence", ""),
         "beam_content_type": extra.get("beam_content_type", ""),
-        "extra_data": str({k: v for k, v in extra.items()
-                          if k not in ("confidence", "beam_content_type")}) if extra else "{}",
+        "extra_data": json.dumps(extra_filtered) if extra_filtered else "{}",
     }
     return row
 
 
 def _parse_extra(extra_str) -> dict:
-    if isinstance(extra_str, str) and extra_str:
-        try:
-            return eval(extra_str)
-        except Exception:
-            return {}
-    return {}
+    return parse_extra(extra_str)
 
 
 # ──────────────────────────────────────────────
@@ -511,11 +515,16 @@ def plot_trigger_switch_rate(switch_df: pd.DataFrame):
 # ──────────────────────────────────────────────
 
 def main():
+    parser = argparse.ArgumentParser(description="트리거 반응 분석")
+    parser.add_argument("--demo", action="store_true",
+                        help="데이터 파일이 없을 때 데모 데이터로 실행")
+    args = parser.parse_args()
+
     print("=" * 60)
     print("트리거 반응 분석 (v2.1)")
     print("=" * 60)
 
-    df = load_events()
+    df = load_events(allow_demo=args.demo)
     print(f"총 이벤트 수: {len(df)}")
 
     # 분석

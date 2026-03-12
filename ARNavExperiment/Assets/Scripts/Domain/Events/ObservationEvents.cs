@@ -6,8 +6,13 @@ namespace ARNavExperiment.Domain.Events
     public readonly struct DeviceScreenChanged : IDomainEvent
     {
         public readonly bool IsOn;
+        public readonly float DurationSec;
 
-        public DeviceScreenChanged(bool isOn) { IsOn = isOn; }
+        public DeviceScreenChanged(bool isOn, float durationSec = 0f)
+        {
+            IsOn = isOn;
+            DurationSec = durationSec;
+        }
     }
 
     /// <summary>

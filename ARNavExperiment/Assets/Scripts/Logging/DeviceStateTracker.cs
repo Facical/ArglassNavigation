@@ -67,7 +67,7 @@ namespace ARNavExperiment.Logging
             IsBeamProActive = false;
             float duration = Time.time - screenOnTime;
             OnBeamProScreenOff?.Invoke(duration);
-            DomainEventBus.Instance?.Publish(new DeviceScreenChanged(false));
+            DomainEventBus.Instance?.Publish(new DeviceScreenChanged(false, duration));
         }
 
         public void SetLocked(bool locked)

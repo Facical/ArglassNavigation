@@ -58,6 +58,26 @@ namespace ARNavExperiment.Domain.Events
     }
 
     /// <summary>
+    /// 기존 트리거가 완료되지 않은 채 새 트리거로 교체될 때 발행.
+    /// </summary>
+    public readonly struct TriggerInterrupted : IDomainEvent
+    {
+        public readonly string TriggerId;
+        public readonly string TriggerType;
+        public readonly float DurationSeconds;
+        public readonly string Reason;
+
+        public TriggerInterrupted(string triggerId, string triggerType,
+            float durationSeconds, string reason)
+        {
+            TriggerId = triggerId;
+            TriggerType = triggerType;
+            DurationSeconds = durationSeconds;
+            Reason = reason;
+        }
+    }
+
+    /// <summary>
     /// AR 화살표 표시 시 발행.
     /// </summary>
     public readonly struct ArrowShown : IDomainEvent

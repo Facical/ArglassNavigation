@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using ARNavExperiment.Domain.Events;
 using ARNavExperiment.Logging;
@@ -15,6 +16,8 @@ namespace ARNavExperiment.Application
     {
         public static ObservationService Instance { get; private set; }
 
+        private bool _subscribed;
+
         private void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -22,7 +25,15 @@ namespace ARNavExperiment.Application
             DontDestroyOnLoad(gameObject);
         }
 
-        private void OnEnable()
+        private void OnEnable() => TrySubscribe();
+
+        private void Start()
+        {
+            if (!_subscribed) TrySubscribe();
+            if (!_subscribed) StartCoroutine(RetrySubscribe());
+        }
+
+        private void TrySubscribe()
         {
             var bus = DomainEventBus.Instance;
             if (bus == null) return;
@@ -50,6 +61,7 @@ namespace ARNavExperiment.Application
             bus.Subscribe<WaypointReached>(OnWaypointReached);
             bus.Subscribe<TriggerActivated>(OnTriggerActivated);
             bus.Subscribe<TriggerDeactivated>(OnTriggerDeactivated);
+            bus.Subscribe<TriggerInterrupted>(OnTriggerInterrupted);
             bus.Subscribe<ArrowShown>(OnArrowShown);
             bus.Subscribe<ArrowHidden>(OnArrowHidden);
             bus.Subscribe<ArrowOffset>(OnArrowOffset);
@@ -78,6 +90,20 @@ namespace ARNavExperiment.Application
             bus.Subscribe<NavigationStateSnapshot>(OnNavigationStateSnapshot);
             bus.Subscribe<RouteBindingSummary>(OnRouteBindingSummary);
             bus.Subscribe<AppLifecycleEvent>(OnAppLifecycleEvent);
+
+            _subscribed = true;
+            Debug.Log($"[{GetType().Name}] Subscribed to DomainEventBus");
+        }
+
+        private IEnumerator RetrySubscribe()
+        {
+            for (int i = 0; i < 10 && !_subscribed; i++)
+            {
+                yield return new WaitForSeconds(0.1f);
+                TrySubscribe();
+            }
+            if (!_subscribed)
+                Debug.LogError($"[{GetType().Name}] Failed to subscribe after 10 retries");
         }
 
         private void OnDisable()
@@ -105,6 +131,7 @@ namespace ARNavExperiment.Application
             bus.Unsubscribe<WaypointReached>(OnWaypointReached);
             bus.Unsubscribe<TriggerActivated>(OnTriggerActivated);
             bus.Unsubscribe<TriggerDeactivated>(OnTriggerDeactivated);
+            bus.Unsubscribe<TriggerInterrupted>(OnTriggerInterrupted);
             bus.Unsubscribe<ArrowShown>(OnArrowShown);
             bus.Unsubscribe<ArrowHidden>(OnArrowHidden);
             bus.Unsubscribe<ArrowOffset>(OnArrowOffset);
@@ -130,6 +157,8 @@ namespace ARNavExperiment.Application
             bus.Unsubscribe<NavigationStateSnapshot>(OnNavigationStateSnapshot);
             bus.Unsubscribe<RouteBindingSummary>(OnRouteBindingSummary);
             bus.Unsubscribe<AppLifecycleEvent>(OnAppLifecycleEvent);
+
+            _subscribed = false;
         }
 
         // ── Experiment ──────────────────────────────────────────
@@ -258,6 +287,13 @@ namespace ARNavExperiment.Application
                 extraData: $"{{\"trigger_type\":\"{e.TriggerType}\",\"duration_s\":{e.DurationSeconds:F1}}}");
         }
 
+        private void OnTriggerInterrupted(TriggerInterrupted e)
+        {
+            EventLogger.Instance?.LogEvent("TRIGGER_INTERRUPTED",
+                extraData: $"{{\"trigger_id\":\"{e.TriggerId}\",\"trigger_type\":\"{e.TriggerType}\"," +
+                           $"\"duration_s\":{e.DurationSeconds:F1},\"reason\":\"{e.Reason}\"}}");
+        }
+
         private void OnArrowShown(ArrowShown e)
         {
             EventLogger.Instance?.LogEvent("GLASS_ARROW_SHOWN");
@@ -340,7 +376,17 @@ namespace ARNavExperiment.Application
 
         private void OnDeviceScreenChanged(DeviceScreenChanged e)
         {
-            EventLogger.Instance?.LogEvent(e.IsOn ? "BEAM_SCREEN_ON" : "BEAM_SCREEN_OFF");
+            if (e.IsOn)
+            {
+                EventLogger.Instance?.LogEvent("BEAM_SCREEN_ON");
+            }
+            else
+            {
+                string extra = e.DurationSec > 0f
+                    ? $"{{\"duration_s\":{e.DurationSec:F1}}}"
+                    : "{}";
+                EventLogger.Instance?.LogEvent("BEAM_SCREEN_OFF", extraData: extra);
+            }
         }
 
         private void OnBeamTabSwitched(BeamTabSwitched e)

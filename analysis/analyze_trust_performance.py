@@ -7,7 +7,8 @@
 - 통계: Paired t-test / Wilcoxon signed-rank
 """
 
-import os
+import sys
+import argparse
 import warnings
 from pathlib import Path
 
@@ -16,6 +17,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 from scipy import stats
+
+from parse_utils import parse_extra
 
 matplotlib.rcParams["font.family"] = "AppleGothic"
 matplotlib.rcParams["axes.unicode_minus"] = False
@@ -58,13 +61,16 @@ TLX_LABELS_KR = [
 # 2. 데이터 로드 / 데모 생성
 # ──────────────────────────────────────────────
 
-def load_nasa_tlx() -> pd.DataFrame:
+def load_nasa_tlx(allow_demo: bool = False) -> pd.DataFrame:
     """NASA-TLX 설문 데이터 로드 또는 데모 생성."""
     path = SURVEY_DIR / "nasa_tlx.csv"
     if path.exists():
         return pd.read_csv(path)
-    print(f"[경고] {path} 없음. 데모 데이터 생성.")
-    return _generate_demo_tlx()
+    if allow_demo:
+        print(f"[경고] {path} 없음. 데모 데이터 생성.")
+        return _generate_demo_tlx()
+    print(f"[오류] {path} 없음. 데모로 실행하려면 --demo 플래그를 사용하세요.")
+    sys.exit(1)
 
 
 def _generate_demo_tlx() -> pd.DataFrame:
@@ -86,13 +92,16 @@ def _generate_demo_tlx() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def load_trust_scale() -> pd.DataFrame:
+def load_trust_scale(allow_demo: bool = False) -> pd.DataFrame:
     """시스템 신뢰 척도 데이터 로드 또는 데모 생성."""
     path = SURVEY_DIR / "trust_scale.csv"
     if path.exists():
         return pd.read_csv(path)
-    print(f"[경고] {path} 없음. 데모 데이터 생성.")
-    return _generate_demo_trust()
+    if allow_demo:
+        print(f"[경고] {path} 없음. 데모 데이터 생성.")
+        return _generate_demo_trust()
+    print(f"[오류] {path} 없음. 데모로 실행하려면 --demo 플래그를 사용하세요.")
+    sys.exit(1)
 
 
 def _generate_demo_trust() -> pd.DataFrame:
@@ -110,7 +119,7 @@ def _generate_demo_trust() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def load_confidence_from_events() -> pd.DataFrame:
+def load_confidence_from_events(allow_demo: bool = False) -> pd.DataFrame:
     """이벤트 로그에서 확신도 데이터 추출 또는 데모 생성."""
     csv_files = sorted(RAW_DIR.glob("P*_*.csv"))
     if csv_files:
@@ -122,8 +131,11 @@ def load_confidence_from_events() -> pd.DataFrame:
         conf = all_events[all_events["event_type"] == "CONFIDENCE_RATED"].copy()
         conf["confidence_rating"] = pd.to_numeric(conf["confidence_rating"], errors="coerce")
         return conf[["participant_id", "condition", "waypoint_id", "confidence_rating"]].dropna()
-    print(f"[경고] 이벤트 로그 없음. 데모 확신도 데이터 생성.")
-    return _generate_demo_confidence()
+    if allow_demo:
+        print(f"[경고] 이벤트 로그 없음. 데모 확신도 데이터 생성.")
+        return _generate_demo_confidence()
+    print(f"[오류] {RAW_DIR}에 이벤트 로그 없음. 데모로 실행하려면 --demo 플래그를 사용하세요.")
+    sys.exit(1)
 
 
 def _generate_demo_confidence() -> pd.DataFrame:
@@ -228,13 +240,7 @@ def analyze_calibration(conf_df: pd.DataFrame, events_df: pd.DataFrame = None):
         mc = events_df[events_df["event_type"] == "MISSION_COMPLETE"].copy()
 
         def extract_correct(extra):
-            if isinstance(extra, str):
-                try:
-                    d = eval(extra) if extra else {}
-                except Exception:
-                    d = {}
-            else:
-                d = {}
+            d = parse_extra(extra)
             return d.get("correct", None)
 
         mc["correct"] = mc["extra_data"].apply(extract_correct)
@@ -329,13 +335,7 @@ def analyze_trigger_type_effects(events_df: pd.DataFrame = None):
     triggers = events_df[events_df["event_type"] == "TRIGGER_ACTIVATED"].copy()
 
     def extract_trigger_type(extra):
-        if isinstance(extra, str):
-            try:
-                d = eval(extra) if extra else {}
-            except Exception:
-                d = {}
-        else:
-            d = {}
+        d = parse_extra(extra)
         return d.get("trigger_type", "unknown")
 
     triggers["trigger_type"] = triggers["extra_data"].apply(extract_trigger_type)
@@ -538,14 +538,19 @@ def plot_confidence_drop(conf_df: pd.DataFrame):
 # ──────────────────────────────────────────────
 
 def main():
+    parser = argparse.ArgumentParser(description="신뢰 및 수행 분석")
+    parser.add_argument("--demo", action="store_true",
+                        help="데이터 파일이 없을 때 데모 데이터로 실행")
+    args = parser.parse_args()
+
     print("=" * 60)
     print("신뢰 및 수행 분석")
     print("=" * 60)
 
     # 데이터 로드
-    tlx_df = load_nasa_tlx()
-    trust_df = load_trust_scale()
-    conf_df = load_confidence_from_events()
+    tlx_df = load_nasa_tlx(allow_demo=args.demo)
+    trust_df = load_trust_scale(allow_demo=args.demo)
+    conf_df = load_confidence_from_events(allow_demo=args.demo)
 
     print(f"NASA-TLX: {len(tlx_df)} rows ({tlx_df['participant_id'].nunique()} 참가자)")
     print(f"신뢰 척도: {len(trust_df)} rows ({trust_df['participant_id'].nunique()} 참가자)")

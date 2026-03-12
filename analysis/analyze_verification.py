@@ -7,6 +7,9 @@
 - 통계: Paired t-test / Wilcoxon signed-rank
 """
 
+import sys
+import json
+import argparse
 import warnings
 from pathlib import Path
 
@@ -15,6 +18,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 from scipy import stats
+
+from parse_utils import parse_extra
 
 matplotlib.rcParams["font.family"] = "AppleGothic"
 matplotlib.rcParams["axes.unicode_minus"] = False
@@ -45,14 +50,17 @@ N_PARTICIPANTS = 24
 # 2. 데이터 로드 / 데모 생성
 # ──────────────────────────────────────────────
 
-def load_events() -> pd.DataFrame:
+def load_events(allow_demo: bool = False) -> pd.DataFrame:
     """이벤트 로그 로드 또는 데모 생성."""
     csv_files = sorted(RAW_DIR.glob("P*_*.csv"))
     if csv_files:
         frames = [pd.read_csv(f, parse_dates=["timestamp"]) for f in csv_files]
         return pd.concat(frames, ignore_index=True)
-    print("[경고] 이벤트 로그 없음. 데모 데이터 생성.")
-    return generate_demo_data()
+    if allow_demo:
+        print("[경고] 이벤트 로그 없음. 데모 데이터 생성.")
+        return generate_demo_data()
+    print(f"[오류] {RAW_DIR}에 이벤트 로그 없음. 데모로 실행하려면 --demo 플래그를 사용하세요.")
+    sys.exit(1)
 
 
 def generate_demo_data() -> pd.DataFrame:
@@ -91,7 +99,7 @@ def generate_demo_data() -> pd.DataFrame:
                     "condition": cond,
                     "event_type": "MISSION_START",
                     "waypoint_id": wp,
-                    "extra_data": str({"mission_id": m_id, "type": m_type}),
+                    "extra_data": json.dumps({"mission_id": m_id, "type": m_type}),
                 })
 
                 dur = max(30, rng.normal(dur_base[cond][m_type], 20))
@@ -114,7 +122,7 @@ def generate_demo_data() -> pd.DataFrame:
                         })
 
                 # VERIFICATION_ANSWERED
-                correct = rng.random() < acc_base[cond][m_type]
+                correct = bool(rng.random() < acc_base[cond][m_type])
                 rt = max(1, rng.normal(5, 2))
                 rows.append({
                     "timestamp": t.isoformat(),
@@ -122,7 +130,7 @@ def generate_demo_data() -> pd.DataFrame:
                     "condition": cond,
                     "event_type": "VERIFICATION_ANSWERED",
                     "waypoint_id": wp,
-                    "extra_data": str({
+                    "extra_data": json.dumps({
                         "mission_id": m_id, "correct": correct,
                         "rt_s": round(rt, 1),
                     }),
@@ -135,7 +143,7 @@ def generate_demo_data() -> pd.DataFrame:
                     "condition": cond,
                     "event_type": "MISSION_COMPLETE",
                     "waypoint_id": wp,
-                    "extra_data": str({
+                    "extra_data": json.dumps({
                         "mission_id": m_id, "correct": correct,
                         "duration_s": round(dur, 1),
                     }),
@@ -149,7 +157,7 @@ def generate_demo_data() -> pd.DataFrame:
                     "condition": cond,
                     "event_type": "DIFFICULTY_RATED",
                     "waypoint_id": wp,
-                    "extra_data": str({"mission_id": m_id, "rating": diff}),
+                    "extra_data": json.dumps({"mission_id": m_id, "rating": diff}),
                 })
 
                 t += pd.Timedelta(seconds=rng.integers(5, 15))
@@ -166,12 +174,7 @@ def generate_demo_data() -> pd.DataFrame:
 
 def _parse_extra(extra_str) -> dict:
     """extra_data 문자열을 딕셔너리로 파싱."""
-    if isinstance(extra_str, str) and extra_str:
-        try:
-            return eval(extra_str)
-        except Exception:
-            return {}
-    return {}
+    return parse_extra(extra_str)
 
 
 # ──────────────────────────────────────────────
@@ -548,11 +551,16 @@ def plot_behavior_distribution(beh_df: pd.DataFrame):
 # ──────────────────────────────────────────────
 
 def main():
+    parser = argparse.ArgumentParser(description="미션 정확도 및 검증 행동 분석")
+    parser.add_argument("--demo", action="store_true",
+                        help="데이터 파일이 없을 때 데모 데이터로 실행")
+    args = parser.parse_args()
+
     print("=" * 60)
     print("미션 정확도 및 검증 행동 분석 (v2.1)")
     print("=" * 60)
 
-    df = load_events()
+    df = load_events(allow_demo=args.demo)
     print(f"총 이벤트 수: {len(df)}")
 
     # 분석

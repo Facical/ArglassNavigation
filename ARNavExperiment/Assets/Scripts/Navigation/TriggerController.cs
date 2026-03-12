@@ -48,8 +48,22 @@ namespace ARNavExperiment.Navigation
 
         public void ActivateTrigger(TriggerType type, string triggerId)
         {
-            if (activeTrigger != null)
+            // 기존 트리거가 미완료 상태면 중단 이벤트 발행
+            if (activeTrigger != null && !triggerCompleted)
+            {
+                float duration = Time.time - triggerStartTime;
+                DomainEventBus.Instance?.Publish(new TriggerInterrupted(
+                    currentTriggerId, currentTriggerType.ToString(), duration,
+                    $"replaced_by_{triggerId}"));
+                CleanupTriggerVisuals();
                 StopCoroutine(activeTrigger);
+                activeTrigger = null;
+            }
+            else if (activeTrigger != null)
+            {
+                StopCoroutine(activeTrigger);
+                activeTrigger = null;
+            }
 
             currentTriggerType = type;
             currentTriggerId = triggerId;
@@ -123,6 +137,11 @@ namespace ARNavExperiment.Navigation
             }
         }
 
+        /// <summary>
+        /// T4: 화살표를 숨기고 근접 텍스트를 표시.
+        /// 코루틴은 초기 설정 후 즉시 종료(yield return null).
+        /// 시각 효과(화살표 숨김 + 텍스트 표시)는 DeactivateCurrentTrigger()가 호출될 때까지 유지.
+        /// </summary>
         private IEnumerator RunT4()
         {
             arrowRenderer.Hide();
@@ -133,7 +152,7 @@ namespace ARNavExperiment.Navigation
                 proximityText.gameObject.SetActive(true);
             }
 
-            // T4 stays active until mission completion
+            // T4 stays active until mission completion — visuals persist until DeactivateCurrentTrigger()
             yield return null;
         }
 
@@ -149,6 +168,14 @@ namespace ARNavExperiment.Navigation
             if (!triggerCompleted)
                 LogTriggerComplete(currentTriggerType, currentTriggerId);
 
+            CleanupTriggerVisuals();
+        }
+
+        /// <summary>
+        /// 트리거 시각 효과를 모두 초기화.
+        /// </summary>
+        private void CleanupTriggerVisuals()
+        {
             arrowRenderer.SetFanMode(false, 0);
             arrowRenderer.SetTriggerMode(false);
             arrowRenderer.Show();

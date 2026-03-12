@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using ARNavExperiment.Domain.Events;
 using ARNavExperiment.Navigation;
@@ -16,19 +17,43 @@ namespace ARNavExperiment.Application
 
         [SerializeField] private ARArrowRenderer arrowRenderer;
 
+        private bool _subscribed;
+
         private void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
         }
 
-        private void OnEnable()
+        private void OnEnable() => TrySubscribe();
+
+        private void Start()
+        {
+            if (!_subscribed) TrySubscribe();
+            if (!_subscribed) StartCoroutine(RetrySubscribe());
+        }
+
+        private void TrySubscribe()
         {
             var bus = DomainEventBus.Instance;
             if (bus == null) return;
 
             bus.Subscribe<MissionCompleted>(OnMissionCompleted);
             bus.Subscribe<MissionForceSkipped>(OnMissionForceSkipped);
+
+            _subscribed = true;
+            Debug.Log($"[{GetType().Name}] Subscribed to DomainEventBus");
+        }
+
+        private IEnumerator RetrySubscribe()
+        {
+            for (int i = 0; i < 10 && !_subscribed; i++)
+            {
+                yield return new WaitForSeconds(0.1f);
+                TrySubscribe();
+            }
+            if (!_subscribed)
+                Debug.LogError($"[{GetType().Name}] Failed to subscribe after 10 retries");
         }
 
         private void OnDisable()
@@ -38,6 +63,8 @@ namespace ARNavExperiment.Application
 
             bus.Unsubscribe<MissionCompleted>(OnMissionCompleted);
             bus.Unsubscribe<MissionForceSkipped>(OnMissionForceSkipped);
+
+            _subscribed = false;
         }
 
         public void ShowArrow() => arrowRenderer?.Show();
@@ -72,8 +99,14 @@ namespace ARNavExperiment.Application
                 "T2" => TriggerType.T2_InformationConflict,
                 "T3" => TriggerType.T3_LowResolution,
                 "T4" => TriggerType.T4_GuidanceAbsence,
-                _ => TriggerType.T1_TrackingDegradation
+                _ => LogUnknownTriggerAndFallback(triggerId)
             };
+        }
+
+        private static TriggerType LogUnknownTriggerAndFallback(string triggerId)
+        {
+            Debug.LogError($"[NavigationService] Unknown trigger ID: '{triggerId}' — falling back to T1_TrackingDegradation");
+            return TriggerType.T1_TrackingDegradation;
         }
     }
 }

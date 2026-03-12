@@ -7,7 +7,10 @@
 """
 
 import os
+import sys
 import glob
+import json
+import argparse
 import warnings
 from pathlib import Path
 
@@ -16,6 +19,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 from scipy import stats
+
+from parse_utils import parse_extra
 
 matplotlib.rcParams["font.family"] = "AppleGothic"
 matplotlib.rcParams["axes.unicode_minus"] = False
@@ -44,12 +49,17 @@ N_PARTICIPANTS = 24
 N_WAYPOINTS = 8
 
 
-def load_all_events() -> pd.DataFrame:
+def load_all_events(allow_demo: bool = False) -> pd.DataFrame:
     """data/raw/ 내 모든 이벤트 로그 CSV를 통합하여 반환."""
     csv_files = sorted(RAW_DIR.glob("P*_*.csv"))
     if not csv_files:
-        print(f"[경고] {RAW_DIR}에 CSV 파일이 없습니다. 데모 데이터를 생성합니다.")
-        return generate_demo_data()
+        if allow_demo:
+            print(f"[경고] {RAW_DIR}에 CSV 파일이 없습니다. 데모 데이터를 생성합니다.")
+            return generate_demo_data()
+        else:
+            print(f"[오류] {RAW_DIR}에 CSV 파일이 없습니다.")
+            print("  데모 데이터로 실행하려면 --demo 플래그를 사용하세요.")
+            sys.exit(1)
 
     frames = []
     for f in csv_files:
@@ -212,6 +222,8 @@ def _generate_confidence(condition: str, wp: str, rng) -> int:
 
 
 def _event(t, pid, cond, etype, wp, **extra) -> dict:
+    extra_filtered = {k: v for k, v in extra.items()
+                      if k not in ("confidence", "beam_content_type")}
     row = {
         "timestamp": t.isoformat(),
         "participant_id": pid,
@@ -224,8 +236,7 @@ def _event(t, pid, cond, etype, wp, **extra) -> dict:
         "device_active": "glass" if cond == "glass_only" else "both",
         "confidence_rating": extra.get("confidence", ""),
         "beam_content_type": extra.get("beam_content_type", ""),
-        "extra_data": str({k: v for k, v in extra.items()
-                          if k not in ("confidence", "beam_content_type")}) if extra else "{}",
+        "extra_data": json.dumps(extra_filtered) if extra_filtered else "{}",
     }
     return row
 
@@ -246,14 +257,7 @@ def analyze_switching(df: pd.DataFrame) -> pd.DataFrame:
     # 전환 지속시간 (BEAM_SCREEN_OFF의 duration_s)
     durations = []
     for _, row in beam_off.iterrows():
-        extra = row.get("extra_data", "{}")
-        if isinstance(extra, str):
-            try:
-                d = eval(extra) if extra else {}
-            except Exception:
-                d = {}
-        else:
-            d = {}
+        d = parse_extra(row.get("extra_data", "{}"))
         dur = d.get("duration_s", np.nan)
         durations.append({"participant_id": row["participant_id"], "duration_s": dur})
 
@@ -364,13 +368,7 @@ def analyze_verification_episodes(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame()
 
     def extract_correct(extra):
-        if isinstance(extra, str):
-            try:
-                d = eval(extra) if extra else {}
-            except Exception:
-                d = {}
-        else:
-            d = {}
+        d = parse_extra(extra)
         return d.get("correct", None)
 
     mission_completes["correct"] = mission_completes["extra_data"].apply(extract_correct)
@@ -429,9 +427,7 @@ def analyze_content_access_patterns(df: pd.DataFrame) -> pd.DataFrame:
 
     # 미션 구간에 콘텐츠 이벤트 매핑
     missions = hybrid[hybrid["event_type"] == "MISSION_START"].copy()
-    missions["parsed"] = missions["extra_data"].apply(
-        lambda x: eval(x) if isinstance(x, str) and x else {}
-    )
+    missions["parsed"] = missions["extra_data"].apply(parse_extra)
     missions["mission_id"] = missions["parsed"].apply(lambda d: d.get("mission_id", ""))
 
     mission_types_map = {"A1": "A", "A2": "A", "B1": "B", "B2": "B", "C1": "C"}
@@ -471,9 +467,7 @@ def analyze_information_utilization(df: pd.DataFrame) -> pd.DataFrame:
         print("  [경고] MISSION_COMPLETE 이벤트 없음")
         return pd.DataFrame()
 
-    mc["parsed"] = mc["extra_data"].apply(
-        lambda x: eval(x) if isinstance(x, str) and x else {}
-    )
+    mc["parsed"] = mc["extra_data"].apply(parse_extra)
     mc["mission_id"] = mc["parsed"].apply(lambda d: d.get("mission_id", ""))
     mc["correct"] = mc["parsed"].apply(lambda d: d.get("correct", None))
 
@@ -532,14 +526,7 @@ def analyze_pauses(df: pd.DataFrame) -> pd.DataFrame:
 
     pause_durations = []
     for _, row in pause_ends.iterrows():
-        extra = row.get("extra_data", "{}")
-        if isinstance(extra, str):
-            try:
-                d = eval(extra) if extra else {}
-            except Exception:
-                d = {}
-        else:
-            d = {}
+        d = parse_extra(row.get("extra_data", "{}"))
         dur = d.get("pause_duration_s", 0)
         pause_durations.append({
             "participant_id": row["participant_id"],
@@ -747,11 +734,16 @@ def plot_content_heatmap(pattern_df: pd.DataFrame):
 # ──────────────────────────────────────────────
 
 def main():
+    parser = argparse.ArgumentParser(description="기기 전환 패턴 분석")
+    parser.add_argument("--demo", action="store_true",
+                        help="CSV 파일이 없을 때 데모 데이터로 실행")
+    args = parser.parse_args()
+
     print("=" * 60)
     print("기기 전환 패턴 분석")
     print("=" * 60)
 
-    df = load_all_events()
+    df = load_all_events(allow_demo=args.demo)
     print(f"총 이벤트 수: {len(df)}")
     print(f"참가자 수: {df['participant_id'].nunique()}")
     print(f"조건: {df['condition'].unique().tolist()}")

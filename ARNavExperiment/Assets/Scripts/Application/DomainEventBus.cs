@@ -9,6 +9,7 @@ namespace ARNavExperiment.Application
     /// 중앙 도메인 이벤트 버스. 동기 발행, 핸들러별 try-catch.
     /// DontDestroyOnLoad 싱글턴.
     /// </summary>
+    [DefaultExecutionOrder(-100)]
     public class DomainEventBus : MonoBehaviour
     {
         public static DomainEventBus Instance { get; private set; }

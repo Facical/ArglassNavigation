@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using ARNavExperiment.Domain.Events;
 using ARNavExperiment.Core;
@@ -13,12 +14,36 @@ namespace ARNavExperiment.Application
     /// </summary>
     public class ExperimentAdvancer : MonoBehaviour
     {
-        private void OnEnable()
+        private bool _subscribed;
+
+        private void OnEnable() => TrySubscribe();
+
+        private void Start()
+        {
+            if (!_subscribed) TrySubscribe();
+            if (!_subscribed) StartCoroutine(RetrySubscribe());
+        }
+
+        private void TrySubscribe()
         {
             var bus = DomainEventBus.Instance;
             if (bus == null) return;
 
             bus.Subscribe<AllMissionsCompleted>(OnAllMissionsCompleted);
+
+            _subscribed = true;
+            Debug.Log($"[{GetType().Name}] Subscribed to DomainEventBus");
+        }
+
+        private IEnumerator RetrySubscribe()
+        {
+            for (int i = 0; i < 10 && !_subscribed; i++)
+            {
+                yield return new WaitForSeconds(0.1f);
+                TrySubscribe();
+            }
+            if (!_subscribed)
+                Debug.LogError($"[{GetType().Name}] Failed to subscribe after 10 retries");
         }
 
         private void OnDisable()
@@ -27,6 +52,8 @@ namespace ARNavExperiment.Application
             if (bus == null) return;
 
             bus.Unsubscribe<AllMissionsCompleted>(OnAllMissionsCompleted);
+
+            _subscribed = false;
         }
 
         private void OnAllMissionsCompleted(AllMissionsCompleted e)
