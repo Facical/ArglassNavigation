@@ -55,9 +55,17 @@ namespace ARNavExperiment.Core
 
         /// <summary>
         /// 매핑 데이터가 없을 때 직접 Setup으로 진입하는 fallback 경로.
+        /// Relocalization 건너뛰므로 조건을 여기서 적용.
         /// </summary>
         public void StartExperiment()
         {
+            if (session != null)
+            {
+                var cond = session.condition == "glass_only"
+                    ? ExperimentCondition.GlassOnly
+                    : ExperimentCondition.Hybrid;
+                ConditionController.Instance?.SetCondition(cond);
+            }
             TransitionTo(ExperimentState.Setup);
         }
 

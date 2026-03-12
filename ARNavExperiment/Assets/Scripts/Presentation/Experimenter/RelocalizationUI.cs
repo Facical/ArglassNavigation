@@ -451,7 +451,21 @@ namespace ARNavExperiment.Presentation.Experimenter
             if (progressBar != null)
                 progressBar.fillAmount = 1f;
 
-            // 2초 후 자동 진행
+            // 공간 정합성 검증
+            var mgr = SpatialAnchorManager.Instance;
+            bool spatialOk = true;
+            string spatialWarning = "";
+            if (mgr != null)
+                spatialOk = mgr.VerifySpatialCoherence(out spatialWarning);
+
+            if (!spatialOk)
+            {
+                Debug.LogWarning($"[RelocalizationUI] Spatial coherence warning: {spatialWarning}");
+                ShowResultPanel(mgr?.RelocalizationSuccessRate ?? 0f);
+                return; // 실험자 수동 판단
+            }
+
+            // 정합성 통과 → 2초 자동 진행
             StopGuidedCoroutine();
             guidedCoroutine = StartCoroutine(GuidedAutoProceed(2f));
         }
@@ -588,9 +602,19 @@ namespace ARNavExperiment.Presentation.Experimenter
             Debug.Log("[RelocalizationUI] OnProceedClicked invoked");
             var mgr = SpatialAnchorManager.Instance;
             float rate = mgr != null ? mgr.RelocalizationSuccessRate : 0f;
-            string fallbacks = mgr != null ? string.Join(",", mgr.FallbackWaypoints) : "";
 
-            DomainEventBus.Instance?.Publish(new RelocalizationCompleted(rate, "proceed_partial"));
+            // 성공률 기반 action 구분
+            string action;
+            if (mgr == null || mgr.TotalAnchorCount == 0)
+                action = "proceed_no_anchors";
+            else if (rate >= 1f)
+                action = "proceed_complete";
+            else if (rate > 0f)
+                action = "proceed_partial";
+            else
+                action = "proceed_fallback";
+
+            DomainEventBus.Instance?.Publish(new RelocalizationCompleted(rate, action));
 
             if (relocalizationPanel != null)
                 relocalizationPanel.SetActive(false);

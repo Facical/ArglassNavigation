@@ -73,6 +73,7 @@ namespace ARNavExperiment.Navigation
         private RouteData activeRoute;
         private Transform playerTransform;
         private float lastSnapshotTime;
+        private float lastArrivalCheckLogTime;
         private ARArrowRenderer cachedArrowRenderer;
         private float headingCalibrationOffset;
         private string headingSource = "none";
@@ -165,8 +166,9 @@ namespace ARNavExperiment.Navigation
             // 바인딩 요약 도메인 이벤트 발행
             PublishRouteBindingSummary(routeId);
 
-            // 스냅샷 타이머 초기화
+            // 스냅샷/로그 타이머 초기화
             lastSnapshotTime = Time.time;
+            lastArrivalCheckLogTime = Time.time;
             cachedArrowRenderer = FindObjectOfType<ARArrowRenderer>();
 
             // 앵커 바인딩 후 가장 가까운 웨이포인트를 시작 인덱스로 설정
@@ -390,49 +392,47 @@ namespace ARNavExperiment.Navigation
         }
 
         /// <summary>
-        /// 현재 WP 이후의 모든 WP를 스캔하여, 이미 반경 내에 들어온 WP로 건너뜁니다.
-        /// 미션 타겟 WP를 우선, 아니면 반경 내 가장 가까운 WP로 건너뜁니다.
+        /// 현재 WP 이후의 WP를 스캔하여, 이미 반경 내에 들어온 WP로 건너뜁니다.
+        /// 미션 타겟 WP: 원거리 전방 탐색 허용 (미션 도착 즉시 감지 필요).
+        /// 비타겟 WP: 현재+1만 확인 (다수 건너뛰기 방지 — 화살표 방향 급변 방지).
         /// </summary>
         private void TryLookAheadReach()
         {
-            int targetIdx = -1;
-            int nearestReachedIdx = -1;
-            float nearestReachedDist = float.MaxValue;
-
+            // 1) 미션 타겟이 반경 내인지 우선 확인 (원거리 전방 탐색)
             for (int i = CurrentWaypointIndex + 1; i < activeRoute.waypoints.Count; i++)
             {
                 var wp = activeRoute.waypoints[i];
+                if (!IsMissionTarget(wp.waypointId)) continue;
                 float dist = ComputeDistanceToWaypoint(wp, out float radius);
-                if (dist > radius) continue;
-
-                if (IsMissionTarget(wp.waypointId))
+                if (dist <= radius)
                 {
-                    targetIdx = i;
-                    break;
-                }
-                if (dist < nearestReachedDist)
-                {
-                    nearestReachedIdx = i;
-                    nearestReachedDist = dist;
+                    Debug.Log($"[WaypointManager] Look-ahead skip to target: index {CurrentWaypointIndex}→{i} " +
+                        $"({wp.waypointId})");
+                    for (int j = CurrentWaypointIndex; j < i; j++)
+                    {
+                        DomainEventBus.Instance?.Publish(new WaypointFallbackUsed(
+                            activeRoute.waypoints[j].waypointId, "look_ahead_skip_to_target"));
+                    }
+                    CurrentWaypointIndex = i;
+                    ReachWaypoint(wp);
+                    return;
                 }
             }
 
-            int skipToIdx = targetIdx >= 0 ? targetIdx : nearestReachedIdx;
-            if (skipToIdx < 0) return;
-
-            Debug.Log($"[WaypointManager] Look-ahead skip: index {CurrentWaypointIndex}→{skipToIdx} " +
-                $"({activeRoute.waypoints[skipToIdx].waypointId})");
-
-            // 건너뛴 WP들은 도메인 이벤트만 발행 (MissionManager에는 전달하지 않음)
-            for (int i = CurrentWaypointIndex; i < skipToIdx; i++)
+            // 2) 비타겟: 현재+1만 확인
+            int nextIdx = CurrentWaypointIndex + 1;
+            if (nextIdx >= activeRoute.waypoints.Count) return;
+            var nextWp = activeRoute.waypoints[nextIdx];
+            float nextDist = ComputeDistanceToWaypoint(nextWp, out float nextRadius);
+            if (nextDist <= nextRadius)
             {
-                var skipped = activeRoute.waypoints[i];
+                Debug.Log($"[WaypointManager] Look-ahead skip: index {CurrentWaypointIndex}→{nextIdx} " +
+                    $"({nextWp.waypointId})");
                 DomainEventBus.Instance?.Publish(new WaypointFallbackUsed(
-                    skipped.waypointId, "look_ahead_skip"));
+                    activeRoute.waypoints[CurrentWaypointIndex].waypointId, "look_ahead_skip"));
+                CurrentWaypointIndex = nextIdx;
+                ReachWaypoint(nextWp);
             }
-
-            CurrentWaypointIndex = skipToIdx;
-            ReachWaypoint(activeRoute.waypoints[skipToIdx]);
         }
 
         private void Update()
@@ -443,9 +443,13 @@ namespace ARNavExperiment.Navigation
             var wp = activeRoute.waypoints[CurrentWaypointIndex];
             float dist = ComputeDistanceToWaypoint(wp, out float arrivalRadius);
 
-            Debug.Log($"[ArrivalCheck] wp={wp.waypointId}, dist={dist:F2}, radius={arrivalRadius:F2}, " +
-                $"anchor={(wp.anchorTransform != null)}, heading={headingCalibrationOffset:F1}, " +
-                $"source={headingSource}, calib={calibrationSource}");
+            if (Time.time - lastArrivalCheckLogTime >= 5f)
+            {
+                lastArrivalCheckLogTime = Time.time;
+                Debug.Log($"[ArrivalCheck] wp={wp.waypointId}, dist={dist:F2}, radius={arrivalRadius:F2}, " +
+                    $"anchor={(wp.anchorTransform != null)}, heading={headingCalibrationOffset:F1}, " +
+                    $"source={headingSource}, calib={calibrationSource}");
+            }
 
             if (dist <= arrivalRadius)
             {

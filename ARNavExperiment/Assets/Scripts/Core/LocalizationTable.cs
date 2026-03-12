@@ -194,6 +194,18 @@ namespace ARNavExperiment.Core
             { "glassflow.guide_ready", ("Ready! Starting...", "준비 완료!") },
             { "glassflow.guide_timeout", ("{0} skipped", "{0} 건너뜀") },
 
+            // ===== Preflight Check =====
+            { "preflight.header", ("Preflight Check", "사전 점검") },
+            { "preflight.logger_ok", ("✓ EventLogger ready", "✓ 이벤트 로거 준비됨") },
+            { "preflight.logger_fail", ("✗ EventLogger NOT ready", "✗ 이벤트 로거 미준비") },
+            { "preflight.spatial_ok", ("✓ Spatial calibration active", "✓ 공간 보정 활성") },
+            { "preflight.spatial_fail", ("✗ No spatial calibration", "✗ 공간 보정 없음") },
+            { "preflight.condition_ok", ("✓ Condition applied: {0}", "✓ 조건 적용됨: {0}") },
+            { "preflight.condition_fail", ("✗ Condition mismatch: expected {0}, got {1}", "✗ 조건 불일치: 예상 {0}, 현재 {1}") },
+            { "preflight.beam_ok", ("✓ BeamPro tracker active", "✓ BeamPro 트래커 활성") },
+            { "preflight.beam_fail", ("✗ BeamPro tracker missing", "✗ BeamPro 트래커 없음") },
+            { "preflight.override_available", ("Override available in {0}s...", "{0}초 후 강제 진행 가능...") },
+
             // ===== GlassFlowUI Image Tracking =====
             { "glassflow.image_scan", ("Scan the marker...", "\ub9c8\ucee4\ub97c \uc2a4\uce94\ud558\uc138\uc694...") },
             { "glassflow.image_marker_found", ("\u2713 {0} found!", "\u2713 {0} \ubc1c\uacac!") },

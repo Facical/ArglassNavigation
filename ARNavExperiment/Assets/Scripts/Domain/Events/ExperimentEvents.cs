@@ -86,4 +86,21 @@ namespace ARNavExperiment.Domain.Events
             TotalDurationSeconds = totalDurationSeconds;
         }
     }
+
+    /// <summary>
+    /// Setup→Running 전환 전 Preflight 체크 결과.
+    /// </summary>
+    public readonly struct PreflightCheckCompleted : IDomainEvent
+    {
+        public readonly bool AllPassed;
+        public readonly string FailedItems; // JSON array
+        public readonly bool Overridden;
+
+        public PreflightCheckCompleted(bool allPassed, string failedItems, bool overridden)
+        {
+            AllPassed = allPassed;
+            FailedItems = failedItems;
+            Overridden = overridden;
+        }
+    }
 }

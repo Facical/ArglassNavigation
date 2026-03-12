@@ -14,6 +14,8 @@ namespace ARNavExperiment.Logging
         private string currentCondition;
         private string currentMissionId;
 
+        public bool IsReady => csvWriter != null;
+
         private static readonly string[] Headers = {
             "timestamp", "participant_id", "condition", "event_type",
             "waypoint_id", "head_rotation_x", "head_rotation_y", "head_rotation_z",

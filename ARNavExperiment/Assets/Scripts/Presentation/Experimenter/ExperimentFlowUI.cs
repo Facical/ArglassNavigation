@@ -1,8 +1,14 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using ARNavExperiment.Core;
 using ARNavExperiment.Mission;
+using ARNavExperiment.Domain.Events;
+using ARNavExperiment.Application;
+using ARNavExperiment.Logging;
+using ARNavExperiment.Navigation;
 
 namespace ARNavExperiment.Presentation.Experimenter
 {
@@ -31,6 +37,11 @@ namespace ARNavExperiment.Presentation.Experimenter
 
         [Header("Completion")]
         [SerializeField] private TextMeshProUGUI completionText;
+
+        // Preflight state
+        private bool preflightPassed;
+        private List<string> preflightFailedItems = new();
+        private Coroutine preflightOverrideCoroutine;
 
         private void Start()
         {
@@ -84,6 +95,12 @@ namespace ARNavExperiment.Presentation.Experimenter
                 {
                     if (relocalizationPanel != null) relocalizationPanel.SetActive(true);
                     relocalizationUI?.StartRelocalization("B");
+                    return;
+                }
+                if (state == ExperimentState.Setup)
+                {
+                    ShowSetupTransition();
+                    return;
                 }
                 return;
             }
@@ -131,11 +148,32 @@ namespace ARNavExperiment.Presentation.Experimenter
 
             var session = ExperimentManager.Instance?.session;
             if (transitionTitleText)
-                transitionTitleText.text = LocalizationManager.Get("flow.setup_title");
+                transitionTitleText.text = LocalizationManager.Get("preflight.header");
+
+            // Preflight 체크 실행
+            RunPreflightChecks();
+            string report = FormatPreflightResults(session);
+
             if (transitionDetailText)
                 transitionDetailText.text = string.Format(
                     LocalizationManager.Get("flow.setup_detail"),
-                    session?.participantId, session?.condition, session?.missionSet);
+                    session?.participantId, session?.condition, session?.missionSet)
+                    + "\n\n" + report;
+
+            // 전체 통과 → Continue 즉시 활성, 실패 → 5초 지연 후 활성화
+            if (transitionContinueButton != null)
+            {
+                if (preflightPassed)
+                {
+                    transitionContinueButton.interactable = true;
+                }
+                else
+                {
+                    transitionContinueButton.interactable = false;
+                    StopPreflightOverride();
+                    preflightOverrideCoroutine = StartCoroutine(PreflightOverrideCountdown(5f));
+                }
+            }
         }
 
         private void ShowConditionStart()
@@ -197,13 +235,161 @@ namespace ARNavExperiment.Presentation.Experimenter
                 completionText.text = LocalizationManager.Get("flow.complete_text");
         }
 
+        // === Preflight ===
+
+        private void RunPreflightChecks()
+        {
+            preflightFailedItems.Clear();
+            preflightPassed = true;
+
+            // 1. EventLogger
+            if (EventLogger.Instance == null || !EventLogger.Instance.IsReady)
+            {
+                preflightFailedItems.Add("logger");
+                preflightPassed = false;
+            }
+
+            // 2. Spatial calibration
+            bool spatialOk = (WaypointManager.Instance != null && WaypointManager.Instance.HasMapCalibration)
+                || (SpatialAnchorManager.Instance != null && SpatialAnchorManager.Instance.SuccessfulAnchorCount > 0);
+            if (!spatialOk)
+            {
+                preflightFailedItems.Add("spatial");
+                preflightPassed = false;
+            }
+
+            // 3. Condition
+            var session = ExperimentManager.Instance?.session;
+            if (session != null && ConditionController.Instance != null)
+            {
+                string expected = session.condition;
+                string actual = ConditionController.Instance.CurrentCondition == ExperimentCondition.GlassOnly
+                    ? "glass_only" : "hybrid";
+                if (expected != actual)
+                {
+                    preflightFailedItems.Add("condition");
+                    preflightPassed = false;
+                }
+            }
+
+            // 4. BeamPro (Hybrid만)
+            if (session != null && session.condition == "hybrid")
+            {
+                if (DeviceStateTracker.Instance == null)
+                {
+                    preflightFailedItems.Add("beampro");
+                    preflightPassed = false;
+                }
+            }
+
+            Debug.Log($"[ExperimentFlowUI] Preflight: passed={preflightPassed}, failed=[{string.Join(",", preflightFailedItems)}]");
+        }
+
+        private string FormatPreflightResults(ParticipantSession session)
+        {
+            var sb = new System.Text.StringBuilder();
+
+            // Logger
+            bool loggerOk = !preflightFailedItems.Contains("logger");
+            sb.AppendLine(loggerOk
+                ? LocalizationManager.Get("preflight.logger_ok")
+                : $"<color=#FF6666>{LocalizationManager.Get("preflight.logger_fail")}</color>");
+
+            // Spatial
+            bool spatialOk = !preflightFailedItems.Contains("spatial");
+            sb.AppendLine(spatialOk
+                ? LocalizationManager.Get("preflight.spatial_ok")
+                : $"<color=#FF6666>{LocalizationManager.Get("preflight.spatial_fail")}</color>");
+
+            // Condition
+            bool conditionOk = !preflightFailedItems.Contains("condition");
+            if (conditionOk)
+            {
+                sb.AppendLine(string.Format(
+                    LocalizationManager.Get("preflight.condition_ok"),
+                    session?.condition ?? "?"));
+            }
+            else
+            {
+                string actual = ConditionController.Instance != null
+                    ? (ConditionController.Instance.CurrentCondition == ExperimentCondition.GlassOnly ? "glass_only" : "hybrid")
+                    : "?";
+                sb.AppendLine($"<color=#FF6666>{string.Format(LocalizationManager.Get("preflight.condition_fail"), session?.condition ?? "?", actual)}</color>");
+            }
+
+            // BeamPro (Hybrid만)
+            if (session != null && session.condition == "hybrid")
+            {
+                bool beamOk = !preflightFailedItems.Contains("beampro");
+                sb.AppendLine(beamOk
+                    ? LocalizationManager.Get("preflight.beam_ok")
+                    : $"<color=#FF6666>{LocalizationManager.Get("preflight.beam_fail")}</color>");
+            }
+
+            return sb.ToString();
+        }
+
+        private IEnumerator PreflightOverrideCountdown(float seconds)
+        {
+            float remaining = seconds;
+            while (remaining > 0f)
+            {
+                if (transitionDetailText != null)
+                {
+                    // 카운트다운을 마지막 줄에 추가
+                    string current = transitionDetailText.text;
+                    string overrideMsg = string.Format(
+                        LocalizationManager.Get("preflight.override_available"),
+                        $"{remaining:F0}");
+                    // 이전 오버라이드 메시지 제거 후 새로 추가
+                    int idx = current.LastIndexOf("\n<color=#FFAA00>");
+                    if (idx >= 0)
+                        current = current.Substring(0, idx);
+                    transitionDetailText.text = current + $"\n<color=#FFAA00>{overrideMsg}</color>";
+                }
+                yield return new WaitForSeconds(1f);
+                remaining -= 1f;
+            }
+
+            // 타이머 만료 → 버튼 활성화 (주황색 스타일은 텍스트로 표현)
+            if (transitionContinueButton != null)
+                transitionContinueButton.interactable = true;
+
+            if (transitionDetailText != null)
+            {
+                string current = transitionDetailText.text;
+                int idx = current.LastIndexOf("\n<color=#FFAA00>");
+                if (idx >= 0)
+                    current = current.Substring(0, idx);
+                transitionDetailText.text = current;
+            }
+
+            preflightOverrideCoroutine = null;
+        }
+
+        private void StopPreflightOverride()
+        {
+            if (preflightOverrideCoroutine != null)
+            {
+                StopCoroutine(preflightOverrideCoroutine);
+                preflightOverrideCoroutine = null;
+            }
+        }
+
         // === Button Callbacks ===
 
         private void OnTransitionContinue()
         {
+            StopPreflightOverride();
             var state = ExperimentManager.Instance?.CurrentState;
             if (state == ExperimentState.Setup)
             {
+                // Preflight 결과 이벤트 발행
+                bool overridden = !preflightPassed;
+                string failedJson = "[" + string.Join(",", preflightFailedItems.ConvertAll(s => $"\"{s}\"")) + "]";
+                DomainEventBus.Instance?.Publish(new PreflightCheckCompleted(
+                    preflightPassed, failedJson, overridden));
+
                 conditionTransitionPanel?.SetActive(false);
                 ExperimentManager.Instance?.AdvanceState(); // → Running
             }
@@ -241,6 +427,8 @@ namespace ARNavExperiment.Presentation.Experimenter
 
         private void OnDestroy()
         {
+            StopPreflightOverride();
+
             if (ExperimentManager.Instance != null)
                 ExperimentManager.Instance.OnStateChanged -= OnStateChanged;
 

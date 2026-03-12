@@ -45,6 +45,7 @@ namespace ARNavExperiment.Application
             bus.Subscribe<RouteStarted>(OnRouteStarted);
             bus.Subscribe<SurveyStarted>(OnSurveyStarted);
             bus.Subscribe<ExperimentCompleted>(OnExperimentCompleted);
+            bus.Subscribe<PreflightCheckCompleted>(OnPreflightCheckCompleted);
 
             // === Mission ===
             bus.Subscribe<MissionStarted>(OnMissionStarted);
@@ -117,6 +118,7 @@ namespace ARNavExperiment.Application
             bus.Unsubscribe<RouteStarted>(OnRouteStarted);
             bus.Unsubscribe<SurveyStarted>(OnSurveyStarted);
             bus.Unsubscribe<ExperimentCompleted>(OnExperimentCompleted);
+            bus.Unsubscribe<PreflightCheckCompleted>(OnPreflightCheckCompleted);
 
             bus.Unsubscribe<MissionStarted>(OnMissionStarted);
             bus.Unsubscribe<MissionArrived>(OnMissionArrived);
@@ -199,6 +201,14 @@ namespace ARNavExperiment.Application
             EventLogger.Instance?.LogEvent("EXPERIMENT_END",
                 extraData: $"{{\"total_duration_s\":{e.TotalDurationSeconds:F0}}}");
             EventLogger.Instance?.EndSession();
+        }
+
+        private void OnPreflightCheckCompleted(PreflightCheckCompleted e)
+        {
+            EventLogger.Instance?.LogEvent("PREFLIGHT_CHECK",
+                extraData: $"{{\"all_passed\":{e.AllPassed.ToString().ToLower()}," +
+                           $"\"failed_items\":{e.FailedItems}," +
+                           $"\"overridden\":{e.Overridden.ToString().ToLower()}}}");
         }
 
         // ── Mission ─────────────────────────────────────────────
@@ -359,11 +369,14 @@ namespace ARNavExperiment.Application
             string eventType = e.Action switch
             {
                 "retry" => "RELOCALIZATION_RETRY",
+                "proceed_complete" => "RELOCALIZATION_PROCEED_COMPLETE",
                 "proceed_partial" => "RELOCALIZATION_PROCEED_PARTIAL",
+                "proceed_no_anchors" => "RELOCALIZATION_PROCEED_NO_ANCHORS",
+                "proceed_fallback" => "RELOCALIZATION_PROCEED_FALLBACK",
                 _ => "RELOCALIZATION_COMPLETE"
             };
             EventLogger.Instance?.LogEvent(eventType,
-                extraData: $"{{\"success_rate\":{e.SuccessRate:F2}}}");
+                extraData: $"{{\"success_rate\":{e.SuccessRate:F2},\"action\":\"{e.Action}\"}}");
         }
 
         private void OnAnchorDiagnostics(AnchorDiagnostics e)
