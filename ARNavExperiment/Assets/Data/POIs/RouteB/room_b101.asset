@@ -15,11 +15,14 @@ MonoBehaviour:
   poiId: room_b101
   poiType: professor_office
   displayName: B101 Prof. Lee's Office
-  description: Prof. Jaemin Lee's office
+  description: Prof. Jae-Min Lee's office (Computer Engineering) + Hanwha Systems
+    Maritime Lab + LGU+ Smart Factory Center
   capacity: 2
   equipment: []
-  mapPosition: {x: 20, y: 25}
+  mapPosition: {x: 36, y: 69}
   icon: {fileID: 0}
-  displayNameKo: "B101 \uC774\uAD50\uC218 \uC5F0\uAD6C\uC2E4"
-  descriptionKo: "\uC774\uC7AC\uBBFC \uAD50\uC218 \uC5F0\uAD6C\uC2E4"
+  displayNameKo: "B101 \uC774\uC7AC\uBBFC \uAD50\uC218 \uC5F0\uAD6C\uC2E4"
+  descriptionKo: "\uC774\uC7AC\uBBFC \uAD50\uC218 \uC5F0\uAD6C\uC2E4 (\uCEF4\uD4E8\uD130\uACF5\uD559\uACFC)
+    + Hanwha Systems \uD574\uC591\uC5F0\uAD6C\uC18C + LGU+ \uC2A4\uB9C8\uD2B8\uD329\uD1A0\uB9AC
+    \uC5F0\uAD6C\uC13C\uD130"
   equipmentKo: []

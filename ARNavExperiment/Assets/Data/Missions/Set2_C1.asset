@@ -1,0 +1,62 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c91d0b795795846309dc88577bbd3277, type: 3}
+  m_Name: Set2_C1
+  m_EditorClassIdentifier: 
+  missionId: C1
+  type: 2
+  briefingText: Check rooms B101 and B102. Compare the amount of notices, posters,
+    and papers posted outside each room's door and wall.
+  targetWaypointId: WP07
+  verificationQuestion: Which room has more notices and posters posted outside?
+  answerOptions:
+  - B101 (Prof. Lee)
+  - B102 (NSL Lab)
+  - Both equal
+  - Neither has postings
+  correctAnswerIndex: 1
+  associatedTriggerId: 
+  relevantPOIs:
+  - {fileID: 11400000, guid: c5ac876e5aee54217a25bad45c9ea5cf, type: 2}
+  - {fileID: 11400000, guid: 40e798d6dce7d4810a40b138672c9d24, type: 2}
+  infoCards:
+  - {fileID: 11400000, guid: 64b64462596564c7794ef1232adeb777, type: 2}
+  comparisonData:
+    comparisonId: comp_s2_b101_b102
+    itemNames:
+    - B101 Prof. Lee's Office
+    - B102 NSL Lab
+    attributes:
+    - Type
+    - Occupant
+    - Outside Postings
+    - Partnership Signs
+    values:
+    - Professor Office
+    - Prof. Lee Jae-Min
+    - Few
+    - Hanwha Systems, LGU+
+    - Research Lab
+    - NSL Team
+    - Many (poster, papers, schedule)
+    - Listed in recruitment poster
+  referenceImages: []
+  briefingTextKo: "B101\uACFC B102\uB97C \uD655\uC778\uD558\uC138\uC694. \uAC01 \uBC29
+    \uBB38\uACFC \uBCBD\uC5D0 \uAC8C\uC2DC\uB41C \uC548\uB0B4\uBB38, \uD3EC\uC2A4\uD130,
+    \uC790\uB8CC\uC758 \uC591\uC744 \uBE44\uAD50\uD558\uC138\uC694."
+  verificationQuestionKo: "\uBB38 \uBC16\uC5D0 \uAC8C\uC2DC\uBB3C\uACFC \uD3EC\uC2A4\uD130\uAC00
+    \uB354 \uB9CE\uC774 \uBD99\uC5B4\uC788\uB294 \uACF3\uC740 \uC5B4\uB514\uC785\uB2C8\uAE4C?"
+  answerOptionsKo:
+  - "B101 (\uC774\uAD50\uC218\uC2E4)"
+  - "B102 (NSL \uC5F0\uAD6C\uC2E4)"
+  - "\uB458 \uB2E4 \uB3D9\uC77C"
+  - "\uB458 \uB2E4 \uC5C6\uC74C"

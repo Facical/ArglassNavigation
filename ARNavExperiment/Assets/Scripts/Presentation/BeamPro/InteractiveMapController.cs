@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 using ARNavExperiment.Core;
 using ARNavExperiment.Mission;
+using ARNavExperiment.Navigation;
 using ARNavExperiment.Presentation.Shared;
 using ARNavExperiment.Domain.Events;
 using ARNavExperiment.Application;
@@ -33,9 +34,47 @@ namespace ARNavExperiment.Presentation.BeamPro
         private bool isTrackingPosition;
         private readonly List<GameObject> poiMarkerInstances = new();
 
+        // SLAM→FloorPlan 보정 (다중 앵커 최소자승법)
+        private bool isCalibrated;
+        private float calibCos = 1f, calibSin = 0f;
+        private Vector2 calibOffset = Vector2.zero;
+        private int lastCalibAnchorCount;
+
         public void SetFloorPlan(Sprite floorPlan)
         {
             if (floorPlanImage) floorPlanImage.sprite = floorPlan;
+        }
+
+        private void OnEnable()
+        {
+            var anchorMgr = SpatialAnchorManager.Instance;
+            if (anchorMgr != null)
+                anchorMgr.OnAnchorLateRecovered += OnAnchorLateRecovered;
+        }
+
+        private void OnDisable()
+        {
+            var anchorMgr = SpatialAnchorManager.Instance;
+            if (anchorMgr != null)
+                anchorMgr.OnAnchorLateRecovered -= OnAnchorLateRecovered;
+        }
+
+        private void OnAnchorLateRecovered(string waypointId, Transform anchorTransform)
+        {
+            isCalibrated = false;
+            Debug.Log($"[InteractiveMap] Calibration invalidated — new anchor: {waypointId}");
+        }
+
+        /// <summary>보정 전에는 빨간 점(현재 위치)을 숨긴다.</summary>
+        protected override void UpdateCurrentPosition()
+        {
+            if (!isCalibrated)
+            {
+                if (currentPositionMarker != null)
+                    currentPositionMarker.gameObject.SetActive(false);
+                return;
+            }
+            base.UpdateCurrentPosition();
         }
 
         public void StartPositionTracking()
@@ -50,13 +89,98 @@ namespace ARNavExperiment.Presentation.BeamPro
             isTrackingPosition = false;
         }
 
-        /// <summary>월드 좌표로 목적지 핀을 배치한다.</summary>
+        /// <summary>SLAM 좌표를 도면 좌표로 변환합니다 (다중 앵커 최소자승법).</summary>
+        protected override Vector2 TransformWorldPosition(Vector2 worldXZ)
+        {
+            if (!isCalibrated) TryCalibrate();
+            if (!isCalibrated) return worldXZ;
+
+            float rx = worldXZ.x * calibCos - worldXZ.y * calibSin;
+            float ry = worldXZ.x * calibSin + worldXZ.y * calibCos;
+            return new Vector2(rx + calibOffset.x, ry + calibOffset.y);
+        }
+
+        /// <summary>WaypointManager에서 앵커 쌍을 가져와 SLAM→도면 rigid transform 계산.</summary>
+        private void TryCalibrate()
+        {
+            var wm = WaypointManager.Instance;
+            if (wm == null) return;
+
+            var pairs = wm.GetAllCalibratedAnchorPairs();
+            if (pairs.Count == 0) return;
+
+            if (pairs.Count == 1)
+            {
+                // 앵커 1개: HeadingCalibrationOffset으로 회전 + 이 점으로 평행이동
+                float offsetDeg = wm.HeadingCalibrationOffset;
+                float theta = -offsetDeg * Mathf.Deg2Rad;
+                calibCos = Mathf.Cos(theta);
+                calibSin = Mathf.Sin(theta);
+
+                var (slamXZ, fallbackXZ) = pairs[0];
+                float rotatedX = slamXZ.x * calibCos - slamXZ.y * calibSin;
+                float rotatedY = slamXZ.x * calibSin + slamXZ.y * calibCos;
+                calibOffset = fallbackXZ - new Vector2(rotatedX, rotatedY);
+            }
+            else
+            {
+                // 앵커 2개+: 최소자승법으로 최적 회전 + 평행이동
+                ComputeLeastSquaresTransform(pairs);
+            }
+
+            lastCalibAnchorCount = pairs.Count;
+            isCalibrated = true;
+            Debug.Log($"[InteractiveMap] Calibrated: cos={calibCos:F3}, sin={calibSin:F3}, " +
+                $"offset={calibOffset}, anchors={pairs.Count}");
+        }
+
+        /// <summary>N개 앵커 쌍으로 최적 2D rigid transform (회전+평행이동)을 최소자승법으로 계산.</summary>
+        private void ComputeLeastSquaresTransform(List<(Vector2 slamXZ, Vector2 fallbackXZ)> pairs)
+        {
+            int n = pairs.Count;
+
+            // 중심점
+            Vector2 centroidS = Vector2.zero, centroidF = Vector2.zero;
+            for (int i = 0; i < n; i++)
+            {
+                centroidS += pairs[i].slamXZ;
+                centroidF += pairs[i].fallbackXZ;
+            }
+            centroidS /= n;
+            centroidF /= n;
+
+            // 최적 회전각: atan2(Σ cross, Σ dot)
+            float sumCross = 0f, sumDot = 0f;
+            for (int i = 0; i < n; i++)
+            {
+                var ds = pairs[i].slamXZ - centroidS;
+                var df = pairs[i].fallbackXZ - centroidF;
+                sumCross += ds.x * df.y - ds.y * df.x;
+                sumDot += ds.x * df.x + ds.y * df.y;
+            }
+
+            float theta = Mathf.Atan2(sumCross, sumDot);
+            calibCos = Mathf.Cos(theta);
+            calibSin = Mathf.Sin(theta);
+
+            // 평행이동: centroidF - Rotate(centroidS)
+            var rotatedCentroidS = new Vector2(
+                centroidS.x * calibCos - centroidS.y * calibSin,
+                centroidS.x * calibSin + centroidS.y * calibCos);
+            calibOffset = centroidF - rotatedCentroidS;
+        }
+
+        /// <summary>월드 좌표로 목적지 핀을 배치한다. SLAM→도면 변환 적용.</summary>
         public void SetDestination(Vector3 worldPos)
         {
             if (destinationPin == null) return;
             destinationPin.gameObject.SetActive(true);
             var worldXZ = new Vector2(worldPos.x, worldPos.z);
-            PlaceMarkerAtWorld(destinationPin, worldXZ);
+            var transformed = TransformWorldPosition(worldXZ);
+            var normalized = AdjustForPreserveAspect(WorldToNormalized(transformed));
+            destinationPin.anchorMin = normalized;
+            destinationPin.anchorMax = normalized;
+            destinationPin.anchoredPosition = Vector2.zero;
         }
 
         public void HideDestination()

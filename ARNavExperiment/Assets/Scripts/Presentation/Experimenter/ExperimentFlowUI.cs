@@ -75,11 +75,16 @@ namespace ARNavExperiment.Presentation.Experimenter
 
         private void OnStateChanged(ExperimentState state)
         {
-            // GlassOnly 조건에서는 ExperimenterCanvas 비활성 — GlassFlowUI가 전담
+            // GlassOnly 조건에서도 Relocalization 시 앵커 로드 + 실험자 폰에 가이드 표시
             if (ConditionController.Instance != null &&
                 ConditionController.Instance.CurrentCondition == ExperimentCondition.GlassOnly)
             {
                 HideAllPanels();
+                if (state == ExperimentState.Relocalization)
+                {
+                    if (relocalizationPanel != null) relocalizationPanel.SetActive(true);
+                    relocalizationUI?.StartRelocalization("B");
+                }
                 return;
             }
 
@@ -114,11 +119,9 @@ namespace ARNavExperiment.Presentation.Experimenter
             if (relocalizationPanel != null)
                 relocalizationPanel.SetActive(true);
 
-            var session = ExperimentManager.Instance?.session;
-            string route = session?.route;
-
+            // Route B 고정
             if (relocalizationUI != null)
-                relocalizationUI.StartRelocalization(route);
+                relocalizationUI.StartRelocalization("B");
         }
 
         private void ShowSetupTransition()
@@ -132,7 +135,7 @@ namespace ARNavExperiment.Presentation.Experimenter
             if (transitionDetailText)
                 transitionDetailText.text = string.Format(
                     LocalizationManager.Get("flow.setup_detail"),
-                    session?.participantId, session?.condition, session?.route);
+                    session?.participantId, session?.condition, session?.missionSet);
         }
 
         private void ShowConditionStart()
@@ -142,13 +145,13 @@ namespace ARNavExperiment.Presentation.Experimenter
 
             var session = ExperimentManager.Instance?.session;
             string condition = session?.condition;
-            string route = session?.route;
+            string missionSet = session?.missionSet;
             string conditionLabel = condition == "glass_only"
                 ? LocalizationManager.Get("flow.condition_glass")
                 : LocalizationManager.Get("flow.condition_hybrid");
-            string routeLabel = route == "A"
-                ? LocalizationManager.Get("session.route_a")
-                : LocalizationManager.Get("session.route_b");
+            string setLabel = missionSet == "Set1"
+                ? LocalizationManager.Get("appmode.set1")
+                : LocalizationManager.Get("appmode.set2");
 
             if (transitionTitleText)
                 transitionTitleText.text = LocalizationManager.Get("flow.condition_title");
@@ -160,11 +163,11 @@ namespace ARNavExperiment.Presentation.Experimenter
 
                 transitionDetailText.text = string.Format(
                     LocalizationManager.Get("flow.condition_info"),
-                    conditionLabel, routeLabel, deviceInfo);
+                    conditionLabel, setLabel, deviceInfo);
             }
 
-            // Load missions for this route
-            MissionManager.Instance?.LoadMissions(route);
+            // Load missions for selected set
+            MissionManager.Instance?.LoadMissions(missionSet);
         }
 
         private void ShowSurveyPrompt()
@@ -210,10 +213,10 @@ namespace ARNavExperiment.Presentation.Experimenter
                 if (mm == null || !mm.HasLoadedMissions)
                 {
                     Debug.LogWarning("[ExperimentFlowUI] Missions not loaded — retrying LoadMissions...");
-                    var session = ExperimentManager.Instance?.session;
-                    string route = session?.route;
-                    if (mm != null && route != null)
-                        mm.LoadMissions(route);
+                    var session2 = ExperimentManager.Instance?.session;
+                    string missionSet2 = session2?.missionSet;
+                    if (mm != null && missionSet2 != null)
+                        mm.LoadMissions(missionSet2);
 
                     if (mm == null || !mm.HasLoadedMissions)
                     {

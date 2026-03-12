@@ -71,8 +71,17 @@ namespace ARNavExperiment.Core
         [Header("Settings")]
         [SerializeField] private string mappingFileName = "anchor_mapping.json";
 #pragma warning disable CS0414
-        [SerializeField] private float anchorTrackingTimeout = 20f;
+        [SerializeField] private float anchorTrackingTimeout = 15f;
 #pragma warning restore CS0414
+
+        [Header("Priority Loading")]
+        [SerializeField] private string[] criticalWaypointIds = { "B_WP00", "B_WP01", "B_WP02" };
+#pragma warning disable CS0414
+        [SerializeField] private float criticalAnchorTimeout = 30f;
+        [SerializeField] private float slamWarmupTimeout = 10f;
+#pragma warning restore CS0414
+
+        private HashSet<string> activeCriticalSet;
 
         /// <summary>매핑 데이터 (waypointId → anchorGuid)</summary>
         private MappingFileData mappingData;
@@ -506,12 +515,27 @@ namespace ARNavExperiment.Core
             IsRelocalized = false;
         }
 
+        private List<AnchorMapping> lastSimulatedMappings;
+
         private void SimulateEditorReloc(string label)
         {
             Debug.Log($"[SpatialAnchorManager] (에디터) {label}: {TotalAnchorCount}개 앵커 시뮬레이션 로드");
             RelocalizedAnchorCount = TotalAnchorCount;
             SuccessfulAnchorCount = TotalAnchorCount;
             IsRelocalized = true;
+
+            // 에디터에서도 개별 앵커 DetailedProgress 발행 (가이드 UI 지원)
+            if (lastSimulatedMappings != null)
+            {
+                int idx = 0;
+                foreach (var m in lastSimulatedMappings)
+                {
+                    idx++;
+                    OnRelocalizationDetailedProgress?.Invoke(
+                        m.waypointId, AnchorRelocState.Tracking, idx, 0, TotalAnchorCount);
+                }
+            }
+
             OnRelocalizationProgress?.Invoke(RelocalizedAnchorCount, TotalAnchorCount);
             OnRelocalizationComplete?.Invoke();
             OnRelocalizationCompleteWithRate?.Invoke(1f);
@@ -577,8 +601,9 @@ namespace ARNavExperiment.Core
             }
 
 #if XR_ARFOUNDATION && UNITY_ANDROID && !UNITY_EDITOR
-            LoadAnchorsFromDevice(mappings);
+            StartCoroutine(PriorityLoadAnchors(mappings));
 #else
+            lastSimulatedMappings = mappings;
             SimulateEditorReloc(label);
 #endif
         }
@@ -766,15 +791,77 @@ namespace ARNavExperiment.Core
         /// <summary>waypointId → TrackableId (재인식 폴링용)</summary>
         private Dictionary<string, TrackableId> pendingTrackableIds = new Dictionary<string, TrackableId>();
 
+        /// <summary>
+        /// SLAM 웜업 대기 → Critical 앵커 우선 로드 → 나머지 앵커 로드.
+        /// LoadRouteAnchors에서 호출.
+        /// </summary>
+        private IEnumerator PriorityLoadAnchors(List<AnchorMapping> allMappings)
+        {
+            // 전체 매핑 캐시 — RetryFailedAnchors()가 critical+remaining 모두 재시도하도록
+            lastLoadedMappings = allMappings;
+
+            // ── Phase A: SLAM 웜업 대기 ──
+            float start = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - start < slamWarmupTimeout)
+            {
+                var status = GetSlamTrackingStatus();
+                if (status.isReady)
+                {
+                    Diag($"SLAM ready ({Time.realtimeSinceStartup - start:F1}s)");
+                    break;
+                }
+                Diag($"SLAM warmup: {status.reasonKey} ({Time.realtimeSinceStartup - start:F1}s)");
+                yield return new WaitForSeconds(0.5f);
+            }
+
+            if (Time.realtimeSinceStartup - start >= slamWarmupTimeout)
+            {
+                DiagWarn($"SLAM warmup timeout ({slamWarmupTimeout}s) — proceeding anyway");
+            }
+
+            // ── 분류 ──
+            activeCriticalSet = new HashSet<string>(criticalWaypointIds);
+            var critical = new List<AnchorMapping>();
+            var remaining = new List<AnchorMapping>();
+            foreach (var m in allMappings)
+            {
+                if (activeCriticalSet.Contains(m.waypointId)) critical.Add(m);
+                else remaining.Add(m);
+            }
+            Diag($"Priority load: {critical.Count} critical, {remaining.Count} remaining");
+
+            // 진단 덤프 1회 (전체 목록)
+            DumpAnchorDiagnostics(allMappings);
+
+            // ── Phase B-1: Critical 앵커 우선 로드 ──
+            int beforeCount = processedAnchorCount;
+            LoadAnchorsFromDeviceCore(critical);
+
+            // critical 완료 대기
+            while (processedAnchorCount - beforeCount < critical.Count)
+                yield return new WaitForSeconds(0.3f);
+
+            Diag($"Critical done: success={SuccessfulAnchorCount}, timedOut={TimedOutAnchorCount}");
+
+            // ── Phase B-2: 나머지 앵커 로드 ──
+            if (remaining.Count > 0)
+                LoadAnchorsFromDeviceCore(remaining);
+        }
+
+        /// <summary>기존 API 유지 — RetryFailedAnchors 등에서 호출</summary>
         private void LoadAnchorsFromDevice(List<AnchorMapping> mappings)
         {
             lastLoadedMappings = mappings;
-
-            // MapPath 불일치 방지
             EnsureMapPath();
-
-            // 진단 덤프
             DumpAnchorDiagnostics(mappings);
+            LoadAnchorsFromDeviceCore(mappings);
+        }
+
+        /// <summary>진단 덤프 없이 앵커만 로드 (PriorityLoadAnchors에서 사용)</summary>
+        private void LoadAnchorsFromDeviceCore(List<AnchorMapping> mappings)
+        {
+            // lastLoadedMappings는 PriorityLoadAnchors 또는 LoadAnchorsFromDevice에서 설정
+            EnsureMapPath();
 
             foreach (var mapping in mappings)
             {
@@ -795,8 +882,12 @@ namespace ARNavExperiment.Core
                         elapsedTime = 0f
                     };
                     pendingTrackableIds[mapping.waypointId] = xrAnchor.trackableId;
-                    StartCoroutine(WaitForAnchorTracking(mapping.waypointId, xrAnchor.trackableId));
-                    Diag($"앵커 로드 요청: {mapping.waypointId}");
+
+                    // critical 앵커는 확장 타임아웃 사용
+                    float timeout = (activeCriticalSet?.Contains(mapping.waypointId) == true)
+                        ? criticalAnchorTimeout : anchorTrackingTimeout;
+                    StartCoroutine(WaitForAnchorTracking(mapping.waypointId, xrAnchor.trackableId, timeout));
+                    Diag($"앵커 로드 요청: {mapping.waypointId} (timeout={timeout}s)");
                 }
                 else
                 {
@@ -817,12 +908,16 @@ namespace ARNavExperiment.Core
             }
         }
 
-        private IEnumerator WaitForAnchorTracking(string waypointId, TrackableId trackableId)
+        private IEnumerator WaitForAnchorTracking(string waypointId, TrackableId trackableId, float overrideTimeout = 0f)
         {
-            float timeout = anchorTrackingTimeout;
+            float timeout = overrideTimeout > 0f ? overrideTimeout : anchorTrackingTimeout;
             float elapsed = 0f;
             float lastSlamLog = 0f;
             float lastRemapAttempt = 0f;
+
+            // critical 앵커는 3초 간격, 나머지 10초
+            bool isCritical = activeCriticalSet?.Contains(waypointId) == true;
+            float remapInterval = isCritical ? 3f : 10f;
 
             while (elapsed < timeout)
             {
@@ -852,11 +947,11 @@ namespace ARNavExperiment.Core
                 {
                     lastSlamLog = elapsed;
                     var slam = GetSlamTrackingStatus();
-                    Diag($"Waiting {waypointId} ({elapsed:F0}s/{timeout:F0}s) — SLAM: {slam.reasonKey}");
+                    Diag($"Waiting {waypointId} ({elapsed:F0}s/{timeout:F0}s) — SLAM: {slam.reasonKey}, critical={isCritical}");
                 }
 
-                // 10초마다 TryRemap으로 재인식 촉진
-                if (elapsed - lastRemapAttempt >= 10f && elapsed > 0f)
+                // TryRemap으로 재인식 촉진 (critical: 3초 간격, 나머지: 10초)
+                if (elapsed - lastRemapAttempt >= remapInterval && elapsed > 0f)
                 {
                     lastRemapAttempt = elapsed;
                     bool remapped = arAnchorManager.TryRemap(trackableId);
@@ -869,7 +964,7 @@ namespace ARNavExperiment.Core
 
             var finalSlam = GetSlamTrackingStatus();
             Vector3 camPos = Camera.main != null ? Camera.main.transform.position : Vector3.zero;
-            DiagWarn($"앵커 재인식 타임아웃: {waypointId} ({timeout}s) | " +
+            DiagWarn($"앵커 재인식 타임아웃: {waypointId} ({timeout}s, critical={isCritical}) | " +
                 $"SLAM={finalSlam.reasonKey} | camPos={camPos}");
             TimedOutAnchorCount++;
             RelocalizedAnchorCount++;
@@ -1003,12 +1098,13 @@ namespace ARNavExperiment.Core
                     if (!pendingTrackableIds.TryGetValue(kv.Key, out var trackableId))
                         continue;
 
-                    // 2회차마다 TryRemap으로 재인식 강제 시도 (10초 간격)
-                    if (loopCount % 2 == 0)
+                    // critical: 매 루프(5초), 나머지: 2회차마다(10초)
+                    bool isCritical = activeCriticalSet?.Contains(kv.Key) == true;
+                    if (isCritical || loopCount % 2 == 0)
                     {
                         bool remapped = arAnchorManager.TryRemap(trackableId);
                         if (remapped)
-                            Diag($"Background Remap 요청: {kv.Key}");
+                            Diag($"Background Remap 요청: {kv.Key} (critical={isCritical})");
                     }
 
                     foreach (var anchor in arAnchorManager.trackables)
@@ -1261,8 +1357,7 @@ namespace ARNavExperiment.Core
         /// </summary>
         public bool HasMappingData()
         {
-            return mappingData != null &&
-                   (mappingData.routeA.waypoints.Count > 0 || mappingData.routeB.waypoints.Count > 0);
+            return mappingData != null && mappingData.routeB.waypoints.Count > 0;
         }
 
         // =====================================================

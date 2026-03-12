@@ -45,11 +45,12 @@ namespace ARNavExperiment.Core
             switch (condition)
             {
                 case ExperimentCondition.GlassOnly:
-                    // GlassOnly: BeamProCanvas 활성 유지 + LockedScreen으로 폰 화면 가림
-                    // ScreenSpaceOverlay 캔버스가 없으면 글래스 스테레오 뷰가 폰에 미러링됨
+                    // GlassOnly: BeamProCanvas → WorldSpace로 전환, 정보 허브를 글래스에 표시
+                    // LockedScreen 불필요 — ExperimenterCanvas(ScreenSpaceOverlay, sortOrder=10)가 폰 미러링 방지
                     if (beamProUI) beamProUI.SetActive(true);
-                    if (lockedScreenUI) lockedScreenUI.SetActive(true);
-                    if (experimenterCanvas) experimenterCanvas.SetActive(false);
+                    if (lockedScreenUI) lockedScreenUI.SetActive(false);
+                    // ExperimenterCanvas는 GlassOnly에서도 표시 유지 — 실험자가 Beam Pro에서 제어 가능
+                    if (experimenterCanvas) experimenterCanvas.SetActive(true);
                     else Debug.LogError("[ConditionCtrl] experimenterCanvas is NULL — Wire Scene References 재실행 필요!");
                     DeviceStateTracker.Instance?.SetLocked(true);
                     HandTrackingManager.Instance?.ActivateHandRays();  // GlassOnly: 핸드트래킹으로 UI 조작

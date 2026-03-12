@@ -28,24 +28,16 @@ namespace ARNavExperiment.Presentation.Mapping
         // waypointId → (X, Z) 좌표 (WaypointDataGenerator와 동일)
         private static readonly Dictionary<string, Vector2> waypointMapPositions = new()
         {
-            // Route A
-            { "A_WP01", new Vector2(-7, 0) },
-            { "A_WP02", new Vector2(-20, 4) },
-            { "A_WP03", new Vector2(-20, 0) },
-            { "A_WP04", new Vector2(-20, 11) },
-            { "A_WP05", new Vector2(-20, 14) },
-            { "A_WP06", new Vector2(-20, 25) },
-            { "A_WP07", new Vector2(-11, 25) },
-            { "A_WP08", new Vector2(-3, 25) },
-            // Route B
-            { "B_WP01", new Vector2(7, 0) },
-            { "B_WP02", new Vector2(20, 4) },
-            { "B_WP03", new Vector2(20, 8) },
-            { "B_WP04", new Vector2(20, 11) },
-            { "B_WP05", new Vector2(20, 15) },
-            { "B_WP06", new Vector2(20, 25) },
-            { "B_WP07", new Vector2(11, 25) },
-            { "B_WP08", new Vector2(3, 25) },
+            // Route B (실측 기반 좌표, 기둥 간격 9m 기준)
+            { "B_WP00", new Vector2(36, 24) },
+            { "B_WP01", new Vector2(36, 18) },
+            { "B_WP02", new Vector2(36, 33) },
+            { "B_WP03", new Vector2(36, 45) },
+            { "B_WP04", new Vector2(36, 57) },
+            { "B_WP05", new Vector2(36, 69) },
+            { "B_WP06", new Vector2(39, 72) },
+            { "B_WP07", new Vector2(36, 48) },
+            { "B_WP08", new Vector2(36, -7) },
         };
 
         private readonly Dictionary<string, RectTransform> markerRects = new();
@@ -76,6 +68,18 @@ namespace ARNavExperiment.Presentation.Mapping
         {
             if (!isVisible) return;
             UpdateCurrentPosition();
+        }
+
+        /// <summary>보정 전에는 빨간 점(현재 위치)을 숨긴다.</summary>
+        protected override void UpdateCurrentPosition()
+        {
+            if (!isCalibrated)
+            {
+                if (currentPositionMarker != null)
+                    currentPositionMarker.gameObject.SetActive(false);
+                return;
+            }
+            base.UpdateCurrentPosition();
         }
 
         /// <summary>SLAM 보정 적용 후 좌표 변환.</summary>

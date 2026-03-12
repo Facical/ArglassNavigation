@@ -1,0 +1,62 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c91d0b795795846309dc88577bbd3277, type: 3}
+  m_Name: Set1_C1
+  m_EditorClassIdentifier: 
+  missionId: C1
+  type: 2
+  briefingText: Check rooms B104 and B105 (professor offices). Select the one with
+    more detailed information posted on the door and wall signs.
+  targetWaypointId: WP07
+  verificationQuestion: Which professor's office has more detailed sign info?
+  answerOptions:
+  - B104
+  - B105
+  - Both equal
+  - Neither has info
+  correctAnswerIndex: 1
+  associatedTriggerId: 
+  relevantPOIs:
+  - {fileID: 11400000, guid: 06df47dcec1e14f528ecc4ee75ab62eb, type: 2}
+  - {fileID: 11400000, guid: 190c90d2e2729418bab7fc669176b948, type: 2}
+  infoCards:
+  - {fileID: 11400000, guid: 8c36e38218b9d445c8dcc45b89cc0ece, type: 2}
+  comparisonData:
+    comparisonId: comp_s1_b104_b105
+    itemNames:
+    - B104 Prof. Choe's Office
+    - B105 Prof. Song's Office
+    attributes:
+    - Professor
+    - Department
+    - Sign Detail
+    - Additional Signs
+    values:
+    - Choe Se-woon
+    - Biomedical Eng.
+    - Basic (name only)
+    - None
+    - Song Kwang-Soup
+    - Biomedical Eng.
+    - Detailed
+    - ICT Convergence Center, NIPA, UACon
+  referenceImages: []
+  briefingTextKo: "B104\uC640 B105(\uAD50\uC218 \uC5F0\uAD6C\uC2E4)\uB97C \uD655\uC778\uD558\uC138\uC694.
+    \uBB38\uACFC \uBCBD\uC5D0 \uB354 \uC0C1\uC138\uD55C \uC815\uBCF4\uAC00 \uAC8C\uC2DC\uB41C
+    \uCABD\uC744 \uC120\uD0DD\uD558\uC138\uC694."
+  verificationQuestionKo: "\uC5B4\uB290 \uAD50\uC218 \uC5F0\uAD6C\uC2E4\uC758 \uBB38\uD328
+    \uC815\uBCF4\uAC00 \uB354 \uC0C1\uC138\uD569\uB2C8\uAE4C?"
+  answerOptionsKo:
+  - B104
+  - B105
+  - "\uB458 \uB2E4 \uB3D9\uC77C"
+  - "\uB458 \uB2E4 \uC815\uBCF4 \uC5C6\uC74C"

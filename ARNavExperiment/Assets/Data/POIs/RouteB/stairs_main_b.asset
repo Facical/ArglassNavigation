@@ -18,7 +18,7 @@ MonoBehaviour:
   description: South central staircase
   capacity: 0
   equipment: []
-  mapPosition: {x: 0, y: -5}
+  mapPosition: {x: 0, y: 0}
   icon: {fileID: 0}
   displayNameKo: "\uC911\uC559 \uACC4\uB2E8"
   descriptionKo: "\uB0A8\uCABD \uC911\uC559 \uACC4\uB2E8"

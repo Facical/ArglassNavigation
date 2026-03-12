@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 444ec120f8ecf4ed2b34343206a6c297, type: 3}
+  m_Name: s1_card_03
+  m_EditorClassIdentifier: 
+  cardId: s1_card_03
+  cardType: sign_card
+  title: B101 Prof. Lee's Office Guide
+  content: 'Professor: Prof. Jae-Min Lee (Computer Engineering)
+
+    Partnership:
+    Hanwha Systems Maritime Lab, LGU+ Smart Factory Center
+
+    Location: North end
+    of east corridor
+
+    Nearby: B102 NSL Lab, B103'
+  image: {fileID: 0}
+  triggerWaypointId: WP05
+  autoShow: 1
+  titleKo: "B101 \uC774\uC7AC\uBBFC \uAD50\uC218 \uC5F0\uAD6C\uC2E4 \uC548\uB0B4"
+  contentKo: "\uAD50\uC218: \uC774\uC7AC\uBBFC \uAD50\uC218 (\uCEF4\uD4E8\uD130\uACF5\uD559\uACFC)\n\uC0B0\uD559\uD611\uB825:
+    Hanwha Systems \uD574\uC591\uC5F0\uAD6C\uC18C, LGU+ \uC2A4\uB9C8\uD2B8\uD329\uD1A0\uB9AC
+    \uC5F0\uAD6C\uC13C\uD130\n\uC704\uCE58: \uB3D9\uCABD \uBCF5\uB3C4 \uBD81\uCABD
+    \uB05D\n\uC778\uADFC: B102 NSL \uC5F0\uAD6C\uC2E4, B103"

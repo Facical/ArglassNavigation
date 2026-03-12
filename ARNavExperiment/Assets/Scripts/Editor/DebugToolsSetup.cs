@@ -78,11 +78,11 @@ namespace ARNavExperiment.EditorTools
                 var envRoot = new GameObject("--- Test Environment ---");
                 Undo.RegisterCreatedObjectUndo(envRoot, "Create Test Environment");
 
-                // Floor plane (50m x 50m)
+                // Floor plane (100m x 100m, 실측 좌표 범위 커버)
                 var floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
                 floor.name = "TestFloor";
                 floor.transform.SetParent(envRoot.transform);
-                floor.transform.localScale = new Vector3(5f, 1f, 5f);
+                floor.transform.localScale = new Vector3(10f, 1f, 10f);
                 floor.transform.position = Vector3.zero;
                 var floorMat = new Material(Shader.Find("Standard"));
                 floorMat.color = new Color(0.15f, 0.15f, 0.2f);
@@ -92,7 +92,7 @@ namespace ARNavExperiment.EditorTools
                 var grid = GameObject.CreatePrimitive(PrimitiveType.Plane);
                 grid.name = "GridOverlay";
                 grid.transform.SetParent(envRoot.transform);
-                grid.transform.localScale = new Vector3(5f, 1f, 5f);
+                grid.transform.localScale = new Vector3(10f, 1f, 10f);
                 grid.transform.position = new Vector3(0, 0.01f, 0);
                 var gridMat = new Material(Shader.Find("Standard"));
                 gridMat.color = new Color(0.2f, 0.2f, 0.3f, 0.5f);
@@ -100,15 +100,11 @@ namespace ARNavExperiment.EditorTools
 
                 // Waypoint marker cubes for visual reference
                 CreateWPMarker(envRoot.transform, "Start (계단)", Vector3.zero, Color.red);
-                // Route A markers
-                CreateWPMarker(envRoot.transform, "A-WP01", new Vector3(-7, 0, 0), new Color(0.2f, 0.6f, 1f));
-                CreateWPMarker(envRoot.transform, "A-WP03 SW", new Vector3(-20, 0, 0), new Color(0.2f, 0.6f, 1f));
-                CreateWPMarker(envRoot.transform, "A-WP06 NW", new Vector3(-20, 0, 25), new Color(0.2f, 0.6f, 1f));
-                CreateWPMarker(envRoot.transform, "A-WP08", new Vector3(-3, 0, 25), new Color(0.2f, 0.6f, 1f));
-                // Route B markers
-                CreateWPMarker(envRoot.transform, "B-WP01", new Vector3(7, 0, 0), new Color(0.9f, 0.5f, 0.1f));
-                CreateWPMarker(envRoot.transform, "B-WP03 SE", new Vector3(20, 0, 8), new Color(0.9f, 0.5f, 0.1f));
-                CreateWPMarker(envRoot.transform, "B-WP06 NE", new Vector3(20, 0, 25), new Color(0.9f, 0.5f, 0.1f));
+                // Route B markers (단일 경로, 실측 기반 좌표)
+                CreateWPMarker(envRoot.transform, "B-WP00 Cal", new Vector3(36, 0, 24), new Color(0.9f, 0.5f, 0.1f));
+                CreateWPMarker(envRoot.transform, "B-WP01", new Vector3(36, 0, 18), new Color(0.9f, 0.5f, 0.1f));
+                CreateWPMarker(envRoot.transform, "B-WP03", new Vector3(36, 0, 45), new Color(0.9f, 0.5f, 0.1f));
+                CreateWPMarker(envRoot.transform, "B-WP06 NE", new Vector3(39, 0, 72), new Color(0.9f, 0.5f, 0.1f));
 
                 added++;
                 Debug.Log("[DebugSetup] 테스트 환경 생성 (바닥 + 웨이포인트 마커)");

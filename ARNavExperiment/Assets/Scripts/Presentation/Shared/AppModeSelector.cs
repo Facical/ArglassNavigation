@@ -15,9 +15,9 @@ namespace ARNavExperiment.Presentation.Shared
         [SerializeField] private TextMeshProUGUI errorText;
         [SerializeField] private TextMeshProUGUI statusText;
 
-        [Header("Route Selection")]
-        [SerializeField] private Button routeAButton;
-        [SerializeField] private Button routeBButton;
+        [Header("Mission Set Selection")]
+        [SerializeField] private Button set1Button;
+        [SerializeField] private Button set2Button;
 
         [Header("Condition Buttons")]
         [SerializeField] private Button glassOnlyButton;
@@ -39,15 +39,15 @@ namespace ARNavExperiment.Presentation.Shared
         [Header("Glass Status")]
         [SerializeField] private GlassModeStatusPanel glassModeStatus;
 
-        private string selectedRoute = "A";
+        private string selectedMissionSet = "Set1";
         private TextMeshProUGUI titleText;
 
         private void Start()
         {
             glassOnlyButton?.onClick.AddListener(OnGlassOnlySelected);
             hybridButton?.onClick.AddListener(OnHybridSelected);
-            routeAButton?.onClick.AddListener(OnRouteASelected);
-            routeBButton?.onClick.AddListener(OnRouteBSelected);
+            set1Button?.onClick.AddListener(OnSet1Selected);
+            set2Button?.onClick.AddListener(OnSet2Selected);
             mappingButton?.onClick.AddListener(OnMappingModeSelected);
             languageButton?.onClick.AddListener(OnLanguageToggle);
             langKoButton?.onClick.AddListener(OnKoreanSelected);
@@ -71,7 +71,7 @@ namespace ARNavExperiment.Presentation.Shared
                 LocalizationManager.Instance.OnLanguageChanged += OnLanguageChanged;
 
             RefreshLocalization();
-            UpdateRouteButtonColors();
+            UpdateSetButtonColors();
 
             if (glassModeStatus != null)
                 glassModeStatus.ShowModeSelection();
@@ -101,7 +101,7 @@ namespace ARNavExperiment.Presentation.Shared
             if (errorText != null)
                 errorText.gameObject.SetActive(false);
 
-            ExperimentManager.Instance?.InitializeSession(pid, condition, selectedRoute);
+            ExperimentManager.Instance?.InitializeSession(pid, condition, selectedMissionSet);
 
             if (glassModeStatus != null) glassModeStatus.Hide();
 
@@ -120,38 +120,38 @@ namespace ARNavExperiment.Presentation.Shared
             if (modeSelectorPanel != null)
                 modeSelectorPanel.SetActive(false);
 
-            Debug.Log($"[AppModeSelector] 실험 시작: PID={pid}, Condition={condition}, Route={selectedRoute}");
+            Debug.Log($"[AppModeSelector] 실험 시작: PID={pid}, Condition={condition}, MissionSet={selectedMissionSet}");
         }
 
-        // === Route Selection ===
+        // === Mission Set Selection ===
 
-        private void OnRouteASelected()
+        private void OnSet1Selected()
         {
-            selectedRoute = "A";
-            UpdateRouteButtonColors();
+            selectedMissionSet = "Set1";
+            UpdateSetButtonColors();
         }
 
-        private void OnRouteBSelected()
+        private void OnSet2Selected()
         {
-            selectedRoute = "B";
-            UpdateRouteButtonColors();
+            selectedMissionSet = "Set2";
+            UpdateSetButtonColors();
         }
 
-        private void UpdateRouteButtonColors()
+        private void UpdateSetButtonColors()
         {
-            if (routeAButton != null)
+            if (set1Button != null)
             {
-                var img = routeAButton.GetComponent<Image>();
+                var img = set1Button.GetComponent<Image>();
                 if (img != null)
-                    img.color = selectedRoute == "A"
+                    img.color = selectedMissionSet == "Set1"
                         ? new Color(0.2f, 0.5f, 0.8f, 1f)
                         : new Color(0.3f, 0.3f, 0.35f, 1f);
             }
-            if (routeBButton != null)
+            if (set2Button != null)
             {
-                var img = routeBButton.GetComponent<Image>();
+                var img = set2Button.GetComponent<Image>();
                 if (img != null)
-                    img.color = selectedRoute == "B"
+                    img.color = selectedMissionSet == "Set2"
                         ? new Color(0.2f, 0.5f, 0.8f, 1f)
                         : new Color(0.3f, 0.3f, 0.35f, 1f);
             }
@@ -175,7 +175,7 @@ namespace ARNavExperiment.Presentation.Shared
             if (overlay != null)
             {
                 overlay.gameObject.SetActive(true);
-                overlay.Show(mappingModeUI != null ? mappingModeUI.CurrentRoute : "A");
+                overlay.Show("B");
             }
 
             var visualizer = FindObjectOfType<MappingAnchorVisualizer>(true);
@@ -235,10 +235,9 @@ namespace ARNavExperiment.Presentation.Shared
             var anchorMgr = SpatialAnchorManager.Instance;
             if (anchorMgr != null && anchorMgr.HasMappingData())
             {
-                var routeA = anchorMgr.GetRouteMappings("A");
                 var routeB = anchorMgr.GetRouteMappings("B");
                 statusText.text = string.Format(LocalizationManager.Get("appmode.mapping_status"),
-                    routeA.Count, routeB.Count);
+                    routeB.Count);
                 statusText.color = new Color(0.6f, 1f, 0.6f);
             }
             else

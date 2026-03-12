@@ -9,8 +9,8 @@ namespace ARNavExperiment.EditorTools
         [MenuItem("ARNav/Generate InfoCard & Comparison Data")]
         public static void GenerateAll()
         {
-            GenerateRouteAInfoCards();
-            GenerateRouteBInfoCards();
+            GenerateSet1InfoCards();
+            GenerateSet2InfoCards();
             WireInfoCardsToMissions();
             SetComparisonData();
             AssetDatabase.SaveAssets();
@@ -18,89 +18,89 @@ namespace ARNavExperiment.EditorTools
             Debug.Log("[InfoCardDataGenerator] InfoCard 및 Comparison 데이터 생성 완료!");
             EditorUtility.DisplayDialog("완료",
                 "InfoCard 10개 + ComparisonData 2개 생성 완료!\n\n" +
-                "- Route A: 5개 InfoCard + B132 vs B133 비교표\n" +
-                "- Route B: 5개 InfoCard + B104 vs B105 비교표\n\n" +
+                "- Set1: 5개 InfoCard + B104 vs B105 비교표 (B105 정답)\n" +
+                "- Set2: 5개 InfoCard + B101 vs B102 비교표 (B102 정답)\n\n" +
                 "Assets/Data/InfoCards/ 폴더를 확인하세요.", "확인");
         }
 
         // ==========================================
-        // Route A InfoCards
+        // Set1 InfoCards (기존 Route B)
         // ==========================================
-        private static void GenerateRouteAInfoCards()
+        private static void GenerateSet1InfoCards()
         {
-            string path = "Assets/Data/InfoCards/RouteA";
+            string path = "Assets/Data/InfoCards/Set1";
             EnsureFolder(path);
-            EnsureFolder("Assets/Resources/Data/InfoCards/RouteA");
+            EnsureFolder("Assets/Resources/Data/InfoCards/Set1");
 
-            CreateInfoCard(path, "a_card_01", "sign_card", "B125 Main Lecture Hall Guide",
-                "Capacity: 80\nEquipment: Projector, Microphone, Large Screen\nPurpose: Largest classroom on B1F\nLocation: South end of west corridor",
+            CreateInfoCard(path, "s1_card_01", "sign_card", "B107 Pervasive & Intelligent Computing Lab Guide",
+                "Research area: Pervasive and Intelligent Computing\nCapacity: 10\nEquipment: Server, Workstation\nAlso: Smart Military Logistics Innovation Center\nLocation: East corridor, north of B111",
                 "WP02", true,
-                "B125 대강의실 안내",
-                "수용인원: 80\n장비: 프로젝터, 마이크, 대형 스크린\n용도: B1F 최대 규모 강의실\n위치: 서쪽 복도 남단");
+                "B107 편재 및 지능형 컴퓨팅 연구실 안내",
+                "연구 분야: 편재 및 지능형 컴퓨팅\n수용인원: 10\n장비: 서버, 워크스테이션\n부설: 스마트군수혁신융합연구센터\n위치: 동쪽 복도, B111에서 북쪽");
 
-            CreateInfoCard(path, "a_card_02", "poi_detail", "SW Junction Area Guide",
-                "Left (West): B125 Main Lecture Hall, B127 AV Room\nRight (South): B123 Classroom, Central Stairs\nStraight (North): B128 Student Counseling, B129-B131 Classrooms",
+            CreateInfoCard(path, "s1_card_02", "poi_detail", "East Corridor Professor Area Guide",
+                "North (Straight): B104 Prof. Choe, B103, B102, B101\nSouth (Back): B106 Medical Eng. Lab, B107 Computing Lab, B111 Start\nCurrent area: B105 Prof. Song's Office",
                 "WP03", true,
-                "남서 교차로 안내",
-                "왼쪽 (서쪽): B125 대강의실, B127 시청각실\n오른쪽 (남쪽): B123 강의실, 중앙 계단\n직진 (북쪽): B128 학생 상담실, B129-B131 강의실");
+                "동쪽 복도 교수실 구간 안내",
+                "북쪽 (직진): B104 최세운 교수실, B103, B102, B101\n남쪽 (뒤): B106 의료공학연구실, B107 컴퓨팅 연구실, B111 출발점\n현재 구간: B105 송광섭 교수 연구실");
 
-            CreateInfoCard(path, "a_card_03", "sign_card", "B130 Graduate Classroom Guide",
-                "Capacity: 30\nEquipment: Projector, Whiteboard\nPurpose: Graduate-only classroom\nLocation: Mid-section of west corridor",
+            CreateInfoCard(path, "s1_card_03", "sign_card", "B101 Prof. Lee's Office Guide",
+                "Professor: Prof. Jae-Min Lee (Computer Engineering)\nPartnership: Hanwha Systems Maritime Lab, LGU+ Smart Factory Center\nLocation: North end of east corridor\nNearby: B102 NSL Lab, B103",
                 "WP05", true,
-                "B130 대학원 강의실 안내",
-                "수용인원: 30\n장비: 프로젝터, 화이트보드\n용도: 대학원 전용 강의실\n위치: 서쪽 복도 중간");
+                "B101 이재민 교수 연구실 안내",
+                "교수: 이재민 교수 (컴퓨터공학과)\n산학협력: Hanwha Systems 해양연구소, LGU+ 스마트팩토리 연구센터\n위치: 동쪽 복도 북쪽 끝\n인근: B102 NSL 연구실, B103");
 
-            CreateInfoCard(path, "a_card_04", "landmark", "NW Junction Area Guide",
-                "South (West corridor): B131 Classroom\nEast (North corridor): B132 Classroom, B133 Seminar Room, B134 Classroom\nCurrent location: West-North corridor junction",
+            CreateInfoCard(path, "s1_card_04", "landmark", "NE Corner Area Guide",
+                "South (East corridor): B103, B104 Prof. Choe, B105 Prof. Song\nWest (North corridor): B132, B134\nNearby: B101 Prof. Lee, B102 NSL Lab\nStairs visible at NE corner",
                 "WP06", true,
-                "북서 교차로 안내",
-                "남쪽 (서쪽 복도): B131 강의실\n동쪽 (북쪽 복도): B132 강의실, B133 세미나실, B134 강의실\n현재 위치: 서쪽-북쪽 복도 교차점");
+                "북동 코너 안내",
+                "남쪽 (동쪽 복도): B103, B104 최세운 교수실, B105 송광섭 교수실\n서쪽 (북쪽 복도): B132, B134\n인근: B101 이재민 교수실, B102 NSL 연구실\n북동 코너에 계단 있음");
 
-            CreateInfoCard(path, "a_card_05", "comparison", "B132 vs B133 Comparison",
-                "B132: Classroom (60), Projector/Microphone\nB133: Seminar Room (15), Whiteboard/Monitor\n→ B133 is suitable for small group discussions",
+            CreateInfoCard(path, "s1_card_05", "comparison", "B104 vs B105 Comparison",
+                "B104: Prof. Choe Se-woon (Biomedical Eng.) — name sign only\nB105: Prof. Song Kwang-Soup (Biomedical Eng.) — name sign + ICT Convergence, NIPA signs\n→ Compare the amount of sign info posted outside each office",
                 "WP07", true,
-                "B132 vs B133 비교",
-                "B132: 강의실 (60명), 프로젝터/마이크\nB133: 세미나실 (15명), 화이트보드/모니터\n→ B133이 소그룹 토론에 적합");
+                "B104 vs B105 비교",
+                "B104: 최세운 교수 (바이오메디컬공학과) — 이름 문패만\nB105: 송광섭 교수 (바이오메디컬공학과) — 이름 문패 + ICT 융합센터, NIPA 간판\n→ 각 연구실 문 밖 게시 정보량을 비교하세요");
         }
 
         // ==========================================
-        // Route B InfoCards
+        // Set2 InfoCards (영상 분석 확정 — 2026-03-09)
         // ==========================================
-        private static void GenerateRouteBInfoCards()
+        private static void GenerateSet2InfoCards()
         {
-            string path = "Assets/Data/InfoCards/RouteB";
+            string path = "Assets/Data/InfoCards/Set2";
             EnsureFolder(path);
-            EnsureFolder("Assets/Resources/Data/InfoCards/RouteB");
+            EnsureFolder("Assets/Resources/Data/InfoCards/Set2");
 
-            CreateInfoCard(path, "b_card_01", "sign_card", "B116 Guide",
-                "Location: South end of east corridor\nPurpose: TBD on-site\nNote: First room heading north from SE junction",
+            CreateInfoCard(path, "s2_card_01", "sign_card", "B106 Medical Engineering Research Lab Guide",
+                "Department: Biomedical Engineering\nResearch area: Medical Engineering\nCapacity: 10\nEquipment: Medical equipment, Workstation\nLocation: East corridor, between B105 and B107",
                 "WP02", true,
-                "B116 안내",
-                "위치: 동쪽 복도 남단\n용도: 현장 확인 필요\n참고: 남동 교차로에서 북쪽으로 첫 번째 공간");
+                "B106 의료공학연구실 안내",
+                "소속: 바이오메디컬공학과\n연구 분야: 의료공학\n수용인원: 10\n장비: 의료 장비, 워크스테이션\n위치: 동쪽 복도, B105와 B107 사이");
 
-            CreateInfoCard(path, "b_card_02", "poi_detail", "E-T Junction Area Guide",
-                "North (Straight): B107 Computational Intelligence Lab, B106 Intelligent Engineering Lab\nSouth (Back): B116, SE junction\nNearby: B110 (TBD)",
+            CreateInfoCard(path, "s2_card_02", "poi_detail", "East Corridor Prof. Office Guide",
+                "North: B103, B102 NSL Lab, B101 Prof. Lee\nSouth: B106 Medical Eng. Lab, B107 Computing Lab\nCurrent area: B104 Prof. Choe Se-woon's Office (Biomedical Eng.)",
                 "WP03", true,
-                "동쪽 교차로 안내",
-                "북쪽 (직진): B107 전산지능연구실, B106 지능공학연구실\n남쪽 (뒤): B116, 남동 교차로\n인근: B110 (현장 확인 필요)");
+                "동쪽 복도 교수실 구간 안내",
+                "북쪽: B103, B102 NSL 연구실, B101 이재민 교수실\n남쪽: B106 의료공학연구실, B107 컴퓨팅 연구실\n현재 구간: B104 최세운 교수 연구실 (바이오메디컬공학과)");
 
-            CreateInfoCard(path, "b_card_03", "sign_card", "B107 Computational Intelligence Lab Guide",
-                "Research area: Computational Intelligence\nCapacity: 10\nEquipment: Server, Workstation\nLocation: Mid-section of east corridor",
+            CreateInfoCard(path, "s2_card_03", "sign_card", "B102 Networked Systems Lab (NSL) Guide",
+                "Lab: Networked Systems Lab (NSL)\nResearch: Network-based systems, DDS, Edge-AI, K-MOSA, blockchain\nPartners: Hanwha Systems, NS Lab, LGU+\nCapacity: 10\nLocation: North section of east corridor",
                 "WP05", true,
-                "B107 전산지능연구실 안내",
-                "연구 분야: 전산지능\n수용인원: 10\n장비: 서버, 워크스테이션\n위치: 동쪽 복도 중간");
+                "B102 네트워크 기반 시스템 연구실 안내",
+                "연구실: 네트워크 기반 시스템 연구실 (NSL)\n연구: 네트워크 시스템, DDS, Edge-AI, K-MOSA, 블록체인\n협력: Hanwha Systems, NS Lab, LGU+\n수용인원: 10\n위치: 동쪽 복도 북쪽 구간");
 
-            CreateInfoCard(path, "b_card_04", "landmark", "NE Junction Area Guide",
-                "South (East corridor): B104-B106 Offices/Labs\nWest (North corridor): B102 Network Lab, B134 Classroom\nNE corner: B101 Prof. Lee's Office",
+            CreateInfoCard(path, "s2_card_04", "landmark", "NE Corner & Prof. Lee Area Guide",
+                "South: B103, B104 Prof. Choe, B105 Prof. Song\nWest: North corridor (B132, B134)\nNearby: B101 Prof. Lee (Hanwha Systems, LGU+ signs), B102 NSL Lab\nStairs at NE corner",
                 "WP06", true,
-                "북동 교차로 안내",
-                "남쪽 (동쪽 복도): B104-B106 연구실/교수실\n서쪽 (북쪽 복도): B102 네트워크 연구실, B134 강의실\n북동 모서리: B101 이교수 연구실");
+                "북동 코너 및 이교수실 구간 안내",
+                "남쪽: B103, B104 최세운 교수실, B105 송광섭 교수실\n서쪽: 북쪽 복도 (B132, B134)\n인근: B101 이재민 교수실 (Hanwha Systems, LGU+ 간판), B102 NSL 연구실\n북동 코너에 계단 있음");
 
-            CreateInfoCard(path, "b_card_05", "comparison", "B104 vs B105 Comparison",
-                "B104: Prof. Choi's Office\nB105: Prof. Song's Office\n→ Compare door sign info (verify on-site)",
+            CreateInfoCard(path, "s2_card_05", "comparison", "B101 vs B102 Comparison",
+                "B101: Prof. Lee's Office — Hanwha Systems + LGU+ partnership plaques\nB102: NSL Lab — recruitment poster, employment chart, class schedule, research papers\n→ Compare the amount of notices/posters posted outside each room",
                 "WP07", true,
-                "B104 vs B105 비교",
-                "B104: 최교수 연구실\nB105: 송교수 연구실\n→ 문패 정보를 비교하세요 (현장에서 확인)");
+                "B101 vs B102 비교",
+                "B101: 이재민 교수실 — Hanwha Systems + LGU+ 산학협력 간판\nB102: NSL 연구실 — 모집 포스터, 취업현황, 강의시간표, 연구 논문\n→ 각 방 문 밖 게시물/포스터 양을 비교하세요");
         }
 
         // ==========================================
@@ -108,19 +108,19 @@ namespace ARNavExperiment.EditorTools
         // ==========================================
         private static void WireInfoCardsToMissions()
         {
-            // Route A: Each mission gets its relevant info cards
-            WireCards("RouteA_A1", new[] { "RouteA/a_card_01" });
-            WireCards("RouteA_B1", new[] { "RouteA/a_card_02" });
-            WireCards("RouteA_A2", new[] { "RouteA/a_card_03" });
-            WireCards("RouteA_B2", new[] { "RouteA/a_card_04" });
-            WireCards("RouteA_C1", new[] { "RouteA/a_card_05" });
+            // Set1
+            WireCards("Set1_A1", new[] { "Set1/s1_card_01" });
+            WireCards("Set1_B1", new[] { "Set1/s1_card_02" });
+            WireCards("Set1_A2", new[] { "Set1/s1_card_03" });
+            WireCards("Set1_B2", new[] { "Set1/s1_card_04" });
+            WireCards("Set1_C1", new[] { "Set1/s1_card_05" });
 
-            // Route B
-            WireCards("RouteB_A1", new[] { "RouteB/b_card_01" });
-            WireCards("RouteB_B1", new[] { "RouteB/b_card_02" });
-            WireCards("RouteB_A2", new[] { "RouteB/b_card_03" });
-            WireCards("RouteB_B2", new[] { "RouteB/b_card_04" });
-            WireCards("RouteB_C1", new[] { "RouteB/b_card_05" });
+            // Set2
+            WireCards("Set2_A1", new[] { "Set2/s2_card_01" });
+            WireCards("Set2_B1", new[] { "Set2/s2_card_02" });
+            WireCards("Set2_A2", new[] { "Set2/s2_card_03" });
+            WireCards("Set2_B2", new[] { "Set2/s2_card_04" });
+            WireCards("Set2_C1", new[] { "Set2/s2_card_05" });
         }
 
         private static void WireCards(string missionName, string[] cardPaths)
@@ -148,24 +148,24 @@ namespace ARNavExperiment.EditorTools
         // ==========================================
         private static void SetComparisonData()
         {
-            // Route A: B132 vs B133
-            SetMissionComparison("RouteA_C1",
-                comparisonId: "comp_a_b132_b133",
-                items: new[] { "B132 Classroom", "B133 Seminar Room" },
-                attrs: new[] { "Purpose", "Capacity", "Seating", "Equipment", "Small Group Suitability" },
+            // Set1: B104 vs B105 — B105가 정답 (추가 간판 다수)
+            SetMissionComparison("Set1_C1",
+                comparisonId: "comp_s1_b104_b105",
+                items: new[] { "B104 Prof. Choe's Office", "B105 Prof. Song's Office" },
+                attrs: new[] { "Professor", "Department", "Sign Detail", "Additional Signs" },
                 vals: new[] {
-                    "Lecture", "60", "Fixed (lecture-facing)", "Projector, Microphone", "Not suitable (too large)",
-                    "Seminar/Discussion", "15", "Movable (circle layout possible)", "Whiteboard, Monitor", "Suitable"
+                    "Choe Se-woon", "Biomedical Eng.", "Basic (name only)", "None",
+                    "Song Kwang-Soup", "Biomedical Eng.", "Detailed", "ICT Convergence Center, NIPA, UACon"
                 });
 
-            // Route B: B104 vs B105
-            SetMissionComparison("RouteB_C1",
-                comparisonId: "comp_b_b104_b105",
-                items: new[] { "B104 Prof. Choi's Office", "B105 Prof. Song's Office" },
-                attrs: new[] { "Professor", "Research Field", "Sign Detail Level", "Office Location" },
+            // Set2: B101 vs B102 — B102가 정답 (게시물 다수)
+            SetMissionComparison("Set2_C1",
+                comparisonId: "comp_s2_b101_b102",
+                items: new[] { "B101 Prof. Lee's Office", "B102 NSL Lab" },
+                attrs: new[] { "Type", "Occupant", "Outside Postings", "Partnership Signs" },
                 vals: new[] {
-                    "Prof. Choi", "(verify on-site)", "Detailed (verify on-site)", "North end of east corridor",
-                    "Prof. Song", "(verify on-site)", "Brief (verify on-site)", "North end of east corridor"
+                    "Professor Office", "Prof. Lee Jae-Min", "Few", "Hanwha Systems, LGU+",
+                    "Research Lab", "NSL Team", "Many (poster, papers, schedule)", "Listed in recruitment poster"
                 });
         }
 

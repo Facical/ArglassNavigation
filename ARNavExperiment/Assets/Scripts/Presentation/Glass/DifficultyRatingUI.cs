@@ -4,8 +4,6 @@ using TMPro;
 using ARNavExperiment.Core;
 using ARNavExperiment.Domain.Events;
 using ARNavExperiment.Application;
-using ARNavExperiment.Presentation.Shared;
-
 namespace ARNavExperiment.Presentation.Glass
 {
     public class DifficultyRatingUI : MonoBehaviour
@@ -20,15 +18,49 @@ namespace ARNavExperiment.Presentation.Glass
         private string missionId;
         private System.Action<int> onRated;
 
-        private void Start()
+        private void Awake()
         {
-            for (int i = 0; i < ratingButtons.Length; i++)
+            if (panel == null)
             {
-                int rating = i + 1;
-                ratingButtons[i]?.onClick.AddListener(() => SelectRating(rating));
+                panel = gameObject;
+                Debug.LogWarning("[DifficultyRatingUI] panel null — self-wired to gameObject");
+            }
+            if (promptText == null || currentRatingText == null)
+            {
+                var texts = panel.GetComponentsInChildren<TextMeshProUGUI>(true);
+                foreach (var t in texts)
+                {
+                    if (t.gameObject.name == "PromptText" && promptText == null) promptText = t;
+                    if (t.gameObject.name == "CurrentRatingText" && currentRatingText == null) currentRatingText = t;
+                }
+            }
+            if (ratingButtons == null || ratingButtons.Length == 0)
+            {
+                var ratingBar = panel.transform.Find("RatingButtons");
+                if (ratingBar != null)
+                    ratingButtons = ratingBar.GetComponentsInChildren<Button>(true);
+            }
+            if (confirmButton == null)
+            {
+                var allBtns = panel.GetComponentsInChildren<Button>(true);
+                foreach (var btn in allBtns)
+                {
+                    if (btn.gameObject.name == "ConfirmRatingBtn") { confirmButton = btn; break; }
+                }
+            }
+            // 버튼 리스너 (Start에서 이동 — 비활성 오브젝트의 Start()는 Show() 후 다음 프레임에 실행되어 패널을 다시 숨김)
+            if (ratingButtons != null)
+            {
+                for (int i = 0; i < ratingButtons.Length; i++)
+                {
+                    int rating = i + 1;
+                    ratingButtons[i]?.onClick.AddListener(() => SelectRating(rating));
+                }
             }
             confirmButton?.onClick.AddListener(Confirm);
-            if (panel) panel.SetActive(false);
+
+            Debug.LogWarning($"[DifficultyRatingUI] Awake — panel={panel != null}, promptText={promptText != null}, " +
+                $"ratingButtons={ratingButtons?.Length ?? 0}, confirmButton={confirmButton != null}");
         }
 
         public void Show(string missionId, System.Action<int> callback)
@@ -41,20 +73,13 @@ namespace ARNavExperiment.Presentation.Glass
             if (panel)
             {
                 panel.SetActive(true);
-                panel.GetComponent<PanelFader>()?.FadeIn();
             }
         }
 
         public void Hide()
         {
-            var fader = panel?.GetComponent<PanelFader>();
-            if (fader != null)
-                fader.FadeOut(() => { onRated = null; });
-            else
-            {
-                if (panel) panel.SetActive(false);
-                onRated = null;
-            }
+            if (panel) panel.SetActive(false);
+            onRated = null;
         }
 
         private void SelectRating(int rating)
@@ -71,14 +96,8 @@ namespace ARNavExperiment.Presentation.Glass
 
             var cb = onRated;
             onRated = null;
-            var fader = panel?.GetComponent<PanelFader>();
-            if (fader != null)
-                fader.FadeOut(() => cb?.Invoke(selectedRating));
-            else
-            {
-                if (panel) panel.SetActive(false);
-                cb?.Invoke(selectedRating);
-            }
+            if (panel) panel.SetActive(false);
+            cb?.Invoke(selectedRating);
         }
     }
 }

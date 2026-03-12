@@ -124,7 +124,7 @@ namespace ARNavExperiment.Domain.Events
     }
 
     /// <summary>
-    /// 10초 주기 내비게이션 상태 스냅샷 (현장 디버깅용).
+    /// 5초 주기 내비게이션 상태 스냅샷 (현장 디버깅용).
     /// </summary>
     public readonly struct NavigationStateSnapshot : IDomainEvent
     {
@@ -136,10 +136,13 @@ namespace ARNavExperiment.Domain.Events
         public readonly bool ArrowVisible;
         public readonly string RouteId;
         public readonly string Condition;
+        public readonly bool HasMapCalibration;
+        public readonly string CalibrationSource;
 
         public NavigationStateSnapshot(string waypointId, bool isAnchorBound,
             string playerPosition, string targetPosition, float distanceToTarget,
-            bool arrowVisible, string routeId, string condition)
+            bool arrowVisible, string routeId, string condition,
+            bool hasMapCalibration, string calibrationSource)
         {
             WaypointId = waypointId;
             IsAnchorBound = isAnchorBound;
@@ -149,6 +152,8 @@ namespace ARNavExperiment.Domain.Events
             ArrowVisible = arrowVisible;
             RouteId = routeId;
             Condition = condition;
+            HasMapCalibration = hasMapCalibration;
+            CalibrationSource = calibrationSource;
         }
     }
 
@@ -171,6 +176,61 @@ namespace ARNavExperiment.Domain.Events
             AnchorBound = anchorBound;
             FallbackUsed = fallbackUsed;
             DetailsJson = detailsJson;
+        }
+    }
+
+    /// <summary>
+    /// Heading 보정 오프셋이 적용되었을 때 발행 (auto/stored/fallback).
+    /// </summary>
+    public readonly struct HeadingCalibrationApplied : IDomainEvent
+    {
+        public readonly string Source; // "auto", "stored", "fallback"
+        public readonly float OffsetDegrees;
+
+        public HeadingCalibrationApplied(string source, float offsetDegrees)
+        {
+            Source = source;
+            OffsetDegrees = offsetDegrees;
+        }
+    }
+
+    /// <summary>
+    /// 실험자가 수동 보정 버튼을 눌렀을 때 발행.
+    /// </summary>
+    public readonly struct ManualCalibrationApplied : IDomainEvent
+    {
+        public readonly string WaypointId;
+        public readonly string CameraPosition;
+        public readonly string FallbackPosition;
+        public readonly float HeadingOffset;
+
+        public ManualCalibrationApplied(string waypointId, string cameraPosition,
+            string fallbackPosition, float headingOffset)
+        {
+            WaypointId = waypointId;
+            CameraPosition = cameraPosition;
+            FallbackPosition = fallbackPosition;
+            HeadingOffset = headingOffset;
+        }
+    }
+
+    /// <summary>
+    /// Image Tracking에서 마커가 감지되었을 때 발행.
+    /// </summary>
+    public readonly struct ImageMarkerDetected : IDomainEvent
+    {
+        public readonly string MarkerId;
+        public readonly string MappedWaypointId;
+        public readonly string SlamPosition;
+        public readonly float HeadingOffset;
+
+        public ImageMarkerDetected(string markerId, string mappedWaypointId,
+            string slamPosition, float headingOffset)
+        {
+            MarkerId = markerId;
+            MappedWaypointId = mappedWaypointId;
+            SlamPosition = slamPosition;
+            HeadingOffset = headingOffset;
         }
     }
 }

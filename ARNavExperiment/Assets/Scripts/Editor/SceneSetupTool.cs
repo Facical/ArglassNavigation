@@ -107,6 +107,10 @@ namespace ARNavExperiment.EditorTools
             var anchorMgr = CreateGameObject("SpatialAnchorManager", system.transform);
             anchorMgr.AddComponent<Core.SpatialAnchorManager>();
 
+            // ImageTrackingAligner (Image Tracking 기반 좌표계 정렬)
+            var imageAligner = CreateGameObject("ImageTrackingAligner", system.transform);
+            imageAligner.AddComponent<Core.ImageTrackingAligner>();
+
             // GlassViewCapture (디버그 녹화)
             var glassCap = CreateGameObject("GlassViewCapture", system.transform);
             glassCap.AddComponent<Logging.GlassViewCapture>();
@@ -275,6 +279,17 @@ namespace ARNavExperiment.EditorTools
             CreateUIButton("ZoomInBtn", zoomPanel.transform, "+");
             CreateUIButton("ZoomOutBtn", zoomPanel.transform, "\u2212");
             zoomPanel.SetActive(false); // BeamProCanvasController가 GlassOnly에서 활성화
+
+            // GlassOnly Map Toggle Button (ZoomButtonPanel 옆, 왼쪽 하단)
+            var mapToggleBtn = CreateUIButton("GlassMapToggleBtn", contentAreaGO.transform, "Map");
+            var mtRect = mapToggleBtn.GetComponent<RectTransform>();
+            mtRect.anchorMin = new Vector2(0.02f, 0.02f);
+            mtRect.anchorMax = new Vector2(0.18f, 0.10f);
+            mtRect.offsetMin = Vector2.zero;
+            mtRect.offsetMax = Vector2.zero;
+            var mtImg = mapToggleBtn.GetComponent<Image>();
+            if (mtImg != null) mtImg.color = new Color(0.2f, 0.4f, 0.7f, 0.9f);
+            mapToggleBtn.gameObject.SetActive(false); // BeamProCanvasController가 GlassOnly에서 활성화
 
             var infoPanel = CreatePanel("InfoCardPanel", contentAreaGO.transform, new Color(0, 0, 0, 0));
             infoPanel.AddComponent<Presentation.BeamPro.InfoCardManager>();
@@ -869,7 +884,7 @@ namespace ARNavExperiment.EditorTools
             rect.anchorMax = new Vector2(0.9f, 0.88f);
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
-            panel.AddComponent<Presentation.Shared.PanelFader>();
+            // CanvasGroup은 CreatePanel()에서 이미 추가됨 — PanelFader 제거 (XR multi-view 호환)
             return panel;
         }
 
@@ -973,7 +988,7 @@ namespace ARNavExperiment.EditorTools
             rect.offsetMax = Vector2.zero;
             var img = go.AddComponent<Image>();
             img.color = bgColor;
-            // CanvasGroup 추가 (PanelFader 지원)
+            // CanvasGroup 추가 (raycast 지원)
             go.AddComponent<CanvasGroup>();
             return go;
         }

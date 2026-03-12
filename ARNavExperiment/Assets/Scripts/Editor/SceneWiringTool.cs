@@ -41,9 +41,9 @@ namespace ARNavExperiment.EditorTools
             WireMappingMiniMap();
             WireInteractiveMapController();
             WireGlassModeStatusPanel();
-            WireHandJointVisualizer();
             WireBeamProCoordinator();
             WireGlassFlowUI();
+            WireImageTrackingAligner();
 
             Debug.Log("[SceneWiring] 모든 참조 연결 완료!");
         }
@@ -122,7 +122,7 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireMissionBriefingUI()
         {
-            var ui = Object.FindObjectOfType<Presentation.Glass.MissionBriefingUI>();
+            var ui = Object.FindObjectOfType<Presentation.Glass.MissionBriefingUI>(true);
             if (ui == null) return;
             var panel = ui.gameObject;
             var so = new SerializedObject(ui);
@@ -143,7 +143,7 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireVerificationUI()
         {
-            var ui = Object.FindObjectOfType<Presentation.Glass.VerificationUI>();
+            var ui = Object.FindObjectOfType<Presentation.Glass.VerificationUI>(true);
             if (ui == null) return;
             var panel = ui.gameObject;
             var so = new SerializedObject(ui);
@@ -184,7 +184,7 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireConfidenceRatingUI()
         {
-            var ui = Object.FindObjectOfType<Presentation.Glass.ConfidenceRatingUI>();
+            var ui = Object.FindObjectOfType<Presentation.Glass.ConfidenceRatingUI>(true);
             if (ui == null) return;
             var panel = ui.gameObject;
             var so = new SerializedObject(ui);
@@ -227,7 +227,7 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireDifficultyRatingUI()
         {
-            var ui = Object.FindObjectOfType<Presentation.Glass.DifficultyRatingUI>();
+            var ui = Object.FindObjectOfType<Presentation.Glass.DifficultyRatingUI>(true);
             if (ui == null) return;
             var panel = ui.gameObject;
             var so = new SerializedObject(ui);
@@ -323,6 +323,7 @@ namespace ARNavExperiment.EditorTools
                     case "WPText": SetObjectRef(so, "waypointText", t); break;
                     case "AnchorText": SetObjectRef(so, "anchorStatusText", t); break;
                     case "CaptureStatusText": SetObjectRef(so, "captureStatusText", t); break;
+                    case "HeadingOffsetText": SetObjectRef(so, "headingOffsetText", t); break;
                 }
             }
 
@@ -335,6 +336,9 @@ namespace ARNavExperiment.EditorTools
                     case "AdvanceBtn": SetObjectRef(so, "advanceButton", btn); break;
                     case "NextMissionBtn": SetObjectRef(so, "nextMissionButton", btn); break;
                     case "CaptureBtn": SetObjectRef(so, "captureToggleButton", btn); break;
+                    case "HeadingLeftBtn": SetObjectRef(so, "headingLeftButton", btn); break;
+                    case "HeadingRightBtn": SetObjectRef(so, "headingRightButton", btn); break;
+                    case "ManualCalibrateBtn": SetObjectRef(so, "manualCalibrateButton", btn); break;
                 }
             }
 
@@ -384,8 +388,8 @@ namespace ARNavExperiment.EditorTools
             SetObjectRef(so, "participantIdInput", FindComponent<TMP_InputField>("ParticipantIdInput"));
             SetObjectRef(so, "errorText", FindComponent<TextMeshProUGUI>("ErrorText"));
             SetObjectRef(so, "statusText", FindComponent<TextMeshProUGUI>("MappingStatusText"));
-            SetObjectRef(so, "routeAButton", FindComponent<Button>("RouteABtn"));
-            SetObjectRef(so, "routeBButton", FindComponent<Button>("RouteBBtn"));
+            SetObjectRef(so, "set1Button", FindComponent<Button>("Set1Btn"));
+            SetObjectRef(so, "set2Button", FindComponent<Button>("Set2Btn"));
             SetObjectRef(so, "glassOnlyButton", FindComponent<Button>("GlassOnlyBtn"));
             SetObjectRef(so, "hybridButton", FindComponent<Button>("HybridBtn"));
             SetObjectRef(so, "mappingButton", FindComponent<Button>("MappingBtn"));
@@ -530,6 +534,7 @@ namespace ARNavExperiment.EditorTools
             if (ctrl == null) return;
             var so = new SerializedObject(ctrl);
             SetObjectRef(so, "zoomButtonPanel", FindGO("ZoomButtonPanel"));
+            SetObjectRef(so, "glassMapToggleButton", FindComponent<Button>("GlassMapToggleBtn"));
             so.ApplyModifiedProperties();
         }
 
@@ -541,6 +546,12 @@ namespace ARNavExperiment.EditorTools
             SetObjectRef(so, "mapController", FindComponent<Presentation.BeamPro.InteractiveMapController>());
             SetObjectRef(so, "zoomInButton", FindComponent<Button>("ZoomInBtn"));
             SetObjectRef(so, "zoomOutButton", FindComponent<Button>("ZoomOutBtn"));
+            // worldMin/worldMax 명시적 설정 (씬 직렬화 값 덮어쓰기)
+            var worldMinProp = so.FindProperty("worldMin");
+            var worldMaxProp = so.FindProperty("worldMax");
+            if (worldMinProp != null) worldMinProp.vector2Value = new Vector2(-39, -23);
+            if (worldMaxProp != null) worldMaxProp.vector2Value = new Vector2(49, 80);
+
             so.ApplyModifiedProperties();
         }
 
@@ -580,6 +591,13 @@ namespace ARNavExperiment.EditorTools
             }
 
             SetObjectRef(so, "poiDetailPanel", FindComponent<Presentation.BeamPro.POIDetailPanel>());
+
+            // worldMin/worldMax 명시적 설정 (씬 직렬화 값 덮어쓰기)
+            var worldMinProp = so.FindProperty("worldMin");
+            var worldMaxProp = so.FindProperty("worldMax");
+            if (worldMinProp != null) worldMinProp.vector2Value = new Vector2(-39, -23);
+            if (worldMaxProp != null) worldMaxProp.vector2Value = new Vector2(49, 80);
+
             so.ApplyModifiedProperties();
         }
 
@@ -650,6 +668,12 @@ namespace ARNavExperiment.EditorTools
                 }
             }
 
+            // worldMin/worldMax 명시적 설정 (씬 직렬화 값 덮어쓰기)
+            var worldMinProp = so.FindProperty("worldMin");
+            var worldMaxProp = so.FindProperty("worldMax");
+            if (worldMinProp != null) worldMinProp.vector2Value = new Vector2(-39, -23);
+            if (worldMaxProp != null) worldMaxProp.vector2Value = new Vector2(49, 80);
+
             so.ApplyModifiedProperties();
         }
 
@@ -673,16 +697,6 @@ namespace ARNavExperiment.EditorTools
                 }
             }
 
-            so.ApplyModifiedProperties();
-        }
-
-        private static void WireHandJointVisualizer()
-        {
-            var mgr = Object.FindObjectOfType<Core.HandTrackingManager>(true);
-            if (mgr == null) return;
-            var so = new SerializedObject(mgr);
-            var visualizer = FindGO("HandJointVisualizer");
-            SetObjectRef(so, "handJointVisualizer", visualizer);
             so.ApplyModifiedProperties();
         }
 
@@ -816,6 +830,27 @@ namespace ARNavExperiment.EditorTools
                     }
                 }
             }
+
+            so.ApplyModifiedProperties();
+        }
+
+        private static void WireImageTrackingAligner()
+        {
+            var aligner = Object.FindObjectOfType<Core.ImageTrackingAligner>(true);
+            if (aligner == null) return;
+            var so = new SerializedObject(aligner);
+
+#if XR_ARFOUNDATION
+            var trackedImageManager = Object.FindObjectOfType<UnityEngine.XR.ARFoundation.ARTrackedImageManager>(true);
+            if (trackedImageManager != null)
+                SetObjectRef(so, "trackedImageManager", trackedImageManager);
+#endif
+
+            // MarkerMappingData 에셋 연결
+            var mappingData = AssetDatabase.LoadAssetAtPath<Core.MarkerMappingData>(
+                "Assets/Data/ImageTracking/MarkerMappingData.asset");
+            if (mappingData != null)
+                SetObjectRef(so, "markerMapping", mappingData);
 
             so.ApplyModifiedProperties();
         }

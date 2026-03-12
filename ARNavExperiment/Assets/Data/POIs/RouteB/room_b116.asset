@@ -13,14 +13,18 @@ MonoBehaviour:
   m_Name: room_b116
   m_EditorClassIdentifier: 
   poiId: room_b116
-  poiType: tbd
-  displayName: B116
-  description: East corridor south end (TBD on-site)
-  capacity: 0
-  equipment: []
-  mapPosition: {x: 20, y: 4}
+  poiType: computer_lab
+  displayName: B116 Education Computer Room
+  description: Education computer room (Cloud Computing class)
+  capacity: 40
+  equipment:
+  - Desktop PC
+  - Projector
+  mapPosition: {x: 39, y: 48}
   icon: {fileID: 0}
-  displayNameKo: B116
-  descriptionKo: "\uB3D9\uCABD \uBCF5\uB3C4 \uB0A8\uB2E8 (\uD604\uC7A5 \uD655\uC778
-    \uD544\uC694)"
-  equipmentKo: []
+  displayNameKo: "B116 \uAD50\uC721\uC6A9 \uCEF4\uD4E8\uD130\uC2E4"
+  descriptionKo: "\uAD50\uC721\uC6A9 \uCEF4\uD4E8\uD130\uC2E4 (\uD074\uB77C\uC6B0\uB4DC\uCEF4\uD4E8\uD305
+    \uC218\uC5C5)"
+  equipmentKo:
+  - "\uB370\uC2A4\uD06C\uD1B1 PC"
+  - "\uD504\uB85C\uC81D\uD130"

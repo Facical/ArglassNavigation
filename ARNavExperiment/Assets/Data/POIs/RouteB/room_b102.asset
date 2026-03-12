@@ -14,14 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b102
   poiType: research_lab
-  displayName: B102 Network Lab
-  description: Network research lab
+  displayName: B102 Networked Systems Lab (NSL)
+  description: "Networked Systems Lab (NSL) \u2014 network-based systems research"
   capacity: 10
   equipment:
   - Network equipment
-  mapPosition: {x: 20, y: 22}
+  - Server
+  mapPosition: {x: 36, y: 63}
   icon: {fileID: 0}
-  displayNameKo: "B102 \uB124\uD2B8\uC6CC\uD06C \uC5F0\uAD6C\uC2E4"
-  descriptionKo: "\uB124\uD2B8\uC6CC\uD06C \uC5F0\uAD6C\uC2E4"
+  displayNameKo: "B102 \uB124\uD2B8\uC6CC\uD06C \uAE30\uBC18 \uC2DC\uC2A4\uD15C \uC5F0\uAD6C\uC2E4"
+  descriptionKo: "\uB124\uD2B8\uC6CC\uD06C \uAE30\uBC18 \uC2DC\uC2A4\uD15C \uC5F0\uAD6C\uC2E4
+    (NSL)"
   equipmentKo:
   - "\uB124\uD2B8\uC6CC\uD06C \uC7A5\uBE44"
+  - "\uC11C\uBC84"

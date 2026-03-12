@@ -16,7 +16,7 @@ MonoBehaviour:
   type: 2
   briefingText: Check rooms B104 and B105 (professor offices). Select the one with
     more detailed lab information posted on the door sign.
-  targetWaypointId: WP08
+  targetWaypointId: WP07
   verificationQuestion: Which professor's office has more detailed sign info?
   answerOptions:
   - B104

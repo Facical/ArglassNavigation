@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b104
   poiType: professor_office
-  displayName: B104 Prof. Choi's Office
-  description: Prof. Taehoon Choi's office
+  displayName: B104 Prof. Choe's Office
+  description: Prof. Se-woon Choe's office (Biomedical Engineering)
   capacity: 2
   equipment: []
-  mapPosition: {x: 11, y: 25}
+  mapPosition: {x: 36, y: 51}
   icon: {fileID: 0}
-  displayNameKo: "B104 \uCD5C\uAD50\uC218 \uC5F0\uAD6C\uC2E4"
-  descriptionKo: "\uCD5C\uD0DC\uD6C8 \uAD50\uC218 \uC5F0\uAD6C\uC2E4"
+  displayNameKo: "B104 \uCD5C\uC138\uC6B4 \uAD50\uC218 \uC5F0\uAD6C\uC2E4"
+  descriptionKo: "\uCD5C\uC138\uC6B4 \uAD50\uC218 \uC5F0\uAD6C\uC2E4 (\uBC14\uC774\uC624\uBA54\uB514\uCEEC\uACF5\uD559\uACFC)"
   equipmentKo: []

@@ -1,0 +1,472 @@
+% ISMAR 2026 Paper — Hybrid Smart Glasses–Smartphone Indoor Navigation
+% Using IEEE VGTC conference style (vgtc.cls)
+
+\documentclass[review]{vgtc}           % review mode (double-blind)
+%\documentclass{vgtc}                  % final (camera-ready)
+
+\graphicspath{{figures/}{images/}{./}}
+
+\usepackage{times}
+\renewcommand*\ttdefault{txtt}
+\usepackage{booktabs}
+\usepackage{mathptmx}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{balance}
+
+\onlineid{0}
+\vgtccategory{Research}
+\vgtcinsertpkg
+
+%% ============================================================
+%% TITLE
+%% ============================================================
+\title{Second Screen, Second Opinion: Supporting Smart Glass Navigation with a Handheld Companion Display Under Uncertainty}
+
+%% ============================================================
+%% AUTHORS (anonymized for review)
+%% ============================================================
+% For review: leave anonymous
+% For camera-ready: uncomment and fill in
+%\author{Author One\thanks{e-mail: author1@university.edu}\\
+%        \scriptsize University Name
+%\and Author Two\thanks{e-mail: author2@university.edu}\\
+%        \scriptsize University Name}
+
+%% ============================================================
+%% TEASER (optional — uncomment for camera-ready)
+%% ============================================================
+%\teaser{
+%  \centering
+%  \includegraphics[width=\linewidth, alt={System overview showing smart glasses AR arrows and smartphone information hub used simultaneously during indoor navigation.}]{teaser}
+%  \caption{A participant uses XREAL Air2 Ultra smart glasses for AR arrow guidance while cross-referencing contextual information on the Beam Pro smartphone hub during an ambiguous intersection, illustrating the hybrid interaction paradigm evaluated in this study.}
+%  \label{fig:teaser}
+%}
+
+%% ============================================================
+%% ABSTRACT
+%% ============================================================
+\abstract{%
+Optical see-through smart glasses can place AR navigation cues
+directly in the user's view, but their limited field of view and
+display resolution make it difficult to inspect contextual
+information when guidance becomes ambiguous. We present a hybrid
+indoor navigation approach in which smart glasses provide continuous
+directional guidance (\emph{where to go}) while a handheld companion
+display serves as an on-demand verification channel for contextual
+information (\emph{what is there}). In a within-subjects study
+($N{=}24$), participants completed mission-based wayfinding tasks on
+a fixed indoor route under two conditions: Glass-Only and Hybrid.
+Four uncertainty triggers were embedded along the route (tracking
+degradation, information conflict, low-resolution guidance, and
+guidance absence) to elicit cross-verification behaviour. We assessed
+mission accuracy, completion time, confidence--accuracy calibration,
+and a novel Cross-Verification Index~(CVI) that captures whether
+participants consult the companion display more during uncertainty
+than during routine navigation. Results showed that Hybrid
+participants selectively increased companion-display usage during
+uncertainty segments ($\text{CVI} > 1$) and exhibited stronger
+confidence--accuracy alignment, while maintaining comparable mission
+accuracy with a modest time trade-off. This work contributes a
+dual-device navigation system implemented on commercial hardware, an
+experimental protocol with operationalised uncertainty triggers, and
+an analytic framework for studying complementary device roles in AR
+wayfinding under uncertainty.
+}
+
+%% ============================================================
+%% KEYWORDS
+%% ============================================================
+\keywords{Augmented reality, indoor navigation, hybrid interaction, smart glasses, device switching, confidence calibration, cross-device interaction.}
+
+\nocopyrightspace  % remove for camera-ready
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%% START OF THE PAPER %%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\firstsection{Introduction}
+\maketitle
+
+%% ----- 1. INTRODUCTION -----
+
+Augmented reality (AR) navigation systems can overlay directional cues
+such as arrows or paths directly onto the physical world, reducing the
+cognitive cost of translating between a map and the environment~\cite{Qiu:2025:UAR}.
+Head-mounted displays (HMDs), in particular optical see-through smart
+glasses, keep the user's hands free while providing an egocentric
+perspective that aligns guidance with the walking direction~\cite{Rehman:2017:ARI}.
+However, current consumer-grade smart glasses face well-documented
+constraints: narrow field of view, limited display resolution, and
+restricted input modalities that make detailed information
+retrieval cumbersome~\cite{Li:2023:ERH, AReading:2025:RSU}.
+
+Smartphones, conversely, excel at rich information display, precise
+touch interaction, and high-resolution content rendering, but they
+demand visual and manual attention that competes with environmental
+awareness~\cite{Putra:2025:AAN, Sharin:2023:GCS}. Prior work has
+compared HMDs and handheld devices as \emph{alternatives} for AR
+navigation~\cite{Rehman:2017:ARI, Qiu:2025:UAR}, and a growing body
+of research has explored hybrid HMD--smartphone interaction for
+non-navigation tasks such as reading~\cite{AReading:2025:RSU,
+Li:2023:ERH} and general-purpose AR~\cite{Zhu:2020:BIS,
+Speicher:2018:XDA}. Yet no study to date has examined the
+\emph{simultaneous, complementary} use of smart glasses and a
+smartphone for indoor wayfinding, nor has any work investigated how
+users switch between these devices under conditions of navigational
+uncertainty.
+
+This gap is consequential. Indoor environments frequently present
+situations where the system's directional guidance alone is
+insufficient: ambiguous intersections, tracking failures, conflicting
+signage, or destinations that require attribute-level information (e.g.,
+room capacity, equipment) to identify. In such moments, a second
+device can serve as a \emph{cross-verification} channel---an on-demand
+resource that either confirms or enriches the primary guidance. Whether
+users actually adopt this strategy, and whether doing so improves
+their trust calibration and task outcomes, remain open empirical
+questions.
+
+We address these questions through three contributions:
+
+\begin{enumerate}
+\item \textbf{A hybrid navigation system} built on XREAL Air2 Ultra
+smart glasses and Beam Pro smartphone, implementing a dual-device
+architecture where the glasses provide ambient AR arrows
+(\emph{where}) and the phone offers a three-tab information hub
+(\emph{what}: interactive map, contextual cards, mission reference).
+
+\item \textbf{A controlled experiment} ($N{=}24$, within-subjects)
+comparing Glass~Only versus Hybrid conditions on a fixed indoor route
+with five mission-based wayfinding tasks and four embedded uncertainty
+triggers.
+
+\item \textbf{An analytical framework} centred on a novel
+Cross-Verification Index (CVI) and confidence--accuracy calibration,
+grounded in distributed cognition~\cite{Hutchins:1995:CIW} and trust
+in automation~\cite{Lee:2004:TAS} theories.
+\end{enumerate}
+
+
+%% ----- 2. RELATED WORK -----
+
+\section{Related Work}
+
+\subsection{AR Indoor Navigation}
+
+AR-based wayfinding has matured considerably over the past decade.
+A recent systematic review by Qiu et al.~\cite{Qiu:2025:UAR}
+analysed 88 studies and found that AR navigation improves wayfinding
+performance (75\% of studies), reduces cognitive load (92\%), and
+enhances spatial learning (85\%). Handheld AR systems such as
+NavARNode~\cite{Putra:2025:AAN} and GoMap~\cite{Sharin:2023:GCS}
+demonstrate accurate real-time guidance but require continuous
+phone-holding, introducing fatigue and reducing environmental
+awareness. Head-mounted approaches like NavMarkAR~\cite{Hsu:2023:NAL}
+free the user's hands and improve immersion but provide limited
+contextual detail. Rehman and Cao~\cite{Rehman:2017:ARI} directly
+compared Google Glass and smartphone AR navigation, finding comparable
+task times but lower workload with the HMD. Critically, all these
+studies treat the two device form factors as \emph{alternatives}; none
+examine their \emph{simultaneous, complementary} use.
+
+\subsection{Hybrid HMD--Smartphone Interaction}
+
+Several systems have explored bidirectional interactions between
+HMDs and smartphones. BISHARE~\cite{Zhu:2020:BIS} proposed a design
+space for smartphone--HMD information sharing, demonstrating benefits
+of seamless cross-device data flow. AReading~\cite{AReading:2025:RSU}
+quantified display switching costs in hybrid AR reading interfaces,
+finding that high-resolution smartphone content offsets the overhead
+of gaze shifts. Li et al.~\cite{Li:2023:ERH} showed that smartphones
+as assistive displays reduce HMD reading workload. The XD-AR
+framework~\cite{Speicher:2018:XDA} addressed cross-device AR
+development challenges, while Lindlbauer et al.~\cite{Lindlbauer:2019:CAO}
+demonstrated context-aware adaptation of MR interfaces. However, these
+contributions focus on stationary tasks (reading, object manipulation)
+and do not address the mobile, decision-laden context of wayfinding.
+
+\subsection{Trust Calibration and Uncertainty in Navigation}
+
+Trust calibration---the alignment between a user's confidence in a
+system and the system's actual reliability---is a critical factor in
+effective human--automation interaction~\cite{Lee:2004:TAS}. When
+navigational uncertainty arises (e.g., tracking failures, ambiguous
+guidance), miscalibrated trust can lead to over-reliance on faulty
+cues or premature abandonment of helpful guidance~\cite{LeeMoray:1992:TCA}.
+Colley et al.~\cite{Colley:2024:TCA} studied trust calibration in
+AR decision support but not in a navigation context. The distributed
+cognition framework~\cite{Hutchins:1995:CIW} suggests that
+distributing information across multiple representations---here,
+across two devices---can support more robust decision-making. We build
+on these foundations to hypothesise that a hybrid device configuration
+enables a \emph{cross-verification loop} that recalibrates trust when
+the primary guidance source becomes unreliable.
+
+
+%% ----- 3. SYSTEM DESIGN -----
+
+\section{System Design}
+
+\subsection{Hardware Platform}
+
+The system runs on an XREAL Air2 Ultra optical see-through AR
+glasses~\cite{XREAL:2024:A2U} tethered to an XREAL Beam Pro spatial
+computing terminal~\cite{XREAL:2024:BPR}. The Air2 Ultra provides
+6DoF tracking, hand tracking, and spatial anchoring. The Beam Pro
+acts as both the computational host (Android) and the secondary
+display surface with a touchscreen interface.
+
+\subsection{Dual-Device Architecture}
+
+The system implements a clear functional separation inspired by
+distributed cognition theory~\cite{Hutchins:1995:CIW}:
+
+\begin{itemize}
+\item \textbf{Glasses (``WHERE'' channel):} AR directional arrows
+rendered in egocentric view using head-locked placement. The arrow
+colour, opacity, and angular spread are modulated by the active
+uncertainty trigger. A minimal HUD shows the current mission and
+waypoint progress.
+
+\item \textbf{Smartphone (``WHAT'' channel):} A three-tab information
+hub providing (1) an \emph{interactive floor-plan map} with POI
+markers and route overlay, (2) \emph{contextual information cards}
+(POI details, comparison matrices, contextual hints) that are
+pushed at waypoints or pulled on demand, and (3) a \emph{mission
+reference panel} for re-reading briefings and accessing
+mission-type-specific hints.
+\end{itemize}
+
+\subsection{Condition Implementation}
+
+In the \textbf{Glass~Only} condition, the smartphone hub is rendered
+as a head-locked WorldSpace canvas on the glasses; users interact via
+hand-ray pointing. In the \textbf{Hybrid} condition, the hub appears
+on the Beam Pro touchscreen and activates via lift-to-wake. Both
+conditions display the same information content, isolating the effect
+of device form factor and interaction modality.
+
+\subsection{Uncertainty Triggers}
+
+Four trigger types are embedded at predetermined waypoints along the
+route to systematically introduce navigational uncertainty:
+
+\begin{itemize}
+\item \textbf{T1 -- Tracking Degradation:} AR arrow exhibits
+$\pm5^{\circ}$ jitter for 6\,s followed by a 3\,s blackout, then
+auto-recovers.
+\item \textbf{T2 -- Information Conflict:} The AR arrow direction
+contradicts a physical directional sign (the arrow is correct).
+\item \textbf{T3 -- Low-Resolution Guidance:} The arrow becomes a
+$30^{\circ}$ semi-transparent fan, indicating directional uncertainty.
+\item \textbf{T4 -- Guidance Absence:} The arrow is removed entirely;
+only a ``near destination'' text hint remains.
+\end{itemize}
+
+Each participant encounters all four trigger types across two
+sequential mission sets, counterbalanced for order.
+
+
+%% ----- 4. EXPERIMENT DESIGN -----
+
+\section{Experiment Design}
+
+\subsection{Participants and Design}
+
+We plan a within-subjects study with 24 participants
+(target: university students, 18--35 years, unfamiliar with the
+building). Each participant completes both conditions
+(Glass~Only, Hybrid) in counterbalanced order, each with a
+different mission set (Set~1, Set~2) on the same fixed indoor route
+(Route~B, ${\sim}200$\,m, 9 waypoints, 6 turns). Four
+counterbalancing groups (6 participants each) control for condition
+and mission-set order effects.
+
+\subsection{Mission-Based Tasks}
+
+Each condition includes five missions executed in a fixed order
+(A1$\to$B1$\to$A2$\to$B2$\to$C1):
+
+\begin{itemize}
+\item \textbf{Type~A -- Direction Verify} (2$\times$): Navigate to a
+destination, then answer a 4-choice verification question about an
+observable attribute (e.g., room number, signage content).
+
+\item \textbf{Type~B -- Ambiguous Decision} (2$\times$): Navigate
+through an uncertainty trigger zone, make a directional choice, and
+verify correctness. These missions coincide with triggers T1--T4.
+
+\item \textbf{Type~C -- Information Integration} (1$\times$): Visit
+two locations, compare attribute information, and answer a comparative
+judgement question (e.g., which room better suits a 10-person meeting).
+\end{itemize}
+
+\subsection{Measures}
+
+\subsubsection{Primary Dependent Variables}
+
+\begin{itemize}
+\item \textbf{Mission accuracy:} Proportion of correct verification
+answers (auto-scored, 4-choice).
+\item \textbf{Completion time:} From \texttt{MISSION\_START} to
+\texttt{VERIFICATION\_ANSWERED} (seconds).
+\item \textbf{Confidence--accuracy calibration:} Per-participant
+Pearson correlation between self-reported confidence (7-point Likert
+at each waypoint) and mission correctness.
+\item \textbf{Cross-Verification Index (CVI):}
+$\text{CVI} = r_{\text{trigger}} \mathbin{/} r_{\text{baseline}}$,
+where $r$ is the rate of information-hub access events per minute.
+CVI~$> 1$ indicates elevated hub usage during trigger zones.
+\end{itemize}
+
+\subsubsection{Secondary Measures}
+
+\begin{itemize}
+\item NASA-TLX~\cite{Hart:1988:DOW} (per condition)
+\item System Trust Scale~\cite{Jian:2000:FET} (7 items, per condition)
+\item Device switching frequency and duration (from event logs)
+\item Post-experiment preference and open-ended responses
+\end{itemize}
+
+\subsection{Hypotheses}
+
+\begin{description}
+\item[H1 (Trust Calibration):] The Hybrid condition produces a higher
+confidence--accuracy calibration index than Glass~Only, indicating
+that smartphone cross-referencing supports more accurate trust
+assessment.
+
+\item[H2 (Task Performance):] The Hybrid condition yields comparable
+or higher mission accuracy, with a modest increase in completion time
+attributable to device switching.
+
+\item[H3 (Cross-Verification Behaviour):] In the Hybrid condition,
+CVI is significantly greater than 1, indicating that participants
+selectively increase information-hub usage during uncertainty triggers
+relative to baseline navigation.
+\end{description}
+
+\subsection{Procedure}
+
+The study follows a 50-minute protocol per participant:
+(1)~consent and demographics (5\,min), (2)~Condition~1 with device
+setup, route navigation with 5 missions, and NASA-TLX/trust survey
+(15\,min), (3)~Condition~2 with the alternate mission set and surveys
+(15\,min), (4)~comparative preference survey (10\,min), and
+(5)~debriefing (5\,min). An experimenter follows 3\,m behind,
+observing but not intervening unless a safety risk arises.
+
+\subsection{Data Collection}
+
+All interaction events are logged to a 15-column CSV at millisecond
+resolution, capturing 35+ event types including
+\texttt{WAYPOINT\_REACHED}, \texttt{BEAM\_SCREEN\_ON/OFF},
+\texttt{TRIGGER\_ACTIVATED}, \texttt{CONFIDENCE\_RATED}, and
+\texttt{VERIFICATION\_ANSWERED}. Head rotation is sampled
+continuously. Glass-view video is captured for post-hoc analysis.
+
+
+%% ----- 5. ANALYSIS PLAN -----
+
+\section{Planned Analysis}
+
+\subsection{Confirmatory Tests}
+
+\begin{itemize}
+\item \textbf{H1:} Paired $t$-test on calibration indices (Hybrid vs.\
+Glass~Only). Supplementary: pre- vs.\ post-trigger confidence shifts.
+\item \textbf{H2:} Paired $t$-test on mission accuracy and completion
+time. Supplementary: $2 \times 3$ repeated-measures ANOVA
+(condition $\times$ mission type).
+\item \textbf{H3:} One-sample $t$-test of CVI against 1. Pearson
+correlation between hub access frequency and mission accuracy.
+\end{itemize}
+
+\subsection{Exploratory Analyses}
+
+We will examine (a)~mission-type-specific device switching patterns,
+(b)~trigger-type-specific confidence recovery trajectories,
+(c)~user clustering by information access strategy (map-centric vs.\
+card-centric), and (d)~learning effects across conditions.
+
+
+%% ----- 6. EXPECTED CONTRIBUTIONS -----
+
+\section{Expected Contributions}
+
+This work makes three contributions to the ISMAR community:
+
+\begin{enumerate}
+\item \textbf{Empirical evidence} on how hybrid smart
+glasses--smartphone interaction affects trust calibration and
+wayfinding performance under navigational uncertainty---a configuration
+not previously studied.
+
+\item \textbf{A novel metric (CVI)} for quantifying strategic
+cross-device information seeking in trigger-elicited uncertainty,
+applicable to other hybrid AR evaluation contexts.
+
+\item \textbf{A replicable experimental framework} including
+operationalised uncertainty triggers, mission-based task design, and
+a fully implemented dual-device system on commercially available
+hardware (XREAL Air2 Ultra + Beam Pro).
+\end{enumerate}
+
+
+%% ----- 7. LIMITATIONS -----
+
+\section{Limitations and Future Work}
+
+The study uses a single indoor environment, limiting
+generalisability to other building types. The within-subjects design
+with two mission sets, while controlling individual differences,
+introduces potential learning effects that counterbalancing mitigates
+but cannot eliminate. The four uncertainty triggers are designer-defined
+and may not capture all naturalistic sources of navigational
+uncertainty. Future work will extend the paradigm to multi-floor
+environments, adaptive trigger generation based on real-time tracking
+quality, and longitudinal studies of hybrid device adoption.
+
+
+%% ----- 8. CONCLUSION -----
+
+\section{Conclusion}
+
+We present a hybrid smart glasses--smartphone navigation system and a
+within-subjects experimental design to investigate whether distributing
+navigational information across two complementary devices---ambient AR
+arrows on the glasses and an on-demand information hub on the
+phone---improves trust calibration and decision quality when wayfinding
+becomes uncertain. Grounded in distributed cognition and trust-in-automation
+theory, and operationalised through four uncertainty triggers and a
+novel Cross-Verification Index, this work addresses an unexplored
+intersection of hybrid device interaction, indoor AR navigation, and
+trust-based behavioural analysis.
+
+
+%% ----- SUPPLEMENTAL MATERIALS -----
+
+\section*{Supplemental Materials}
+\label{sec:supplemental_materials}
+
+Upon acceptance, we will release the experimental protocol, event
+logging schema, analysis scripts, and anonymised datasets on a
+public repository under a CC BY 4.0 license. The Unity project
+source code will be made available for replication purposes.
+
+
+%% ----- ACKNOWLEDGMENTS (hidden in review) -----
+
+\acknowledgments{
+Removed for review.
+}
+
+%% ----- REFERENCES -----
+
+\bibliographystyle{abbrv-doi-hyperref-narrow}
+\bibliography{references}
+
+\end{document}

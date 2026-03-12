@@ -15,11 +15,13 @@ MonoBehaviour:
   poiId: room_b105
   poiType: professor_office
   displayName: B105 Prof. Song's Office
-  description: Prof. Youngmin Song's office
+  description: Prof. Kwang-Soup Song's office (Biomedical Engineering) + ICT Convergence
+    Research Center
   capacity: 2
   equipment: []
-  mapPosition: {x: 3, y: 25}
+  mapPosition: {x: 36, y: 45}
   icon: {fileID: 0}
-  displayNameKo: "B105 \uC1A1\uAD50\uC218 \uC5F0\uAD6C\uC2E4"
-  descriptionKo: "\uC1A1\uC601\uBBFC \uAD50\uC218 \uC5F0\uAD6C\uC2E4"
+  displayNameKo: "B105 \uC1A1\uAD11\uC12D \uAD50\uC218 \uC5F0\uAD6C\uC2E4"
+  descriptionKo: "\uC1A1\uAD11\uC12D \uAD50\uC218 \uC5F0\uAD6C\uC2E4 (\uBC14\uC774\uC624\uBA54\uB514\uCEEC\uACF5\uD559\uACFC)
+    + ICT \uC735\uD569 \uD2B9\uC131\uD654 \uC5F0\uAD6C\uC13C\uD130"
   equipmentKo: []

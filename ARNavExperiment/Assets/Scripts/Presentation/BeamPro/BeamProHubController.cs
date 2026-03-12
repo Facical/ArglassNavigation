@@ -72,9 +72,20 @@ namespace ARNavExperiment.Presentation.BeamPro
 
             if (condition == ExperimentCondition.GlassOnly)
             {
-                // GlassOnly: Beam Pro 완전 비활성화
-                if (hubRoot) hubRoot.SetActive(false);
-                Debug.Log("[BeamProHub] GlassOnly — hubRoot disabled");
+                // GlassOnly: 허브 활성 + TabBar 숨김 + 모든 탭 기본 숨김
+                if (lockedScreen) lockedScreen.SetActive(false);
+                if (hubRoot) hubRoot.SetActive(true);
+
+                // TabBar 숨김 (Map 토글 버튼이 대체)
+                if (hubRoot)
+                {
+                    var tabBar = hubRoot.transform.Find("TabBar");
+                    if (tabBar) tabBar.gameObject.SetActive(false);
+                }
+
+                // 모든 탭 기본 숨김 — 토글로 표시
+                HideAllTabs();
+                Debug.Log("[BeamProHub] GlassOnly — hubRoot enabled, tabs hidden (toggle to show map)");
                 return;
             }
 
@@ -110,6 +121,23 @@ namespace ARNavExperiment.Presentation.BeamPro
             var canvasCtrl = GetComponent<BeamProCanvasController>();
             if (canvasCtrl != null && canvasCtrl.IsWorldSpace) return;
             if (hubRoot) hubRoot.SetActive(false);
+        }
+
+        /// <summary>맵 탭을 토글합니다 (GlassOnly 모드에서 사용).</summary>
+        public void ToggleMapTab()
+        {
+            if (activeTabIndex == 0)
+                HideAllTabs();
+            else
+                SwitchTab(0);
+        }
+
+        /// <summary>모든 탭 패널을 숨깁니다.</summary>
+        public void HideAllTabs()
+        {
+            for (int i = 0; i < tabPanels.Length; i++)
+                if (tabPanels[i]) tabPanels[i].SetActive(false);
+            activeTabIndex = -1;
         }
 
         public void SwitchTab(int tabIndex)

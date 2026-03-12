@@ -46,6 +46,9 @@ debug_captures/
 # Data
 data/raw/*.csv
 data/processed/
+data/diagnostics/
+data/frames/
+data/frames_debug/
 
 # Reference / research notes
 Reference/
@@ -58,8 +61,23 @@ system-prompt-extraction/
 *XRSimulationPreferences 2*
 
 # Unity 중복 에셋 (자동 생성된 숫자 접미사 복사본)
-ARNavExperiment/Assets/Data/** [0-9].asset
-ARNavExperiment/Assets/Data/** [0-9].asset.meta
+*\ [0-9].asset
+*\ [0-9].asset.meta
+*\ [0-9][0-9].asset
+*\ [0-9][0-9].asset.meta
+
+# 대용량 영상 파일
+*.MOV
+*.mov
 
 # Claude
 .claude/
+
+# Claude agents
+.agents/
+
+# Claude Code
+skills-lock.json
+
+# XR Temp
+ARNavExperiment/Assets/XR/Temp/

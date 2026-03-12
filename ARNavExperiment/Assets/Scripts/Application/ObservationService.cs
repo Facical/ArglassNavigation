@@ -55,6 +55,9 @@ namespace ARNavExperiment.Application
             bus.Subscribe<ArrowOffset>(OnArrowOffset);
             bus.Subscribe<WaypointFallbackUsed>(OnWaypointFallbackUsed);
             bus.Subscribe<WaypointLateAnchorBound>(OnWaypointLateAnchorBound);
+            bus.Subscribe<HeadingCalibrationApplied>(OnHeadingCalibrationApplied);
+            bus.Subscribe<ManualCalibrationApplied>(OnManualCalibrationApplied);
+            bus.Subscribe<ImageMarkerDetected>(OnImageMarkerDetected);
 
             // === Spatial ===
             bus.Subscribe<RelocalizationStarted>(OnRelocalizationStarted);
@@ -107,6 +110,9 @@ namespace ARNavExperiment.Application
             bus.Unsubscribe<ArrowOffset>(OnArrowOffset);
             bus.Unsubscribe<WaypointFallbackUsed>(OnWaypointFallbackUsed);
             bus.Unsubscribe<WaypointLateAnchorBound>(OnWaypointLateAnchorBound);
+            bus.Unsubscribe<HeadingCalibrationApplied>(OnHeadingCalibrationApplied);
+            bus.Unsubscribe<ManualCalibrationApplied>(OnManualCalibrationApplied);
+            bus.Unsubscribe<ImageMarkerDetected>(OnImageMarkerDetected);
 
             bus.Unsubscribe<RelocalizationStarted>(OnRelocalizationStarted);
             bus.Unsubscribe<RelocalizationCompleted>(OnRelocalizationCompleted);
@@ -144,13 +150,13 @@ namespace ARNavExperiment.Application
         private void OnSessionInitialized(SessionInitialized e)
         {
             EventLogger.Instance?.LogEvent("EXPERIMENT_START",
-                extraData: $"{{\"condition\":\"{e.Condition}\",\"route\":\"{e.Route}\"}}");
+                extraData: $"{{\"condition\":\"{e.Condition}\",\"mission_set\":\"{e.MissionSet}\"}}");
         }
 
         private void OnRouteStarted(RouteStarted e)
         {
             EventLogger.Instance?.LogEvent("ROUTE_START",
-                extraData: $"{{\"route\":\"{e.RouteId}\",\"condition\":\"{e.Condition}\"}}");
+                extraData: $"{{\"mission_set\":\"{e.MissionSet}\",\"condition\":\"{e.Condition}\"}}");
         }
 
         private void OnSurveyStarted(SurveyStarted e)
@@ -283,6 +289,28 @@ namespace ARNavExperiment.Application
                 extraData: $"{{\"drift_m\":{e.DriftMeters:F2},\"old_pos\":\"{e.OldPosition}\",\"new_pos\":\"{e.NewPosition}\"}}");
         }
 
+        private void OnHeadingCalibrationApplied(HeadingCalibrationApplied e)
+        {
+            EventLogger.Instance?.LogEvent("HEADING_CALIBRATION",
+                extraData: $"{{\"source\":\"{e.Source}\",\"offset_deg\":{e.OffsetDegrees:F1}}}");
+        }
+
+        private void OnManualCalibrationApplied(ManualCalibrationApplied e)
+        {
+            EventLogger.Instance?.LogEvent("MANUAL_CALIBRATION",
+                waypointId: e.WaypointId,
+                extraData: $"{{\"camera_pos\":\"{e.CameraPosition}\",\"fallback_pos\":\"{e.FallbackPosition}\"," +
+                           $"\"heading_offset\":{e.HeadingOffset:F1}}}");
+        }
+
+        private void OnImageMarkerDetected(ImageMarkerDetected e)
+        {
+            EventLogger.Instance?.LogEvent("IMAGE_MARKER_DETECTED",
+                waypointId: e.MappedWaypointId,
+                extraData: $"{{\"marker_id\":\"{e.MarkerId}\",\"slam_pos\":\"{e.SlamPosition}\"," +
+                           $"\"heading_offset\":{e.HeadingOffset:F1}}}");
+        }
+
         // ── Spatial ─────────────────────────────────────────────
 
         private void OnRelocalizationStarted(RelocalizationStarted e)
@@ -376,7 +404,9 @@ namespace ARNavExperiment.Application
                            $"\"distance_m\":{e.DistanceToTarget:F2}," +
                            $"\"arrow_visible\":{e.ArrowVisible.ToString().ToLower()}," +
                            $"\"route\":\"{e.RouteId}\"," +
-                           $"\"condition\":\"{e.Condition}\"}}");
+                           $"\"condition\":\"{e.Condition}\"," +
+                           $"\"has_map_calib\":{e.HasMapCalibration.ToString().ToLower()}," +
+                           $"\"calib_source\":\"{e.CalibrationSource}\"}}");
         }
 
         private void OnRouteBindingSummary(RouteBindingSummary e)

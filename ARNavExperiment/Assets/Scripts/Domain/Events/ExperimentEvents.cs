@@ -36,27 +36,27 @@ namespace ARNavExperiment.Domain.Events
     {
         public readonly string ParticipantId;
         public readonly string Condition;
-        public readonly string Route;
+        public readonly string MissionSet;
 
-        public SessionInitialized(string pid, string cond, string route)
+        public SessionInitialized(string pid, string cond, string missionSet)
         {
             ParticipantId = pid;
             Condition = cond;
-            Route = route;
+            MissionSet = missionSet;
         }
     }
 
     /// <summary>
-    /// 경로(Route) 시작 시 발행.
+    /// 조건/미션세트 시작 시 발행.
     /// </summary>
     public readonly struct RouteStarted : IDomainEvent
     {
-        public readonly string RouteId;
+        public readonly string MissionSet;
         public readonly string Condition;
 
-        public RouteStarted(string routeId, string condition)
+        public RouteStarted(string missionSet, string condition)
         {
-            RouteId = routeId;
+            MissionSet = missionSet;
             Condition = condition;
         }
     }

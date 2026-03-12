@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 444ec120f8ecf4ed2b34343206a6c297, type: 3}
+  m_Name: s2_card_01
+  m_EditorClassIdentifier: 
+  cardId: s2_card_01
+  cardType: sign_card
+  title: B106 Medical Engineering Research Lab Guide
+  content: 'Department: Biomedical Engineering
+
+    Research area: Medical Engineering
+
+    Capacity:
+    10
+
+    Equipment: Medical equipment, Workstation
+
+    Location: East corridor,
+    between B105 and B107'
+  image: {fileID: 0}
+  triggerWaypointId: WP02
+  autoShow: 1
+  titleKo: "B106 \uC758\uB8CC\uACF5\uD559\uC5F0\uAD6C\uC2E4 \uC548\uB0B4"
+  contentKo: "\uC18C\uC18D: \uBC14\uC774\uC624\uBA54\uB514\uCEEC\uACF5\uD559\uACFC\n\uC5F0\uAD6C
+    \uBD84\uC57C: \uC758\uB8CC\uACF5\uD559\n\uC218\uC6A9\uC778\uC6D0: 10\n\uC7A5\uBE44:
+    \uC758\uB8CC \uC7A5\uBE44, \uC6CC\uD06C\uC2A4\uD14C\uC774\uC158\n\uC704\uCE58:
+    \uB3D9\uCABD \uBCF5\uB3C4, B105\uC640 B107 \uC0AC\uC774"

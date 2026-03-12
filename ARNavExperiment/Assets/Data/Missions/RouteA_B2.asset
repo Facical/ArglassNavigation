@@ -14,18 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   missionId: B2
   type: 1
-  briefingText: Find the seminar room.
+  briefingText: Find the project room.
   targetWaypointId: WP06
-  verificationQuestion: What is the room number of the seminar room you arrived at?
+  verificationQuestion: What is the room number of the project room you arrived at?
   answerOptions:
   - B131
   - B132
   - B133
   - B134
-  correctAnswerIndex: 2
+  correctAnswerIndex: 3
   associatedTriggerId: T4
   relevantPOIs:
-  - {fileID: 11400000, guid: ead76f0412fbc4a06a8fde3677f72551, type: 2}
+  - {fileID: 11400000, guid: 21ef666d1a93e41a5885c3e65c89d758, type: 2}
   - {fileID: 11400000, guid: f566ca1f45299490eaea8a4a0b021d8e, type: 2}
   infoCards:
   - {fileID: 11400000, guid: bfc2a634c4c224ee1877093f11e7446f, type: 2}
@@ -35,9 +35,9 @@ MonoBehaviour:
     attributes: []
     values: []
   referenceImages: []
-  briefingTextKo: "\uC138\uBBF8\uB098\uC2E4\uC744 \uCC3E\uC73C\uC138\uC694."
-  verificationQuestionKo: "\uB3C4\uCC29\uD55C \uC138\uBBF8\uB098\uC2E4\uC758 \uD638\uC2E4
-    \uBC88\uD638\uB294 \uBB34\uC5C7\uC785\uB2C8\uAE4C?"
+  briefingTextKo: "\uD504\uB85C\uC81D\uD2B8\uC2E4\uC744 \uCC3E\uC73C\uC138\uC694."
+  verificationQuestionKo: "\uB3C4\uCC29\uD55C \uD504\uB85C\uC81D\uD2B8\uC2E4\uC758
+    \uD638\uC2E4 \uBC88\uD638\uB294 \uBB34\uC5C7\uC785\uB2C8\uAE4C?"
   answerOptionsKo:
   - B131
   - B132

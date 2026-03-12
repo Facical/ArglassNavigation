@@ -20,7 +20,7 @@ MonoBehaviour:
   equipment:
   - Desktop PC
   - Projector
-  mapPosition: {x: 7, y: 0}
+  mapPosition: {x: 36, y: -7}
   icon: {fileID: 0}
   displayNameKo: "B121 \uCEF4\uD4E8\uD130\uC2E4"
   descriptionKo: "PC \uCEF4\uD4E8\uD130 \uC2E4\uC2B5\uC2E4"

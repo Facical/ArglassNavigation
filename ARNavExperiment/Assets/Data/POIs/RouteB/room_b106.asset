@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b106
   poiType: research_lab
-  displayName: B106 Intelligent Engineering Lab
-  description: Intelligent engineering lab
+  displayName: B106 Medical Engineering Research Lab
+  description: Biomedical Engineering Dept. Medical Engineering Research Lab
   capacity: 10
   equipment:
-  - Server
+  - Medical equipment
   - Workstation
-  mapPosition: {x: 20, y: 18}
+  mapPosition: {x: 36, y: 39}
   icon: {fileID: 0}
-  displayNameKo: "B106 \uC9C0\uB2A5\uACF5\uD559\uC5F0\uAD6C\uC2E4"
-  descriptionKo: "\uC9C0\uB2A5\uACF5\uD559 \uC5F0\uAD6C\uC2E4"
+  displayNameKo: "B106 \uC758\uB8CC\uACF5\uD559\uC5F0\uAD6C\uC2E4"
+  descriptionKo: "\uBC14\uC774\uC624\uBA54\uB514\uCEEC\uACF5\uD559\uACFC \uC758\uB8CC\uACF5\uD559\uC5F0\uAD6C\uC2E4"
   equipmentKo:
-  - "\uC11C\uBC84"
+  - "\uC758\uB8CC \uC7A5\uBE44"
   - "\uC6CC\uD06C\uC2A4\uD14C\uC774\uC158"

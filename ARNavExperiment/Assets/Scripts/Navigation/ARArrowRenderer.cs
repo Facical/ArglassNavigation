@@ -1,6 +1,7 @@
 using UnityEngine;
 using ARNavExperiment.Domain.Events;
 using ARNavExperiment.Application;
+using ARNavExperiment.Utils;
 
 namespace ARNavExperiment.Navigation
 {
@@ -29,6 +30,7 @@ namespace ARNavExperiment.Navigation
         private GameObject[] fanObjects;
         private float[] fanOffsets;
         private bool isFanActive;
+        private float lastCameraWarningTime;
 
         private void Start()
         {
@@ -52,22 +54,31 @@ namespace ARNavExperiment.Navigation
                 if (dir.sqrMagnitude > 0.001f)
                     targetYaw = Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg;
 
+                /* 노이즈 로그 비활성화 — logcat 디버깅 시 ~150회/실험 반복
                 if (Time.time - lastDebugLogTime > 2f)
                 {
                     lastDebugLogTime = Time.time;
                     var wpMgr = WaypointManager.Instance;
                     bool isFallback = wpMgr.CurrentWaypoint?.anchorTransform == null;
+                    var xrCam = XRCameraHelper.GetCamera();
                     Debug.Log($"[Arrow] dir=({dir.x:F2},{dir.y:F2},{dir.z:F2}) yaw={targetYaw:F1}° " +
                         $"wp={wpMgr.CurrentWaypoint?.waypointId} fallback={isFallback} " +
-                        $"playerPos={Camera.main?.transform.position}");
+                        $"playerPos={xrCam?.transform.position}");
                 }
+                */
             }
 
             // view-locked positioning
-            if (Camera.main != null)
+            var viewCam = XRCameraHelper.GetCamera();
+            if (viewCam != null)
             {
-                var cam = Camera.main.transform;
+                var cam = viewCam.transform;
                 arrowObject.transform.position = cam.TransformPoint(offsetFromCamera);
+            }
+            else if (Time.time - lastCameraWarningTime >= 5f)
+            {
+                lastCameraWarningTime = Time.time;
+                Debug.LogWarning("[Arrow] 카메라를 찾을 수 없어 화살표 위치 갱신 불가");
             }
 
             // smooth rotation toward target direction
@@ -96,6 +107,12 @@ namespace ARNavExperiment.Navigation
         {
             isVisible = true;
             if (arrowObject) arrowObject.SetActive(true);
+
+            var cam = XRCameraHelper.GetCamera();
+            Debug.Log($"[Arrow] Show() — arrowObject.active={arrowObject?.activeSelf}, " +
+                $"renderer={arrowRenderer != null}, camera={cam?.name ?? "NULL"}, " +
+                $"mesh={arrowObject?.GetComponent<MeshFilter>()?.mesh != null}");
+
             DomainEventBus.Instance?.Publish(ArrowShown.Default);
         }
 

@@ -23,8 +23,13 @@ namespace ARNavExperiment.Core
         [Header("Session")]
         public ParticipantSession session;
 
+        [Header("Localization Mode")]
+        [Tooltip("true: Image Tracking 기반 정렬, false: Spatial Anchor 기반 재인식")]
+        [SerializeField] private bool useImageTracking = false;
+        public bool UseImageTracking => useImageTracking;
+
         public ExperimentState CurrentState { get; private set; } = ExperimentState.Idle;
-        public string ActiveRoute { get; private set; }
+        public string ActiveMissionSet { get; private set; }
         public string ActiveCondition { get; private set; }
 
         public event System.Action<ExperimentState> OnStateChanged;
@@ -38,14 +43,14 @@ namespace ARNavExperiment.Core
             DontDestroyOnLoad(gameObject);
         }
 
-        public void InitializeSession(string participantId, string condition, string route)
+        public void InitializeSession(string participantId, string condition, string missionSet)
         {
-            session = new ParticipantSession(participantId, condition, route);
-            Debug.Log($"[ExperimentManager] Session: {participantId}, Condition: {condition}, Route: {route}");
+            session = new ParticipantSession(participantId, condition, missionSet);
+            Debug.Log($"[ExperimentManager] Session: {participantId}, Condition: {condition}, MissionSet: {missionSet}");
 
             experimentStartTime = Time.time;
-            EventLogger.Instance?.StartSession(participantId, condition, route);
-            DomainEventBus.Instance?.Publish(new SessionInitialized(participantId, condition, route));
+            EventLogger.Instance?.StartSession(participantId, condition, missionSet);
+            DomainEventBus.Instance?.Publish(new SessionInitialized(participantId, condition, missionSet));
         }
 
         /// <summary>
@@ -104,7 +109,17 @@ namespace ARNavExperiment.Core
             ConditionController.Instance?.SetCondition(cond);
 
             DomainEventBus.Instance?.Publish(RelocalizationStarted.Default);
-            Debug.Log("[ExperimentManager] Relocalization 시작 — 앵커 재인식 대기 중");
+
+            if (useImageTracking)
+            {
+                // Image Tracking 모드: 마커 감지로 좌표계 정렬
+                ImageTrackingAligner.Instance?.StartTracking();
+                Debug.Log("[ExperimentManager] Image Tracking relocalization 시작");
+            }
+            else
+            {
+                Debug.Log("[ExperimentManager] Spatial Anchor relocalization 시작 — 앵커 재인식 대기 중");
+            }
         }
 
         private void StartCondition()
@@ -112,14 +127,15 @@ namespace ARNavExperiment.Core
             Mission.MissionManager.Instance?.ResetState();
 
             ActiveCondition = session.condition;
-            ActiveRoute = session.route;
+            ActiveMissionSet = session.missionSet;
 
             var cond = session.condition == "glass_only" ? ExperimentCondition.GlassOnly : ExperimentCondition.Hybrid;
             ConditionController.Instance?.SetCondition(cond);
 
-            DomainEventBus.Instance?.Publish(new RouteStarted(session.route, session.condition));
+            DomainEventBus.Instance?.Publish(new RouteStarted(session.missionSet, session.condition));
 
-            WaypointManager.Instance?.LoadRoute(session.route);
+            // Route B 고정 — 단일 경로 사용
+            WaypointManager.Instance?.LoadRoute("B");
         }
 
         private void WriteTransitionSnapshot(ExperimentState prev, ExperimentState next)
@@ -135,7 +151,7 @@ namespace ARNavExperiment.Core
             float uptime = Time.realtimeSinceStartup;
 
             string snapshot = $"StateTransition {prev}→{next} | " +
-                $"participant={session?.participantId} | route={ActiveRoute} | condition={ActiveCondition} | " +
+                $"participant={session?.participantId} | missionSet={ActiveMissionSet} | condition={ActiveCondition} | " +
                 $"anchors={anchorSuccess}/{anchorTotal} | fallback={fallbackCount} | " +
                 $"mission={missionState} | uptime={uptime:F0}s";
 

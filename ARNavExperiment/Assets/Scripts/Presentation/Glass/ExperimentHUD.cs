@@ -17,6 +17,15 @@ namespace ARNavExperiment.Presentation.Glass
         [SerializeField] private TextMeshProUGUI missionText;
         [SerializeField] private TextMeshProUGUI waypointText;
 
+        private CanvasGroup _canvasGroup;
+
+        private void Awake()
+        {
+            _canvasGroup = GetComponent<CanvasGroup>();
+            if (_canvasGroup == null)
+                _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+        }
+
         private void Start()
         {
             if (ExperimentManager.Instance != null)
@@ -29,8 +38,29 @@ namespace ARNavExperiment.Presentation.Glass
             gameObject.SetActive(false);
         }
 
+        private void SetHUDVisible(bool visible)
+        {
+            if (_canvasGroup == null) return;
+            _canvasGroup.alpha = visible ? 1f : 0f;
+        }
+
         private void Update()
         {
+            // GlassFlowUI 패널 또는 미션 입력 UI 표시 중 HUD 숨김
+            bool hideForPanel = GlassFlowUI.HasActivePanel;
+
+            if (!hideForPanel && MissionManager.Instance != null)
+            {
+                var ms = MissionManager.Instance.CurrentState;
+                hideForPanel = ms == MissionState.Briefing
+                            || ms == MissionState.Verification
+                            || ms == MissionState.ConfidenceRating
+                            || ms == MissionState.DifficultyRating;
+            }
+
+            SetHUDVisible(!hideForPanel);
+            if (hideForPanel) return;
+
             if (missionText != null && MissionManager.Instance != null)
             {
                 var m = MissionManager.Instance.CurrentMission;
@@ -44,8 +74,22 @@ namespace ARNavExperiment.Presentation.Glass
                 var wp = Navigation.WaypointManager.Instance.CurrentWaypoint;
                 float dist = Navigation.WaypointManager.Instance.GetDistanceToNext();
                 waypointText.text = wp != null
-                    ? string.Format(LocalizationManager.Get("hud.waypoint"), wp.waypointId, $"{dist:F1}")
+                    ? string.Format(LocalizationManager.Get("hud.waypoint"), wp.waypointId,
+                        dist >= 0 ? $"{dist:F1}" : "?")
                     : LocalizationManager.Get("hud.no_waypoint");
+
+                // 진단: 글래스 캔버스 내 활성 패널 수 표시
+                int activeCount = 0;
+                var canvas = GetComponentInParent<Canvas>();
+                if (canvas != null)
+                {
+                    foreach (Transform child in canvas.transform)
+                    {
+                        if (child.gameObject.activeSelf && child.gameObject != gameObject)
+                            activeCount++;
+                    }
+                }
+                waypointText.text += $"\n[Panels: {activeCount}]";
             }
 
         }

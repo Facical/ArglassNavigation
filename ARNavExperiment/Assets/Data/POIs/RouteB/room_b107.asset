@@ -14,16 +14,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poiId: room_b107
   poiType: research_lab
-  displayName: B107 Computational Intelligence Lab
-  description: Computational intelligence lab
+  displayName: B107 Pervasive & Intelligent Computing Lab
+  description: Pervasive and Intelligent Computing Lab + Smart Military Logistics
+    Innovation Center
   capacity: 10
   equipment:
   - Server
   - Workstation
-  mapPosition: {x: 20, y: 15}
+  mapPosition: {x: 36, y: 33}
   icon: {fileID: 0}
-  displayNameKo: "B107 \uC804\uC0B0\uC9C0\uB2A5\uC5F0\uAD6C\uC2E4"
-  descriptionKo: "\uC804\uC0B0\uC9C0\uB2A5 \uC5F0\uAD6C\uC2E4"
+  displayNameKo: "B107 \uD3B8\uC7AC \uBC0F \uC9C0\uB2A5\uD615 \uCEF4\uD4E8\uD305
+    \uC5F0\uAD6C\uC2E4"
+  descriptionKo: "\uD3B8\uC7AC \uBC0F \uC9C0\uB2A5\uD615 \uCEF4\uD4E8\uD305 \uC5F0\uAD6C\uC2E4
+    + \uC2A4\uB9C8\uD2B8\uAD70\uC218\uD601\uC2E0\uC735\uD569\uC5F0\uAD6C\uC13C\uD130"
   equipmentKo:
   - "\uC11C\uBC84"
   - "\uC6CC\uD06C\uC2A4\uD14C\uC774\uC158"

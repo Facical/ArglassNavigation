@@ -11,9 +11,11 @@ namespace ARNavExperiment.Core
             { "appmode.glass_only_btn", ("Glass Only", "글래스 전용") },
             { "appmode.hybrid_btn", ("Hybrid", "하이브리드") },
             { "appmode.mapping_small_btn", ("Mapping", "매핑") },
-            { "appmode.route_label", ("Route:", "경로:") },
+            { "appmode.set_label", ("Mission Set:", "미션 세트:") },
             { "appmode.mapping_btn", ("Mapping Mode (Preparation)", "매핑 모드 (준비)") },
-            { "appmode.mapping_status", ("Mapping status: Route A {0}, Route B {1} anchors", "매핑 상태: Route A {0}, Route B {1}개 앵커") },
+            { "appmode.set1", ("Set 1", "세트 1") },
+            { "appmode.set2", ("Set 2", "세트 2") },
+            { "appmode.mapping_status", ("Mapping status: {0} anchors", "매핑 상태: {0}개 앵커") },
             { "appmode.no_mapping", ("No mapping data \u2014 run Mapping Mode first", "매핑 데이터 없음 \u2014 매핑 모드를 먼저 실행하세요") },
             { "appmode.lang_en", ("English", "English") },
             { "appmode.lang_ko", ("\ud55c\uad6d\uc5b4", "\ud55c\uad6d\uc5b4") },
@@ -21,8 +23,8 @@ namespace ARNavExperiment.Core
             // ===== Session (AppModeSelector에서 재사용) =====
             { "session.pid_label", ("Participant ID:", "참가자 ID:") },
             { "session.error_no_id", ("Please enter a participant ID (e.g., P01)", "\ucc38\uac00\uc790 ID\ub97c \uc785\ub825\ud558\uc138\uc694 (\uc608: P01)") },
-            { "session.route_a", ("A (West-North)", "A (\uc11c\ucabd-\ubd81\ucabd)") },
-            { "session.route_b", ("B (East-North)", "B (\ub3d9\ucabd-\ubd81\ucabd)") },
+            { "session.set1", ("Set 1", "\uc138\ud2b8 1") },
+            { "session.set2", ("Set 2", "\uc138\ud2b8 2") },
             { "session.glass_only", ("Glass Only", "\uae00\ub798\uc2a4 \uc804\uc6a9") },
             { "session.hybrid", ("Hybrid", "\ud558\uc774\ube0c\ub9ac\ub4dc") },
             { "session.title", ("AR Navigation Experiment", "AR 내비게이션 실험") },
@@ -30,13 +32,13 @@ namespace ARNavExperiment.Core
 
             // ===== ExperimentFlowUI =====
             { "flow.setup_title", ("Experiment Setup", "\uc2e4\ud5d8 \uc900\ube44") },
-            { "flow.setup_detail", ("Participant: {0}\nCondition: {1}\nRoute: {2}\n\nPlease verify that glasses are worn and\ndevice is connected, then press 'Continue'.", "\ucc38\uac00\uc790: {0}\n\uc870\uac74: {1}\n\uacbd\ub85c: {2}\n\n\uae00\ub798\uc2a4 \ucc29\uc6a9 \ubc0f \uae30\uae30 \uc5f0\uacb0\uc744 \ud655\uc778\ud55c \ud6c4\n'\uacc4\uc18d' \ubc84\ud2bc\uc744 \ub204\ub974\uc138\uc694.") },
+            { "flow.setup_detail", ("Participant: {0}\nCondition: {1}\nMission Set: {2}\n\nPlease verify that glasses are worn and\ndevice is connected, then press 'Continue'.", "\ucc38\uac00\uc790: {0}\n\uc870\uac74: {1}\n\ubbf8\uc158 \uc138\ud2b8: {2}\n\n\uae00\ub798\uc2a4 \ucc29\uc6a9 \ubc0f \uae30\uae30 \uc5f0\uacb0\uc744 \ud655\uc778\ud55c \ud6c4\n'\uacc4\uc18d' \ubc84\ud2bc\uc744 \ub204\ub974\uc138\uc694.") },
             { "flow.condition_title", ("Condition Start", "\uc870\uac74 \uc2dc\uc791") },
             { "flow.condition_glass", ("Glass Only", "\uae00\ub798\uc2a4 \uc804\uc6a9") },
             { "flow.condition_hybrid", ("Hybrid (Glass + Phone)", "\ud558\uc774\ube0c\ub9ac\ub4dc (\uae00\ub798\uc2a4 + \ud3f0)") },
             { "flow.condition_detail_glass", ("Use only the AR arrow on the glasses.\nNavigate by observing the environment.\nOperate glass UI via hand tracking.", "글래스의 AR 화살표만 사용하세요.\n환경을 관찰하며 내비게이션하세요.\n글래스 UI는 핸드트래킹으로 조작합니다.") },
             { "flow.condition_detail_hybrid", ("Use the AR arrow on glasses and\nthe info hub on the phone screen.", "AR \ud654\uc0b4\ud45c\ub294 \uae00\ub798\uc2a4\uc5d0\uc11c,\n\uc815\ubcf4 \ud5c8\ube0c\ub294 \ud3f0 \ud654\uba74\uc5d0\uc11c \uc0ac\uc6a9\ud558\uc138\uc694.") },
-            { "flow.condition_info", ("Condition: {0}\nRoute: {1}\n\n{2}\n\nStart from the stairs.\nPress 'Continue' when ready.", "\uc870\uac74: {0}\n\uacbd\ub85c: {1}\n\n{2}\n\n\uacc4\ub2e8\uc5d0\uc11c \uc2dc\uc791\ud558\uc138\uc694.\n\uc900\ube44\ub418\uba74 '\uacc4\uc18d' \ubc84\ud2bc\uc744 \ub204\ub974\uc138\uc694.") },
+            { "flow.condition_info", ("Condition: {0}\nMission Set: {1}\n\n{2}\n\nStart from the stairs.\nPress 'Continue' when ready.", "\uc870\uac74: {0}\n\ubbf8\uc158 \uc138\ud2b8: {1}\n\n{2}\n\n\uacc4\ub2e8\uc5d0\uc11c \uc2dc\uc791\ud558\uc138\uc694.\n\uc900\ube44\ub418\uba74 '\uacc4\uc18d' \ubc84\ud2bc\uc744 \ub204\ub974\uc138\uc694.") },
             { "flow.continue", ("Continue", "\uacc4\uc18d") },
             { "flow.survey_title_single", ("Post-Condition Survey ({0})", "\uc870\uac74 \ud6c4 \uc124\ubb38 ({0})") },
             { "flow.survey_instr", ("A survey about your experience in this condition will follow.\n\nThe researcher will hand you a tablet/paper questionnaire.\n- NASA-TLX (Workload)\n- System Trust Scale\n\nPress 'Survey Done' when complete.", "\uc774 \uc870\uac74\uc5d0\uc11c\uc758 \uacbd\ud5d8\uc5d0 \ub300\ud55c \uc124\ubb38\uc774 \uc774\uc5b4\uc9d1\ub2c8\ub2e4.\n\n\uc5f0\uad6c\uc790\uac00 \ud0dc\ube14\ub9bf/\uc885\uc774 \uc124\ubb38\uc9c0\ub97c \uc804\ub2ec\ud569\ub2c8\ub2e4.\n- NASA-TLX (\uc791\uc5c5\ubd80\ud558)\n- \uc2dc\uc2a4\ud15c \uc2e0\ub8b0\ub3c4 \ucc99\ub3c4\n\n\uc644\ub8cc \ud6c4 '\uc124\ubb38 \uc644\ub8cc' \ubc84\ud2bc\uc744 \ub204\ub974\uc138\uc694.") },
@@ -47,9 +49,9 @@ namespace ARNavExperiment.Core
             { "flow.error_missions_hint", ("<color=#FFCC00>Tap 'Continue' to retry.\nIf the problem persists, restart the app.</color>", "<color=#FFCC00>'\uacc4\uc18d' \ubc84\ud2bc\uc744 \ub2e4\uc2dc \ub20c\ub7ec \uc7ac\uc2dc\ub3c4\ud558\uc138\uc694.\n\ubb38\uc81c\uac00 \uc9c0\uc18d\ub418\uba74 \uc571\uc744 \uc7ac\uc2dc\uc791\ud558\uc138\uc694.</color>") },
 
             // ===== RelocalizationUI =====
-            { "reloc.scanning", ("Scanning the environment ({0})...\nPlease look around slowly.", "\ud658\uacbd\uc744 \uc2a4\uce94 \uc911 ({0})...\n\ucc9c\ucc9c\ud788 \uc8fc\uc704\ub97c \ub458\ub7ec\ubd10 \uc8fc\uc138\uc694.") },
+            { "reloc.scanning", ("Scanning the environment ({0})...\nPlease walk along the mapped route and look around slowly.", "\ud658\uacbd\uc744 \uc2a4\uce94 \uc911 ({0})...\n\ub9e4\ud551\ud55c \uacbd\ub85c\ub97c \ub530\ub77c \ucc9c\ucc9c\ud788 \uac78\uc73c\uba70 \uc8fc\uc704\ub97c \ub458\ub7ec\ubd10 \uc8fc\uc138\uc694.") },
             { "reloc.preparing", ("Preparing...", "\uc900\ube44 \uc911...") },
-            { "reloc.coordinate_established", ("Coordinate frame established!\nWaiting for remaining anchors...", "\uc88c\ud45c\uacc4\uac00 \ud655\ub9bd\ub418\uc5c8\uc2b5\ub2c8\ub2e4!\n\ub098\uba38\uc9c0 \uc575\ucee4\ub97c \uae30\ub2e4\ub9ac\ub294 \uc911...") },
+            { "reloc.coordinate_established", ("First anchor recognized!\nPlease walk toward the remaining anchors and look around.", "\uccab \uc575\ucee4 \uc778\uc2dd \uc131\uacf5!\n\ub098\uba38\uc9c0 \uc575\ucee4 \uadfc\ucc98\ub85c \uc774\ub3d9\ud558\uba70 \uc8fc\uc704\ub97c \ub458\ub7ec\ubd10 \uc8fc\uc138\uc694.") },
             { "reloc.tracked", ("Tracked", "\ucd94\uc801\ub428") },
             { "reloc.timed_out", ("Timed out", "\uc2dc\uac04 \ucd08\uacfc") },
             { "reloc.load_failed", ("Load failed", "\ub85c\ub4dc \uc2e4\ud328") },
@@ -59,9 +61,7 @@ namespace ARNavExperiment.Core
             { "reloc.complete", ("Environment scan complete!", "\ud658\uacbd \uc2a4\uce94 \uc644\ub8cc!") },
             { "reloc.all_recognized", ("All anchors recognized.", "\ubaa8\ub4e0 \uc575\ucee4\uac00 \uc778\uc2dd\ub418\uc5c8\uc2b5\ub2c8\ub2e4.") },
             { "reloc.all_recognized_detail", ("Scan complete: {0}/{1} anchors recognized.", "스캔 완료: 성공 {0}/{1}") },
-            { "reloc.partial_fail", ("Environment scan complete (partial failure)", "\ud658\uacbd \uc2a4\uce94 \uc644\ub8cc (\ubd80\ubd84 \uc2e4\ud328)") },
-            { "reloc.result_detail", ("Success: {0} / Timed out: {1} / Failed: {2}", "\uc131\uacf5: {0} / \uc2dc\uac04\ucd08\uacfc: {1} / \uc2e4\ud328: {2}") },
-            { "reloc.warning", ("Success rate: {0}\nFallback waypoints: {1}\n\nProceeding will use floor plan estimates (fallback) for failed anchors.\nRetry will reload only the failed anchors.", "\uc131\uacf5\ub960: {0}\nFallback \uc6e8\uc774\ud3ec\uc778\ud2b8: {1}\n\n\uacc4\uc18d \uc9c4\ud589 \uc2dc \uc2e4\ud328\ud55c \uc575\ucee4\ub294 \ub3c4\uba74 \ucd94\uc815\uce58(fallback)\ub97c \uc0ac\uc6a9\ud569\ub2c8\ub2e4.\n\uc7ac\uc2dc\ub3c4 \uc2dc \uc2e4\ud328\ud55c \uc575\ucee4\ub9cc \ub2e4\uc2dc \ub85c\ub4dc\ud569\ub2c8\ub2e4.") },
+            { "reloc.nav_ready", ("\u2713 Navigation ready", "\u2713 \ub124\ube44\uac8c\uc774\uc158 \uc900\ube44 \uc644\ub8cc") },
             { "reloc.auto_proceed", ("Auto-proceed in {0}s...", "{0}\ucd08 \ud6c4 \uc790\ub3d9 \uc9c4\ud589...") },
             { "reloc.proceed", ("Proceed", "\uc9c4\ud589") },
             { "reloc.retry", ("Retry", "\uc7ac\uc2dc\ub3c4") },
@@ -69,6 +69,18 @@ namespace ARNavExperiment.Core
             { "reloc.retrying_short", ("Retrying...", "\uc7ac\uc2dc\ub3c4 \uc911...") },
             { "reloc.result_summary", ("Anchor positions:\n{0}", "\uc575\ucee4 \uc704\uce58:\n{0}") },
             { "reloc.spatial_warning", ("SPATIAL WARNING: {0}", "\uacf5\uac04 \uacbd\uace0: {0}") },
+            { "reloc.guide_face", ("Please face {0}", "{0}을(를) 마주봐주세요") },
+            { "reloc.guide_recognized", ("✓ {0} recognized!", "✓ {0} 인식완료!") },
+            { "reloc.guide_timeout", ("{0} skipped (timeout)", "{0} 건너뜀 (시간초과)") },
+            { "reloc.guide_done", ("✓ Ready to start!", "✓ 준비 완료!") },
+            { "reloc.guide_step", ("Step {0}/{1}", "단계 {0}/{1}") },
+            { "reloc.slam_warmup", ("Initializing SLAM... Look around slowly", "SLAM 초기화 중... 천천히 주위를 둘러보세요") },
+
+            // ===== Image Tracking Relocalization =====
+            { "reloc.image_scan", ("Scan the marker on the wall.\nLook at it directly.", "\ubcbd\uc758 \ub9c8\ucee4\ub97c \uc2a4\uce94\ud558\uc138\uc694.\n\uc815\uba74\uc73c\ub85c \ubc14\ub77c\ubd10 \uc8fc\uc138\uc694.") },
+            { "reloc.image_progress", ("Markers: {0}/{1}", "\ub9c8\ucee4: {0}/{1}") },
+            { "reloc.image_marker_found", ("\u2713 {0} detected!", "\u2713 {0} \uac10\uc9c0!") },
+            { "reloc.image_aligned", ("\u2713 Alignment complete! Ready to go.", "\u2713 \uc815\ub82c \uc644\ub8cc! \uc900\ube44\ub418\uc5c8\uc2b5\ub2c8\ub2e4.") },
 
             // ===== GlassModeStatusPanel =====
             { "glass.title", ("AR Navigation Experiment", "AR \ub0b4\ube44\uac8c\uc774\uc158 \uc2e4\ud5d8") },
@@ -85,6 +97,7 @@ namespace ARNavExperiment.Core
             // ===== MissionBriefingUI =====
             { "briefing.mission", ("Mission {0}", "\ubbf8\uc158 {0}") },
             { "briefing.confirm", ("Confirm", "\ud655\uc778") },
+            { "briefing.auto_advance", ("Auto-advance in {0}s", "{0}\ucd08 \ud6c4 \uc790\ub3d9 \uc9c4\ud589") },
 
             // ===== VerificationUI =====
             // (uses SO data directly, no static keys needed beyond labels)
@@ -109,7 +122,7 @@ namespace ARNavExperiment.Core
             { "hud.no_waypoint", ("No waypoint", "\uc6e8\uc774\ud3ec\uc778\ud2b8 \uc5c6\uc74c") },
 
             // ===== ExperimenterHUD =====
-            { "exphud.fallback", ("\u26a0 Fallback: {0} WP", "\u26a0 Fallback: {0} WP") },
+            { "exphud.map_assist", ("\ud83d\udccd Map-assist: {0} WP", "\ud83d\udccd \ub3c4\uba74\ubcf4\uc815: {0} WP") },
             { "exphud.anchors_ok", ("Anchors: OK", "\uc575\ucee4: \uc815\uc0c1") },
             { "exphud.stop_capture", ("Stop Capture", "\ucea1\ucc98 \uc911\uc9c0") },
             { "exphud.capture", ("Capture", "\ucea1\ucc98") },
@@ -118,6 +131,9 @@ namespace ARNavExperiment.Core
             { "exphud.skip_briefing", ("Skip Briefing", "브리핑 건너뛰기") },
             { "exphud.force_arrival", ("Force Arrival", "도착 선언") },
             { "exphud.skip_mission", ("Skip Mission", "미션 건너뛰기") },
+            { "exphud.heading_left", ("\u2190 5\u00b0", "\u2190 5\u00b0") },
+            { "exphud.heading_right", ("5\u00b0 \u2192", "5\u00b0 \u2192") },
+            { "exphud.manual_calibrate", ("Calibrate", "\uc218\ub3d9 \ubcf4\uc815") },
 
             // ===== MappingModeUI =====
             { "mapping.title", ("Mapping Mode \u2014 Route {0}", "\ub9e4\ud551 \ubaa8\ub4dc \u2014 Route {0}") },
@@ -153,17 +169,17 @@ namespace ARNavExperiment.Core
             { "beam.tab_map", ("Map", "\uc9c0\ub3c4") },
             { "beam.tab_info", ("Info Cards", "\uc815\ubcf4 \uce74\ub4dc") },
             { "beam.tab_mission", ("Mission Ref", "\ubbf8\uc158 \ucc38\uace0") },
+            { "beam.toggle_map", ("Map", "\uc9c0\ub3c4") },
 
             // ===== Locked Screen =====
             { "locked.message", ("This device is not available\nin the current condition.\n\nPlease use only the AR glasses.", "현재 조건에서는\n이 기기를 사용할 수 없습니다.\n\nAR 글래스만 사용해 주세요.") },
 
             // ===== GlassFlowUI =====
             { "glassflow.reloc_scanning", ("Scanning... ({0}%)\nLook around slowly.", "스캔 중... ({0}%)\n천천히 주위를 둘러보세요.") },
-            { "glassflow.reloc_complete", ("Scan complete! ({0}%)", "스캔 완료! ({0}%)") },
+            { "glassflow.reloc_done", ("Scan complete! Ready to go.", "\uc2a4\uce94 \uc644\ub8cc! \uc900\ube44\ub418\uc5c8\uc2b5\ub2c8\ub2e4.") },
             { "glassflow.reloc_proceed", ("Proceed", "진행") },
-            { "glassflow.reloc_auto", ("Auto-proceed in {0}s", "자동 진행: {0}초") },
             { "glassflow.setup_title", ("Experiment Setup", "실험 준비") },
-            { "glassflow.setup_detail", ("PID: {0} | {1} | Route {2}\n\nPinch 'Continue' to start.", "PID: {0} | {1} | Route {2}\n\n'계속' 버튼을 핀치하세요.") },
+            { "glassflow.setup_detail", ("PID: {0} | {1} | {2}\n\nPinch 'Continue' to start.", "PID: {0} | {1} | {2}\n\n'계속' 버튼을 핀치하세요.") },
             { "glassflow.condition_title", ("Start Navigation", "내비게이션 시작") },
             { "glassflow.condition_detail_glass", ("Navigate using AR arrows.\nPinch glass UI to interact.", "AR 화살표로 내비게이션합니다.\n글래스 UI를 핀치로 조작하세요.") },
             { "glassflow.continue", ("Continue", "계속") },
@@ -173,6 +189,14 @@ namespace ARNavExperiment.Core
             { "glassflow.survey_done", ("Done", "완료") },
             { "glassflow.complete_title", ("Complete!", "완료!") },
             { "glassflow.complete_text", ("Experiment complete!\nThank you.", "실험 완료!\n감사합니다.") },
+            { "glassflow.guide_face", ("Face {0}", "{0}을(를) 보세요") },
+            { "glassflow.guide_recognized", ("✓ {0} done!", "✓ {0} 완료!") },
+            { "glassflow.guide_ready", ("Ready! Starting...", "준비 완료!") },
+            { "glassflow.guide_timeout", ("{0} skipped", "{0} 건너뜀") },
+
+            // ===== GlassFlowUI Image Tracking =====
+            { "glassflow.image_scan", ("Scan the marker...", "\ub9c8\ucee4\ub97c \uc2a4\uce94\ud558\uc138\uc694...") },
+            { "glassflow.image_marker_found", ("\u2713 {0} found!", "\u2713 {0} \ubc1c\uacac!") },
         };
 
         public static string GetEN(string key)

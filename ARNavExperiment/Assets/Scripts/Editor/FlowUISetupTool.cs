@@ -25,16 +25,19 @@ namespace ARNavExperiment.EditorTools
             int removed = 0;
             foreach (var name in targets)
             {
-                GameObject found;
-                while ((found = GameObject.Find(name)) != null)
+                // Resources.FindObjectsOfTypeAll로 비활성 오브젝트 포함 검색
+                foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
                 {
-                    Undo.DestroyObjectImmediate(found);
-                    removed++;
+                    if (go.name == name && go.scene.isLoaded)
+                    {
+                        Undo.DestroyObjectImmediate(go);
+                        removed++;
+                    }
                 }
             }
 
             if (removed > 0)
-                Debug.Log($"[FlowUI Cleanup] {removed}개 오브젝트 삭제 완료");
+                Debug.Log($"[FlowUI Cleanup] {removed}개 오브젝트 삭제 완료 (비활성 포함)");
         }
 
         /// <summary>다이얼로그 포함 버전 (개별 메뉴에서 호출)</summary>
@@ -77,15 +80,15 @@ namespace ARNavExperiment.EditorTools
             var pidInputGO = CreateInputField("ParticipantIdInput", modeSelectorPanel.transform, "P01");
             SetRect(pidInputGO, new Vector2(0.38f, 0.77f), new Vector2(0.88f, 0.85f));
 
-            // Route A Button
-            var routeABtn = CreateButton("RouteABtn", modeSelectorPanel.transform,
-                "Route A", new Color(0.2f, 0.5f, 0.8f, 1f), 18);
-            SetRect(routeABtn.gameObject, new Vector2(0.12f, 0.66f), new Vector2(0.48f, 0.75f));
+            // Set1 Button
+            var set1Btn = CreateButton("Set1Btn", modeSelectorPanel.transform,
+                "Set 1", new Color(0.2f, 0.5f, 0.8f, 1f), 18);
+            SetRect(set1Btn.gameObject, new Vector2(0.12f, 0.66f), new Vector2(0.48f, 0.75f));
 
-            // Route B Button
-            var routeBBtn = CreateButton("RouteBBtn", modeSelectorPanel.transform,
-                "Route B", new Color(0.3f, 0.3f, 0.35f, 1f), 18);
-            SetRect(routeBBtn.gameObject, new Vector2(0.52f, 0.66f), new Vector2(0.88f, 0.75f));
+            // Set2 Button
+            var set2Btn = CreateButton("Set2Btn", modeSelectorPanel.transform,
+                "Set 2", new Color(0.3f, 0.3f, 0.35f, 1f), 18);
+            SetRect(set2Btn.gameObject, new Vector2(0.52f, 0.66f), new Vector2(0.88f, 0.75f));
 
             // Glass Only Button (파란색)
             var glassOnlyBtn = CreateButton("GlassOnlyBtn", modeSelectorPanel.transform,
@@ -484,13 +487,15 @@ namespace ARNavExperiment.EditorTools
         }
 
         /// <summary>
-        /// 글래스 플로우 패널 공통 생성 (반투명 배경 + PanelFader + anchorMin/Max 설정)
+        /// 글래스 플로우 패널 공통 생성 (반투명 배경 + CanvasGroup + anchorMin/Max 설정)
         /// </summary>
         private static GameObject CreateGlassFlowPanel(string name, Transform parent)
         {
-            var panel = CreatePanel(name, parent, new Color(0.08f, 0.08f, 0.12f, 0.92f));
+            // 어두운 남색 — AR 글래스 가산 합성에서 검정은 투명하므로 약간 밝은 색 사용
+            var panel = CreatePanel(name, parent, new Color(0.0f, 0.15f, 0.3f, 0.85f));
             SetRect(panel, new Vector2(0.1f, 0.12f), new Vector2(0.9f, 0.88f));
-            panel.AddComponent<PanelFader>();
+            // CanvasGroup 추가 (raycast 지원, alpha 조작 안 함 — XR multi-view 호환)
+            panel.AddComponent<CanvasGroup>();
             return panel;
         }
 

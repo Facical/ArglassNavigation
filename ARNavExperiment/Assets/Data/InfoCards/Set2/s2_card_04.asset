@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 444ec120f8ecf4ed2b34343206a6c297, type: 3}
+  m_Name: s2_card_04
+  m_EditorClassIdentifier: 
+  cardId: s2_card_04
+  cardType: landmark
+  title: NE Corner & Prof. Lee Area Guide
+  content: 'South: B103, B104 Prof. Choe, B105 Prof. Song
+
+    West: North corridor
+    (B132, B134)
+
+    Nearby: B101 Prof. Lee (Hanwha Systems, LGU+ signs), B102 NSL
+    Lab
+
+    Stairs at NE corner'
+  image: {fileID: 0}
+  triggerWaypointId: WP06
+  autoShow: 1
+  titleKo: "\uBD81\uB3D9 \uCF54\uB108 \uBC0F \uC774\uAD50\uC218\uC2E4 \uAD6C\uAC04
+    \uC548\uB0B4"
+  contentKo: "\uB0A8\uCABD: B103, B104 \uCD5C\uC138\uC6B4 \uAD50\uC218\uC2E4, B105
+    \uC1A1\uAD11\uC12D \uAD50\uC218\uC2E4\n\uC11C\uCABD: \uBD81\uCABD \uBCF5\uB3C4
+    (B132, B134)\n\uC778\uADFC: B101 \uC774\uC7AC\uBBFC \uAD50\uC218\uC2E4 (Hanwha
+    Systems, LGU+ \uAC04\uD310), B102 NSL \uC5F0\uAD6C\uC2E4\n\uBD81\uB3D9 \uCF54\uB108\uC5D0
+    \uACC4\uB2E8 \uC788\uC74C"

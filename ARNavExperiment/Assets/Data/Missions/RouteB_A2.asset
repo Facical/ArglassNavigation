@@ -14,21 +14,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   missionId: A2
   type: 0
-  briefingText: Find a research lab focused on intelligence-related studies. Upon
-    arrival, check the room number.
+  briefingText: Find a professor's office at the far end of this corridor. Upon arrival,
+    check the room number.
   targetWaypointId: WP05
-  verificationQuestion: What is the room number of the research lab you just arrived
-    at?
+  verificationQuestion: What is the room number of the professor's office you just
+    arrived at?
   answerOptions:
-  - B106
-  - B107
-  - B108
-  - B109
-  correctAnswerIndex: 1
+  - B101
+  - B102
+  - B103
+  - B104
+  correctAnswerIndex: 0
   associatedTriggerId: 
   relevantPOIs:
-  - {fileID: 11400000, guid: db39b09c1838948ee9027e499920f212, type: 2}
-  - {fileID: 11400000, guid: ad0b751e584be4ba3a322946cd04bd8f, type: 2}
+  - {fileID: 11400000, guid: c5ac876e5aee54217a25bad45c9ea5cf, type: 2}
+  - {fileID: 11400000, guid: 40e798d6dce7d4810a40b138672c9d24, type: 2}
   infoCards:
   - {fileID: 11400000, guid: 28362c1e19d0242ac8fc70970ed26fa0, type: 2}
   comparisonData:
@@ -37,13 +37,13 @@ MonoBehaviour:
     attributes: []
     values: []
   referenceImages: []
-  briefingTextKo: "\uC9C0\uB2A5 \uAD00\uB828 \uC5F0\uAD6C\uB97C \uC218\uD589\uD558\uB294
-    \uC5F0\uAD6C\uC2E4\uC744 \uCC3E\uC73C\uC138\uC694. \uB3C4\uCC29\uD558\uBA74 \uD638\uC2E4
-    \uBC88\uD638\uB97C \uD655\uC778\uD558\uC138\uC694."
-  verificationQuestionKo: "\uBC29\uAE08 \uB3C4\uCC29\uD55C \uC5F0\uAD6C\uC2E4\uC758
+  briefingTextKo: "\uC774 \uBCF5\uB3C4 \uB05D\uC5D0 \uC788\uB294 \uAD50\uC218 \uC5F0\uAD6C\uC2E4\uC744
+    \uCC3E\uC73C\uC138\uC694. \uB3C4\uCC29\uD558\uBA74 \uD638\uC2E4 \uBC88\uD638\uB97C
+    \uD655\uC778\uD558\uC138\uC694."
+  verificationQuestionKo: "\uBC29\uAE08 \uB3C4\uCC29\uD55C \uAD50\uC218 \uC5F0\uAD6C\uC2E4\uC758
     \uD638\uC2E4 \uBC88\uD638\uB294 \uBB34\uC5C7\uC785\uB2C8\uAE4C?"
   answerOptionsKo:
-  - B106
-  - B107
-  - B108
-  - B109
+  - B101
+  - B102
+  - B103
+  - B104

@@ -23,8 +23,6 @@ namespace ARNavExperiment.Core
 #pragma warning disable CS0414 // 조건부 컴파일(XR_HANDS, !UNITY_EDITOR)에서만 사용
         [SerializeField] private bool enableHandTracking = true;
 #pragma warning restore CS0414
-        [SerializeField] private GameObject handJointVisualizer;
-
         /// <summary>핸드트래킹 활성 상태 변경 시 발행 (true=활성, false=비활성)</summary>
         public event Action<bool> OnHandTrackingStateChanged;
 
@@ -196,17 +194,14 @@ namespace ARNavExperiment.Core
             if (leftHandRay != null) leftHandRay.SetActive(true);
             if (rightHandRay != null) rightHandRay.SetActive(true);
 
-            // Hand Joint Visualizer 활성화
-            if (handJointVisualizer != null) handJointVisualizer.SetActive(true);
-
             AreHandRaysActive = true;
             OnHandTrackingStateChanged?.Invoke(true);
-            Debug.Log($"[HandTracking] Hand Ray 활성화 — L:{leftHandRay != null}, R:{rightHandRay != null}, Visualizer:{handJointVisualizer != null}");
+            Debug.Log($"[HandTracking] Hand Ray 활성화 — L:{leftHandRay != null}, R:{rightHandRay != null}");
 
 #if !UNITY_EDITOR
-            // 진단: ActionBasedController 데이터 흐름 확인 (3초간 매초 로깅)
-            if (diagCoroutine != null) StopCoroutine(diagCoroutine);
-            diagCoroutine = StartCoroutine(DiagnoseHandRayData());
+            // 진단: ActionBasedController 데이터 흐름 확인 — 노이즈 로그 비활성화
+            // if (diagCoroutine != null) StopCoroutine(diagCoroutine);
+            // diagCoroutine = StartCoroutine(DiagnoseHandRayData());
 #endif
         }
 
@@ -369,9 +364,6 @@ namespace ARNavExperiment.Core
         {
             if (leftHandRay != null) leftHandRay.SetActive(false);
             if (rightHandRay != null) rightHandRay.SetActive(false);
-
-            // Hand Joint Visualizer 비활성화
-            if (handJointVisualizer != null) handJointVisualizer.SetActive(false);
 
 #if !UNITY_EDITOR
             // 진단 코루틴 중지

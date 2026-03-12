@@ -14,27 +14,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   missionId: C1
   type: 2
-  briefingText: Check rooms B132 (classroom) and B133 (seminar room). Select the
+  briefingText: Check rooms B132 (classroom) and B134 (project room). Select the
     room number more suitable for a small group discussion of 10 or fewer.
   targetWaypointId: WP08
   verificationQuestion: Which space is more suitable for a small group discussion?
   answerOptions:
   - B132 (Classroom)
-  - B133 (Seminar Room)
+  - B134 (Project Room)
   - Both suitable
   - Neither suitable
   correctAnswerIndex: 1
   associatedTriggerId: 
   relevantPOIs:
   - {fileID: 11400000, guid: f566ca1f45299490eaea8a4a0b021d8e, type: 2}
-  - {fileID: 11400000, guid: ead76f0412fbc4a06a8fde3677f72551, type: 2}
+  - {fileID: 11400000, guid: 21ef666d1a93e41a5885c3e65c89d758, type: 2}
   infoCards:
   - {fileID: 11400000, guid: f90e7a785956a46c489c7774cc935ace, type: 2}
   comparisonData:
-    comparisonId: comp_a_b132_b133
+    comparisonId: comp_a_b132_b134
     itemNames:
     - B132 Classroom
-    - B133 Seminar Room
+    - B134 Projectroom
     attributes:
     - Purpose
     - Capacity
@@ -47,19 +47,19 @@ MonoBehaviour:
     - Fixed (lecture-facing)
     - Projector, Microphone
     - Not suitable (too large)
-    - Seminar/Discussion
+    - Group Project
     - 15
     - Movable (circle layout possible)
     - Whiteboard, Monitor
     - Suitable
   referenceImages: []
-  briefingTextKo: "B132(\uAC15\uC758\uC2E4)\uC640 B133(\uC138\uBBF8\uB098\uC2E4)\uC744
+  briefingTextKo: "B132(\uAC15\uC758\uC2E4)\uC640 B134(\uD504\uB85C\uC81D\uD2B8\uC2E4)\uB97C
     \uD655\uC778\uD558\uC138\uC694. 10\uBA85 \uC774\uD558 \uC18C\uADF8\uB8F9 \uD1A0\uB860\uC5D0
     \uB354 \uC801\uD569\uD55C \uD638\uC2E4 \uBC88\uD638\uB97C \uC120\uD0DD\uD558\uC138\uC694."
   verificationQuestionKo: "\uC18C\uADF8\uB8F9 \uD1A0\uB860\uC5D0 \uB354 \uC801\uD569\uD55C
     \uACF5\uAC04\uC740 \uC5B4\uB514\uC785\uB2C8\uAE4C?"
   answerOptionsKo:
   - "B132 (\uAC15\uC758\uC2E4)"
-  - "B133 (\uC138\uBBF8\uB098\uC2E4)"
+  - "B134 (\uD504\uB85C\uC81D\uD2B8\uC2E4)"
   - "\uB458 \uB2E4 \uC801\uD569"
   - "\uB458 \uB2E4 \uBD80\uC801\uD569"

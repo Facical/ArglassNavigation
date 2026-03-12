@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 프로젝트 개요
 
-스마트 글래스(XReal Air2 Ultra)와 스마트폰(XReal Beam Pro)을 활용한 하이브리드 실내 내비게이션 HCI 연구 프로젝트. **2가지 조건(Glass Only / Hybrid)**을 단일 조건 직접 선택 방식으로 24명 대상 비교 실험. 실험자가 메인 화면에서 참가자 ID, 경로, 조건을 선택하여 단일 조건만 실행. 미션 기반 길찾기 태스크와 4종 불확실성 트리거를 통해 교차검증 행동을 유도. 문서는 주로 한국어로 작성.
+스마트 글래스(XReal Air2 Ultra)와 스마트폰(XReal Beam Pro)을 활용한 하이브리드 실내 내비게이션 HCI 연구 프로젝트. **2가지 조건(Glass Only / Hybrid)**을 단일 조건 직접 선택 방식으로 24명 대상 비교 실험. **Route B 단일 경로 + 미션 세트 2개(Set1/Set2)**로 within-subjects 설계 유지. 실험자가 메인 화면에서 참가자 ID, 미션 세트, 조건을 선택하여 단일 조건만 실행. 미션 기반 길찾기 태스크와 4종 불확실성 트리거를 통해 교차검증 행동을 유도. 문서는 주로 한국어로 작성.
 
 ## 저장소 구조
 
@@ -117,11 +117,12 @@ WASD(이동), Shift(달리기), 우클릭 드래그(시점), N(상태전환), M(
 
 **MissionManager** (내부, Running 동안 반복): `Idle → Briefing → Navigation → Arrival → Verification → ConfidenceRating → DifficultyRating → Scored`
 
-미션 타입: A_DirectionVerify, B_AmbiguousDecision, C_InfoIntegration (Route당 5개: A1→B1→A2→B2→C1)
+미션 타입: A_DirectionVerify, B_AmbiguousDecision, C_InfoIntegration (미션 세트당 5개: A1→B1→A2→B2→C1). Set1: T2+T3 트리거, Set2: T1+T4 트리거
 
 ### 카운터밸런싱 규칙
 
-- **조건/경로**: 실험자가 메인 화면에서 직접 선택 (Glass Only / Hybrid, Route A / Route B)
+- **조건/미션 세트**: 실험자가 메인 화면에서 직접 선택 (Glass Only / Hybrid, Set1 / Set2)
+- **카운터밸런싱 4그룹** (24명 = 6명/그룹): G1: Glass+Set1→Hybrid+Set2, G2: Glass+Set2→Hybrid+Set1, G3: Hybrid+Set1→Glass+Set2, G4: Hybrid+Set2→Glass+Set1
 - **CounterbalanceConfig.asset**: 참조용으로 유지 (레거시). 실제 선택은 AppModeSelector UI에서 수행
 
 ### DDD 아키텍처 (Onion Architecture)
@@ -152,7 +153,7 @@ Publish/Subscribe 패턴:
 
 | 이벤트 파일 | 이벤트 | 발행자 |
 |------------|--------|--------|
-| **ExperimentEvents** | SessionInitialized(pid,cond,route), ExperimentStateChanged, ConditionChanged, RouteStarted, SurveyStarted, ExperimentCompleted | ExperimentManager, ConditionController |
+| **ExperimentEvents** | SessionInitialized(pid,cond,missionSet), ExperimentStateChanged, ConditionChanged, RouteStarted(missionSet), SurveyStarted, ExperimentCompleted | ExperimentManager, ConditionController |
 | **MissionEvents** | MissionStarted/Arrived/Completed, VerificationAnswered, ConfidenceRated, DifficultyRated, BriefingForced, ArrivalForced, MissionForceSkipped, AllMissionsCompleted | MissionManager |
 | **NavigationEvents** | WaypointReached, TriggerActivated/Deactivated, ArrowShown/Hidden/Offset, WaypointFallbackUsed, WaypointLateAnchorBound | WaypointManager, TriggerController, ARArrowRenderer |
 | **SpatialEvents** | RelocalizationStarted/Progress/Completed, AnchorLateRecovered, AnchorSaved, AnchorDiagnostics | SpatialAnchorManager |
@@ -211,6 +212,8 @@ DontDestroyOnLoad 적용: **ExperimentManager**, **EventLogger** (세션 수명)
 
 **Fallback 패턴**: `Waypoint.Position` = `anchorTransform ?? fallbackPosition` — 재인식 실패 시에도 미터 수준 정확도로 내비게이션 지속
 
+**Heading 자동 보정**: 앵커 2+개 인식 시 `AutoCalibrateFromAnchors()` — 가장 먼 앵커 쌍의 SLAM/도면 yaw 차이로 좌표계 회전 오프셋 자동 계산. `BindAnchorTransforms()` + `OnAnchorLateRecovered()` 에서 트리거. Route B 시작점에 WP00 보정앵커 배치 (9개 WP). ExperimenterHUD ±5° 미세 조정 버튼 유지
+
 ## 다국어(Localization) 패턴
 
 - **LocalizationManager**: 싱글턴, `Language.EN`/`KO` enum, `PlayerPrefs("ARNav_Language")` 영속, `OnLanguageChanged` (Action\<Language\>) 이벤트. `Get(string key)` 정적 메서드로 현재 언어에 맞는 문자열 반환
@@ -224,7 +227,7 @@ DontDestroyOnLoad 적용: **ExperimentManager**, **EventLogger** (세션 수명)
 | 변경 대상 | 연쇄 수정 필요 파일 |
 |-----------|-------------------|
 | **GameObject 이름** | SceneWiringTool 재실행 필수 (이름 기반 리플렉션 와이어링, 경고 없이 실패) |
-| **웨이포인트 ID/fallbackPosition** | WaypointGizmoDrawer, WaypointDataGenerator, EditorPlayerController |
+| **웨이포인트 ID/fallbackPosition** | WaypointDataGenerator, MappingModeUI, MappingMiniMap, DebugToolsSetup, EditorPlayerController |
 | **이벤트 시그니처** 변경 | "이벤트 통신 흐름" 섹션의 구독자 전체 확인 |
 | **ExperimentState enum** 추가 | ExperimentManager (6상태: Idle/Relocalization/Setup/Running/Survey/Complete), ExperimentFlowUI, ExperimentHUD, ExperimenterHUD |
 | **MissionState enum** 추가 | MissionManager + 해당 상태의 UI 패널 |
@@ -338,7 +341,7 @@ python3 analysis/analyze_triggers.py
 
 ### 이벤트 로그 CSV
 
-파일명: `P{id}_{condition}_{route}_{timestamp}.csv` (15개 컬럼: timestamp, participant_id, condition, event_type, waypoint_id, head_rotation_x/y/z, device_active, confidence_rating, mission_id, difficulty_rating, verification_correct, beam_content_type, extra_data)
+파일명: `{pid}_{condition}_{missionSet}_{timestamp}.csv` (15개 컬럼: timestamp, participant_id, condition, event_type, waypoint_id, head_rotation_x/y/z, device_active, confidence_rating, mission_id, difficulty_rating, verification_correct, beam_content_type, extra_data)
 
 - **디바이스**: `/storage/emulated/0/Android/data/com.KIT_HCI.ARNavExperiment/files/data/raw/`
 - **로컬 분석**: `data/raw/`
@@ -348,16 +351,16 @@ python3 analysis/analyze_triggers.py
 
 | 디렉토리 | 내용 | 생성 도구 |
 |----------|------|----------|
-| `Missions/` | RouteA/B × 5미션 (A1,B1,A2,B2,C1) | MissionDataGenerator |
-| `POIs/RouteA/`, `POIs/RouteB/` | 장소 정보 (room_bXXX, restroom_w, stairs_main 등) | MissionDataGenerator |
-| `InfoCards/RouteA/`, `InfoCards/RouteB/` | 정보 카드 5개씩 | InfoCardDataGenerator |
+| `Missions/` | Set1/Set2 × 5미션 (A1,B1,A2,B2,C1) | MissionDataGenerator |
+| `POIs/RouteB/` | 장소 정보 (room_bXXX, stairs_main 등) | MissionDataGenerator |
+| `InfoCards/Set1/`, `InfoCards/Set2/` | 정보 카드 5개씩 | InfoCardDataGenerator |
 | `Routes/` | 경로 데이터 | WaypointDataGenerator |
 | `FloorPlan/` | KIT B1F 도면 (SVG/PNG) | 수동 |
 | `CounterbalanceConfig.asset` | 카운터밸런싱 설정 | ExperimentConfigTool |
 
 ### 앵커 매핑 (`anchor_mapping.json`)
 
-`Application.persistentDataPath/anchor_mapping.json`에 저장. 구조: `{ createdAt, routeA: { waypoints: [{ waypointId, anchorGuid, radius, locationName }] }, routeB: {...} }`. 매핑 모드에서 생성, 재인식 시 로드.
+`Application.persistentDataPath/anchor_mapping.json`에 저장. 구조: `{ createdAt, routeA: { waypoints: [] }, routeB: { waypoints: [{ waypointId, anchorGuid, radius, locationName }] } }`. Route B만 사용 (routeA는 하위 호환성을 위해 빈 상태로 유지). 매핑 모드에서 생성, 재인식 시 로드.
 
 ## 주요 문서
 

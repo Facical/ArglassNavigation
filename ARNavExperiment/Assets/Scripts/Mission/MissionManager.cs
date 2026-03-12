@@ -7,6 +7,7 @@ using ARNavExperiment.Presentation.Glass;
 using ARNavExperiment.Presentation.BeamPro;
 using ARNavExperiment.Domain.Events;
 using ARNavExperiment.Application;
+using ARNavExperiment.Utils;
 
 namespace ARNavExperiment.Mission
 {
@@ -27,8 +28,8 @@ namespace ARNavExperiment.Mission
         public static MissionManager Instance { get; private set; }
 
         [Header("Mission Data")]
-        [SerializeField] private List<MissionData> routeAMissions;
-        [SerializeField] private List<MissionData> routeBMissions;
+        [SerializeField] private List<MissionData> set1Missions;
+        [SerializeField] private List<MissionData> set2Missions;
 
         [Header("UI References")]
         [SerializeField] private MissionBriefingUI briefingUI;
@@ -44,7 +45,7 @@ namespace ARNavExperiment.Mission
         public int CurrentMissionIndex { get; private set; }
 
         private List<MissionData> activeMissions;
-        private string activeRouteId;
+        private string activeMissionSetId;
         private float missionStartTime;
         private Coroutine pendingAdvance;
         private BeamProCanvasController beamProCanvasCtrl;
@@ -68,34 +69,34 @@ namespace ARNavExperiment.Mission
             beamProCanvasCtrl = FindObjectOfType<BeamProCanvasController>();
         }
 
-        public void LoadMissions(string routeId)
+        public void LoadMissions(string missionSetId)
         {
-            var source = routeId == "A" ? routeAMissions : routeBMissions;
+            var source = missionSetId == "Set1" ? set1Missions : set2Missions;
             if (source == null || source.Count == 0)
             {
-                Debug.LogWarning($"[MissionManager] route{routeId}Missions SerializedField is null/empty — trying Resources fallback");
-                source = TryRuntimeLoadMissions(routeId);
+                Debug.LogWarning($"[MissionManager] {missionSetId} Missions SerializedField is null/empty — trying Resources fallback");
+                source = TryRuntimeLoadMissions(missionSetId);
             }
             if (source == null || source.Count == 0)
             {
-                Debug.LogError($"[MissionManager] route{routeId}Missions failed to load from both SerializedField and Resources!");
+                Debug.LogError($"[MissionManager] {missionSetId} Missions failed to load from both SerializedField and Resources!");
                 activeMissions = new List<MissionData>();
                 CurrentMissionIndex = 0;
                 return;
             }
             activeMissions = source;
-            activeRouteId = routeId;
+            activeMissionSetId = missionSetId;
             CurrentMissionIndex = 0;
-            Debug.Log($"[MissionManager] Loaded {activeMissions.Count} missions for Route {routeId}");
+            Debug.Log($"[MissionManager] Loaded {activeMissions.Count} missions for {missionSetId}");
         }
 
         /// <summary>
         /// SerializedField가 null일 때 Resources 폴더에서 미션 데이터를 로드합니다.
         /// 미션 순서: A1 → B1 → A2 → B2 → C1
         /// </summary>
-        private List<MissionData> TryRuntimeLoadMissions(string routeId)
+        private List<MissionData> TryRuntimeLoadMissions(string missionSetId)
         {
-            string prefix = $"Route{routeId}_";
+            string prefix = $"{missionSetId}_";
             string[] missionOrder = { "A1", "B1", "A2", "B2", "C1" };
             var result = new List<MissionData>();
 
@@ -116,9 +117,8 @@ namespace ARNavExperiment.Mission
 
             if (result.Count > 0)
             {
-                // 성공 시 SerializedField에도 캐시 (다음 호출 시 바로 사용)
-                if (routeId == "A") routeAMissions = result;
-                else routeBMissions = result;
+                if (missionSetId == "Set1") set1Missions = result;
+                else set2Missions = result;
             }
 
             return result;
@@ -129,7 +129,7 @@ namespace ARNavExperiment.Mission
             if (activeMissions == null || activeMissions.Count == 0)
             {
                 Debug.LogError("[MissionManager] Cannot start mission — no missions loaded. " +
-                    "Check that routeAMissions/routeBMissions are assigned in Inspector.");
+                    "Check that set1Missions/set2Missions are assigned in Inspector.");
                 return;
             }
             if (CurrentMissionIndex >= activeMissions.Count)
@@ -211,13 +211,24 @@ namespace ARNavExperiment.Mission
             {
                 CurrentState = MissionState.Idle;
                 arrowRenderer?.Hide();
-                DomainEventBus.Instance?.Publish(new AllMissionsCompleted(activeRouteId ?? ""));
+                DomainEventBus.Instance?.Publish(new AllMissionsCompleted(activeMissionSetId ?? ""));
             }
         }
 
         private void TransitionTo(MissionState newState)
         {
+            var prevState = CurrentState;
             CurrentState = newState;
+
+            // 진단 로그
+            var glassCanvas = GlassCanvasController.Instance;
+            var cam = XRCameraHelper.GetCamera();
+            Debug.Log($"[MissionManager] {prevState} → {newState} | " +
+                $"GlassCanvas.isAttached={glassCanvas?.IsAttached} | " +
+                $"Camera={cam?.name ?? "NULL"} | " +
+                $"arrowRenderer={arrowRenderer != null} | " +
+                $"briefingUI={briefingUI != null}");
+
             UpdateCanvasRaycasters(newState);
 
             switch (newState)
@@ -269,7 +280,7 @@ namespace ARNavExperiment.Mission
         {
             DomainEventBus.Instance?.Publish(new MissionStarted(
                 CurrentMission.missionId,
-                activeRouteId ?? "",
+                activeMissionSetId ?? "",
                 CurrentMission.type.ToString(),
                 CurrentMission.briefingText ?? ""));
 
@@ -417,7 +428,7 @@ namespace ARNavExperiment.Mission
                 // 역방향 의존성 제거: ExperimentManager.AdvanceState() 직접 호출 대신 도메인 이벤트 발행
                 // ExperimentAdvancer가 이 이벤트를 구독하여 ExperimentManager를 전진시킴
                 pendingAdvance = StartCoroutine(DelayedAction(2f, () =>
-                    DomainEventBus.Instance?.Publish(new AllMissionsCompleted(activeRouteId ?? ""))));
+                    DomainEventBus.Instance?.Publish(new AllMissionsCompleted(activeMissionSetId ?? ""))));
             }
         }
 

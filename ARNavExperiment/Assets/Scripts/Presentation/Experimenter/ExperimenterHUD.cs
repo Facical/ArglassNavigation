@@ -31,6 +31,14 @@ namespace ARNavExperiment.Presentation.Experimenter
         [SerializeField] private Button advanceButton;
         [SerializeField] private Button nextMissionButton;
 
+        [Header("Heading Calibration")]
+        [SerializeField] private Button headingLeftButton;
+        [SerializeField] private Button headingRightButton;
+        [SerializeField] private TextMeshProUGUI headingOffsetText;
+
+        [Header("Manual Calibration")]
+        [SerializeField] private Button manualCalibrateButton;
+
         private bool captureEventBound;
         private TextMeshProUGUI nextMissionBtnText;
 
@@ -39,6 +47,9 @@ namespace ARNavExperiment.Presentation.Experimenter
             advanceButton?.onClick.AddListener(OnAdvanceClicked);
             nextMissionButton?.onClick.AddListener(OnNextMissionClicked);
             captureToggleButton?.onClick.AddListener(OnCaptureToggleClicked);
+            headingLeftButton?.onClick.AddListener(() => OnAdjustHeading(-5f));
+            headingRightButton?.onClick.AddListener(() => OnAdjustHeading(5f));
+            manualCalibrateButton?.onClick.AddListener(OnManualCalibrateClicked);
 
             if (nextMissionButton != null)
                 nextMissionBtnText = nextMissionButton.GetComponentInChildren<TextMeshProUGUI>();
@@ -71,7 +82,8 @@ namespace ARNavExperiment.Presentation.Experimenter
                 var wp = Navigation.WaypointManager.Instance.CurrentWaypoint;
                 float dist = Navigation.WaypointManager.Instance.GetDistanceToNext();
                 waypointText.text = wp != null
-                    ? string.Format(LocalizationManager.Get("hud.waypoint"), wp.waypointId, $"{dist:F1}")
+                    ? string.Format(LocalizationManager.Get("hud.waypoint"), wp.waypointId,
+                        dist >= 0 ? $"{dist:F1}" : "?")
                     : LocalizationManager.Get("hud.no_waypoint");
             }
 
@@ -79,8 +91,15 @@ namespace ARNavExperiment.Presentation.Experimenter
             {
                 int fallback = Navigation.WaypointManager.Instance.FallbackWaypointCount;
                 anchorStatusText.text = fallback > 0
-                    ? string.Format(LocalizationManager.Get("exphud.fallback"), fallback)
+                    ? string.Format(LocalizationManager.Get("exphud.map_assist"), fallback)
                     : LocalizationManager.Get("exphud.anchors_ok");
+            }
+
+            if (headingOffsetText != null && Navigation.WaypointManager.Instance != null)
+            {
+                var wpm = Navigation.WaypointManager.Instance;
+                headingOffsetText.text = $"H:{wpm.HeadingCalibrationOffset:F0}\u00b0({wpm.HeadingSource}) " +
+                    $"C:{wpm.CalibrationSource}";
             }
 
             // 미션 버튼 라벨 동적 업데이트
@@ -112,14 +131,6 @@ namespace ARNavExperiment.Presentation.Experimenter
 
         private void UpdateStateDisplay(ExperimentState state)
         {
-            // GlassOnly: Beam Pro에 표시하지 않음
-            if (ConditionController.Instance != null &&
-                ConditionController.Instance.CurrentCondition == ExperimentCondition.GlassOnly)
-            {
-                if (gameObject.activeSelf) gameObject.SetActive(false);
-                return;
-            }
-
             bool shouldShow = state != ExperimentState.Idle;
             if (gameObject.activeSelf != shouldShow)
                 gameObject.SetActive(shouldShow);
@@ -168,6 +179,16 @@ namespace ARNavExperiment.Presentation.Experimenter
                     mm.StartNextMission();
                     break;
             }
+        }
+
+        private void OnAdjustHeading(float delta)
+        {
+            Navigation.WaypointManager.Instance?.AdjustHeadingOffset(delta);
+        }
+
+        private void OnManualCalibrateClicked()
+        {
+            Navigation.WaypointManager.Instance?.ManualCalibrateAtCurrentWaypoint();
         }
 
         private void OnCaptureToggleClicked()

@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c91d0b795795846309dc88577bbd3277, type: 3}
+  m_Name: Set1_A2
+  m_EditorClassIdentifier: 
+  missionId: A2
+  type: 0
+  briefingText: Find a professor's office at the far end of this corridor. Upon arrival,
+    check the room number.
+  targetWaypointId: WP05
+  verificationQuestion: What is the room number of the professor's office you just
+    arrived at?
+  answerOptions:
+  - B101
+  - B102
+  - B103
+  - B104
+  correctAnswerIndex: 0
+  associatedTriggerId: 
+  relevantPOIs:
+  - {fileID: 11400000, guid: c5ac876e5aee54217a25bad45c9ea5cf, type: 2}
+  - {fileID: 11400000, guid: 40e798d6dce7d4810a40b138672c9d24, type: 2}
+  infoCards:
+  - {fileID: 11400000, guid: b1e0698cbc55b4e68a98e302b41561c6, type: 2}
+  comparisonData:
+    comparisonId: 
+    itemNames: []
+    attributes: []
+    values: []
+  referenceImages: []
+  briefingTextKo: "\uC774 \uBCF5\uB3C4 \uB05D\uC5D0 \uC788\uB294 \uAD50\uC218 \uC5F0\uAD6C\uC2E4\uC744
+    \uCC3E\uC73C\uC138\uC694. \uB3C4\uCC29\uD558\uBA74 \uD638\uC2E4 \uBC88\uD638\uB97C
+    \uD655\uC778\uD558\uC138\uC694."
+  verificationQuestionKo: "\uBC29\uAE08 \uB3C4\uCC29\uD55C \uAD50\uC218 \uC5F0\uAD6C\uC2E4\uC758
+    \uD638\uC2E4 \uBC88\uD638\uB294 \uBB34\uC5C7\uC785\uB2C8\uAE4C?"
+  answerOptionsKo:
+  - B101
+  - B102
+  - B103
+  - B104

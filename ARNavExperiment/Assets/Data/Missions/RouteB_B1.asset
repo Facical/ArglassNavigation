@@ -19,15 +19,15 @@ MonoBehaviour:
   verificationQuestion: What is the room number of the first professor's office you
     encountered?
   answerOptions:
-  - B108
-  - B109
-  - B110
-  - B111
-  correctAnswerIndex: 2
+  - B104
+  - B105
+  - B106
+  - B107
+  correctAnswerIndex: 1
   associatedTriggerId: T2
   relevantPOIs:
-  - {fileID: 11400000, guid: 937b2e91e5edd4d88b889071ec85f5cb, type: 2}
-  - {fileID: 11400000, guid: 202599ccd291e445c933d6fca4785b24, type: 2}
+  - {fileID: 11400000, guid: 190c90d2e2729418bab7fc669176b948, type: 2}
+  - {fileID: 11400000, guid: 06df47dcec1e14f528ecc4ee75ab62eb, type: 2}
   infoCards:
   - {fileID: 11400000, guid: 24e48191276fb44e3bfa27ac18f77aff, type: 2}
   comparisonData:
@@ -40,7 +40,7 @@ MonoBehaviour:
   verificationQuestionKo: "\uCC98\uC74C \uB9CC\uB09C \uAD50\uC218 \uC5F0\uAD6C\uC2E4\uC758
     \uD638\uC2E4 \uBC88\uD638\uB294 \uBB34\uC5C7\uC785\uB2C8\uAE4C?"
   answerOptionsKo:
-  - B108
-  - B109
-  - B110
-  - B111
+  - B104
+  - B105
+  - B106
+  - B107

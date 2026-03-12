@@ -99,6 +99,42 @@ namespace ARNavExperiment.EditorTools
             CreateControlButton("CaptureBtn", btnArea.transform,
                 "Capture", new Color(0.5f, 0.3f, 0.1f, 1f));
 
+            // Heading Calibration area (하단 HUD 아래 추가 영역)
+            var headingArea = new GameObject("HeadingArea");
+            headingArea.transform.SetParent(hudPanel.transform, false);
+            var headingRect = headingArea.AddComponent<RectTransform>();
+            headingRect.anchorMin = new Vector2(0, 1f);
+            headingRect.anchorMax = new Vector2(0.45f, 1f);
+            headingRect.pivot = new Vector2(0, 0);
+            headingRect.anchoredPosition = new Vector2(10, 2);
+            headingRect.sizeDelta = new Vector2(0, 32);
+            var headingLayout = headingArea.AddComponent<HorizontalLayoutGroup>();
+            headingLayout.spacing = 6;
+            headingLayout.childForceExpandWidth = false;
+            headingLayout.childForceExpandHeight = true;
+            headingLayout.childControlWidth = true;
+            headingLayout.childControlHeight = true;
+            headingLayout.padding = new RectOffset(2, 2, 2, 2);
+
+            CreateControlButton("HeadingLeftBtn", headingArea.transform,
+                "\u2190 5\u00b0", new Color(0.35f, 0.35f, 0.45f, 1f));
+            var leftLE = headingArea.transform.Find("HeadingLeftBtn")?.gameObject.AddComponent<LayoutElement>();
+            if (leftLE != null) leftLE.preferredWidth = 50;
+
+            CreateControlButton("HeadingRightBtn", headingArea.transform,
+                "5\u00b0 \u2192", new Color(0.35f, 0.35f, 0.45f, 1f));
+            var rightLE = headingArea.transform.Find("HeadingRightBtn")?.gameObject.AddComponent<LayoutElement>();
+            if (rightLE != null) rightLE.preferredWidth = 50;
+
+            CreateControlButton("ManualCalibrateBtn", headingArea.transform,
+                "Calibrate", new Color(0.5f, 0.25f, 0.5f, 1f));
+            var calLE = headingArea.transform.Find("ManualCalibrateBtn")?.gameObject.AddComponent<LayoutElement>();
+            if (calLE != null) calLE.preferredWidth = 70;
+
+            CreateStatusText("HeadingOffsetText", headingArea.transform, "Heading: 0\u00b0");
+            var offsetLE = headingArea.transform.Find("HeadingOffsetText")?.gameObject.AddComponent<LayoutElement>();
+            if (offsetLE != null) offsetLE.preferredWidth = 140;
+
             // FlowPanelArea 컨테이너 (HUD 위 전체 영역)
             var flowPanelArea = new GameObject("FlowPanelArea");
             flowPanelArea.transform.SetParent(canvasGO.transform, false);

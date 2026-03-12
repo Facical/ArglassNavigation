@@ -3,8 +3,6 @@ using TMPro;
 using UnityEngine.UI;
 using ARNavExperiment.Core;
 using ARNavExperiment.Mission;
-using ARNavExperiment.Presentation.Shared;
-
 namespace ARNavExperiment.Presentation.Glass
 {
     public class VerificationUI : MonoBehaviour
@@ -20,14 +18,44 @@ namespace ARNavExperiment.Presentation.Glass
         private float showTime;
         private int correctIndex;
 
-        private void Start()
+        private void Awake()
         {
-            for (int i = 0; i < answerButtons.Length; i++)
+            if (panel == null)
             {
-                int idx = i;
-                answerButtons[i]?.onClick.AddListener(() => OnAnswerSelected(idx));
+                panel = gameObject;
+                Debug.LogWarning("[VerificationUI] panel null — self-wired to gameObject");
             }
-            if (panel) panel.SetActive(false);
+            if (questionText == null)
+            {
+                var texts = panel.GetComponentsInChildren<TextMeshProUGUI>(true);
+                foreach (var t in texts)
+                {
+                    if (t.gameObject.name == "QuestionText") { questionText = t; break; }
+                }
+            }
+            if (answerButtons == null || answerButtons.Length == 0)
+            {
+                var answersGO = panel.transform.Find("Answers");
+                if (answersGO != null)
+                {
+                    answerButtons = answersGO.GetComponentsInChildren<Button>(true);
+                    answerTexts = new TextMeshProUGUI[answerButtons.Length];
+                    for (int i = 0; i < answerButtons.Length; i++)
+                        answerTexts[i] = answerButtons[i].GetComponentInChildren<TextMeshProUGUI>();
+                }
+            }
+            // 버튼 리스너 (Start에서 이동 — 비활성 오브젝트의 Start()는 Show() 후 다음 프레임에 실행되어 패널을 다시 숨김)
+            if (answerButtons != null)
+            {
+                for (int i = 0; i < answerButtons.Length; i++)
+                {
+                    int idx = i;
+                    answerButtons[i]?.onClick.AddListener(() => OnAnswerSelected(idx));
+                }
+            }
+
+            Debug.LogWarning($"[VerificationUI] Awake — panel={panel != null}, questionText={questionText != null}, " +
+                $"answerButtons={answerButtons?.Length ?? 0}");
         }
 
         public void Show(MissionData mission, System.Action<int, float> callback)
@@ -56,20 +84,13 @@ namespace ARNavExperiment.Presentation.Glass
             if (panel)
             {
                 panel.SetActive(true);
-                panel.GetComponent<PanelFader>()?.FadeIn();
             }
         }
 
         public void Hide()
         {
-            var fader = panel?.GetComponent<PanelFader>();
-            if (fader != null)
-                fader.FadeOut(() => { onAnswered = null; });
-            else
-            {
-                if (panel) panel.SetActive(false);
-                onAnswered = null;
-            }
+            if (panel) panel.SetActive(false);
+            onAnswered = null;
         }
 
         private void OnAnswerSelected(int index)
@@ -79,11 +100,7 @@ namespace ARNavExperiment.Presentation.Glass
             // 응답 시간 정확도 유지: callback 즉시 호출, 페이드는 비동기
             var cb = onAnswered;
             onAnswered = null;
-            var fader = panel?.GetComponent<PanelFader>();
-            if (fader != null)
-                fader.FadeOut();
-            else if (panel)
-                panel.SetActive(false);
+            if (panel) panel.SetActive(false);
             cb?.Invoke(index, rt);
         }
     }

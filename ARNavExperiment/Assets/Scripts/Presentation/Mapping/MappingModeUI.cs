@@ -18,7 +18,7 @@ namespace ARNavExperiment.Presentation.Mapping
         // === Public 접근자 ===
         public string SelectedWaypointId => selectedWaypointId;
         public string CurrentRoute => currentRoute;
-        public int TotalWaypointCount => (currentRoute == "A" ? routeAWaypoints : routeBWaypoints).Count;
+        public int TotalWaypointCount => routeBWaypoints.Count;
 
         // === 이벤트 ===
         public event System.Action<string, string> OnWaypointSelectedEvent;  // (waypointId, locationName)
@@ -39,10 +39,9 @@ namespace ARNavExperiment.Presentation.Mapping
         [SerializeField] private GameObject waypointItemPrefab;
 
         [Header("Waypoint Definitions")]
-        [SerializeField] private List<WaypointDefinition> routeAWaypoints = new List<WaypointDefinition>();
         [SerializeField] private List<WaypointDefinition> routeBWaypoints = new List<WaypointDefinition>();
 
-        private string currentRoute = "A";
+        private string currentRoute = "B";
         private string selectedWaypointId;
         private List<MappingItemUI> itemUIs = new List<MappingItemUI>();
         private bool initialized;
@@ -60,17 +59,17 @@ namespace ARNavExperiment.Presentation.Mapping
             if (initialized) return;
             initialized = true;
 
-            if (routeAWaypoints.Count == 0)
+            if (routeBWaypoints.Count == 0)
                 SetupDefaultWaypoints();
 
-            // 드롭다운 옵션 설정
+            // Route B 고정 — 드롭다운 비활성화
             if (routeDropdown != null)
             {
                 routeDropdown.options.Clear();
-                routeDropdown.options.Add(new TMP_Dropdown.OptionData("Route A"));
                 routeDropdown.options.Add(new TMP_Dropdown.OptionData("Route B"));
                 routeDropdown.value = 0;
                 routeDropdown.RefreshShownValue();
+                routeDropdown.interactable = false;
             }
 
             createAnchorButton?.onClick.AddListener(OnCreateAnchor);
@@ -142,25 +141,10 @@ namespace ARNavExperiment.Presentation.Mapping
 
         private void SetupDefaultWaypoints()
         {
-            // Route A: 기존 순서 유지 (남→서→북, 계단에서 시작)
-            string[] routeAIds =   { "A_WP01", "A_WP02", "A_WP03", "A_WP04", "A_WP05", "A_WP06", "A_WP07", "A_WP08" };
-            string[] routeANames = { "계단 근처 (Start)", "B123 강의실 앞", "SW 교차로 (T1)", "B125 대강의실", "B129 대학원 강의실", "NW 교차로 (T4)", "B132 강의실", "B133 세미나실 (End)" };
-            float[] routeARadii =  { 2.5f, 2.5f, 3f, 2.5f, 2.5f, 3f, 2.5f, 2.5f };
-
-            for (int i = 0; i < routeAIds.Length; i++)
-            {
-                routeAWaypoints.Add(new WaypointDefinition
-                {
-                    waypointId = routeAIds[i],
-                    locationName = routeANames[i],
-                    radius = routeARadii[i]
-                });
-            }
-
-            // Route B: B111 근처부터 시작 → 남쪽 → 되돌아 북쪽 순서
-            string[] routeBIds =   { "B_WP04", "B_WP03", "B_WP02", "B_WP01", "B_WP05", "B_WP06", "B_WP07", "B_WP08" };
-            string[] routeBNames = { "B110 근처 ★시작", "E-T 교차로 (T2)", "B116 근처", "B121 컴퓨터실 앞", "B107 전산지능연구실", "NE 교차로 (T3)", "B104 최교수실", "B105 송교수실 (End)" };
-            float[] routeBRadii =  { 2.5f, 3f, 2.5f, 2.5f, 2.5f, 3f, 2.5f, 2.5f };
+            // Route B: WP00(보정앵커) → B111 시작 → 북상 → NE U턴 → 남하
+            string[] routeBIds =   { "B_WP00", "B_WP01", "B_WP02", "B_WP03", "B_WP04", "B_WP05", "B_WP06", "B_WP07", "B_WP08" };
+            string[] routeBNames = { "B110 근처 (보정앵커)", "B111 근처 ★시작", "B107 전산지능연구실", "B105 송교수실 (T2)", "B103 부근 (경유)", "B101 이교수실", "NE 코너 U턴 (T3)", "B104/B105 비교 (C1)", "B121 남쪽복도 (End)" };
+            float[] routeBRadii =  { 2.5f, 2.5f, 2.5f, 3f, 2.5f, 2.5f, 3f, 2.5f, 2.5f };
 
             for (int i = 0; i < routeBIds.Length; i++)
             {
@@ -175,7 +159,8 @@ namespace ARNavExperiment.Presentation.Mapping
 
         private void OnRouteChanged(int index)
         {
-            currentRoute = index == 0 ? "A" : "B";
+            // Route B 고정
+            currentRoute = "B";
             RefreshWaypointList();
         }
 
@@ -192,7 +177,7 @@ namespace ARNavExperiment.Presentation.Mapping
             if (titleText != null)
                 titleText.text = string.Format(LocalizationManager.Get("mapping.title"), currentRoute);
 
-            var waypoints = currentRoute == "A" ? routeAWaypoints : routeBWaypoints;
+            var waypoints = routeBWaypoints;
             var anchorMgr = SpatialAnchorManager.Instance;
             var mappings = anchorMgr != null ? anchorMgr.GetRouteMappings(currentRoute) : new List<AnchorMapping>();
 
@@ -308,7 +293,7 @@ namespace ARNavExperiment.Presentation.Mapping
             }
 
             // 이벤트 발행 (locationName 포함)
-            var waypoints = currentRoute == "A" ? routeAWaypoints : routeBWaypoints;
+            var waypoints = routeBWaypoints;
             var wp = waypoints.Find(w => w.waypointId == waypointId);
             string locationName = wp != null ? wp.locationName : waypointId;
             OnWaypointSelectedEvent?.Invoke(waypointId, locationName);
@@ -324,7 +309,7 @@ namespace ARNavExperiment.Presentation.Mapping
                 return;
             }
 
-            var waypoints = currentRoute == "A" ? routeAWaypoints : routeBWaypoints;
+            var waypoints = routeBWaypoints;
             var wp = waypoints.Find(w => w.waypointId == selectedWaypointId);
             if (wp == null) return;
 

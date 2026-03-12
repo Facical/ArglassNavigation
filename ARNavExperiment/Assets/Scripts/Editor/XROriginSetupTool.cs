@@ -348,12 +348,6 @@ namespace ARNavExperiment.EditorTools
             handTrackingGO.transform.SetParent(xrOriginGO.transform, false);
             handTrackingGO.AddComponent<Core.HandTrackingManager>();
 
-            // === HandJointVisualizer (디바이스에서 손 관절 시각화) ===
-            var jointVisualizer = new GameObject("HandJointVisualizer");
-            jointVisualizer.transform.SetParent(xrOriginGO.transform, false);
-            jointVisualizer.AddComponent<DebugTools.HandJointVisualizer>();
-            jointVisualizer.SetActive(false); // HandTrackingManager가 활성화 시 켬
-
             // Select the created object
             Selection.activeGameObject = xrOriginGO;
 

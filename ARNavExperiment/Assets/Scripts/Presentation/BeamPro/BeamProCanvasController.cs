@@ -25,6 +25,9 @@ namespace ARNavExperiment.Presentation.BeamPro
         [Header("Zoom UI")]
         [SerializeField] private GameObject zoomButtonPanel;
 
+        [Header("GlassOnly Map Toggle")]
+        [SerializeField] private UnityEngine.UI.Button glassMapToggleButton;
+
         public bool IsWorldSpace { get; private set; }
 
         private Canvas canvas;
@@ -53,6 +56,20 @@ namespace ARNavExperiment.Presentation.BeamPro
             if (canvasGroup == null)
                 canvasGroup = gameObject.AddComponent<CanvasGroup>();
             CacheOriginalSettings();
+
+            // Map 토글 버튼 이벤트 바인딩
+            if (glassMapToggleButton != null)
+            {
+                glassMapToggleButton.onClick.AddListener(OnGlassMapToggle);
+                glassMapToggleButton.gameObject.SetActive(false); // 기본 숨김
+            }
+        }
+
+        private void OnGlassMapToggle()
+        {
+            var hub = BeamProHubController.Instance;
+            if (hub != null)
+                hub.ToggleMapTab();
         }
 
         private void OnEnable()
@@ -79,9 +96,9 @@ namespace ARNavExperiment.Presentation.BeamPro
         {
             if (condition == ExperimentCondition.GlassOnly)
             {
-                // GlassOnly: ScreenSpaceOverlay 유지 → 폰에 잠금 화면 표시
-                // WorldSpace 전환 불필요 (정보 허브를 글래스에 표시하지 않음)
-                SwitchToScreenSpace();
+                // GlassOnly: WorldSpace로 전환하여 글래스 head-locked UI로 정보 허브 표시
+                // 폰 화면은 ExperimenterCanvas(ScreenSpaceOverlay, sortOrder=10)가 미러링 방지
+                SwitchToWorldSpace();
             }
             else
             {
@@ -143,12 +160,16 @@ namespace ARNavExperiment.Presentation.BeamPro
             // 줌 버튼 활성화
             if (zoomButtonPanel) zoomButtonPanel.SetActive(true);
 
+            // GlassOnly Map 토글 버튼 표시
+            if (glassMapToggleButton) glassMapToggleButton.gameObject.SetActive(true);
+
             IsWorldSpace = true;
             Debug.Log($"[BeamProCanvasCtrl] WorldSpace로 전환 — distance={distanceFromCamera}m, scale={canvasScale}");
 #else
             // 에디터에서는 ScreenSpaceOverlay 유지
             IsWorldSpace = false;
             if (zoomButtonPanel) zoomButtonPanel.SetActive(true);
+            if (glassMapToggleButton) glassMapToggleButton.gameObject.SetActive(true);
             Debug.Log("[BeamProCanvasCtrl] 에디터 — WorldSpace 전환 건너뜀 (ScreenSpaceOverlay 유지)");
 #endif
         }
@@ -173,11 +194,15 @@ namespace ARNavExperiment.Presentation.BeamPro
             // 줌 버튼 비활성화 (폰에서는 핀치-투-줌 사용)
             if (zoomButtonPanel) zoomButtonPanel.SetActive(false);
 
+            // GlassOnly Map 토글 버튼 숨김
+            if (glassMapToggleButton) glassMapToggleButton.gameObject.SetActive(false);
+
             IsWorldSpace = false;
             Debug.Log("[BeamProCanvasCtrl] ScreenSpaceOverlay로 복원");
 #else
             IsWorldSpace = false;
             if (zoomButtonPanel) zoomButtonPanel.SetActive(false);
+            if (glassMapToggleButton) glassMapToggleButton.gameObject.SetActive(false);
             Debug.Log("[BeamProCanvasCtrl] 에디터 — ScreenSpaceOverlay 유지");
 #endif
         }

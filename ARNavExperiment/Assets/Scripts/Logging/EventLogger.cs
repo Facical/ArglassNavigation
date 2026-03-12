@@ -28,13 +28,13 @@ namespace ARNavExperiment.Logging
             DontDestroyOnLoad(gameObject);
         }
 
-        public void StartSession(string participantId, string condition, string route)
+        public void StartSession(string participantId, string condition, string missionSet)
         {
             this.participantId = participantId;
             this.currentCondition = condition;
 
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            string fileName = $"{participantId}_{condition}_{route}_{timestamp}.csv";
+            string fileName = $"{participantId}_{condition}_{missionSet}_{timestamp}.csv";
             string path = Path.Combine(UnityEngine.Application.persistentDataPath, "data", "raw", fileName);
 
             csvWriter = new CSVWriter(path, Headers);

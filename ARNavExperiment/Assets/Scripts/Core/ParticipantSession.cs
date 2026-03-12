@@ -6,14 +6,14 @@ namespace ARNavExperiment.Core
     public class ParticipantSession
     {
         public string participantId;
-        public string condition;  // "glass_only" | "hybrid"
-        public string route;      // "A" | "B"
+        public string condition;   // "glass_only" | "hybrid"
+        public string missionSet;  // "Set1" | "Set2"
 
-        public ParticipantSession(string id, string cond, string rt)
+        public ParticipantSession(string id, string cond, string missionSet)
         {
             participantId = id;
             condition = cond;
-            route = rt;
+            this.missionSet = missionSet;
         }
     }
 }

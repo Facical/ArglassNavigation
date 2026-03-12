@@ -19,27 +19,27 @@ namespace ARNavExperiment.EditorTools
 
             var so = new SerializedObject(missionMgr);
 
-            // Route A missions (순서: A1, B1, A2, B2, C1)
-            var routeA = so.FindProperty("routeAMissions");
-            var aMissions = new[] {
-                LoadMission("RouteA_A1"),
-                LoadMission("RouteA_B1"),
-                LoadMission("RouteA_A2"),
-                LoadMission("RouteA_B2"),
-                LoadMission("RouteA_C1")
+            // Set1 missions (순서: A1, B1, A2, B2, C1)
+            var set1 = so.FindProperty("set1Missions");
+            var s1Missions = new[] {
+                LoadMission("Set1_A1"),
+                LoadMission("Set1_B1"),
+                LoadMission("Set1_A2"),
+                LoadMission("Set1_B2"),
+                LoadMission("Set1_C1")
             };
-            SetMissionList(routeA, aMissions);
+            SetMissionList(set1, s1Missions);
 
-            // Route B missions (순서: A1, B1, A2, B2, C1)
-            var routeB = so.FindProperty("routeBMissions");
-            var bMissions = new[] {
-                LoadMission("RouteB_A1"),
-                LoadMission("RouteB_B1"),
-                LoadMission("RouteB_A2"),
-                LoadMission("RouteB_B2"),
-                LoadMission("RouteB_C1")
+            // Set2 missions (순서: A1, B1, A2, B2, C1)
+            var set2 = so.FindProperty("set2Missions");
+            var s2Missions = new[] {
+                LoadMission("Set2_A1"),
+                LoadMission("Set2_B1"),
+                LoadMission("Set2_A2"),
+                LoadMission("Set2_B2"),
+                LoadMission("Set2_C1")
             };
-            SetMissionList(routeB, bMissions);
+            SetMissionList(set2, s2Missions);
 
             so.ApplyModifiedProperties();
 
@@ -52,27 +52,27 @@ namespace ARNavExperiment.EditorTools
             Debug.Log("[MissionWiring] 미션 데이터 연결 완료!");
             EditorUtility.DisplayDialog("완료",
                 $"MissionManager에 연결 완료:\n" +
-                $"- Route A: {aMissions.Length}개 미션\n" +
-                $"- Route B: {bMissions.Length}개 미션\n" +
+                $"- Set1: {s1Missions.Length}개 미션\n" +
+                $"- Set2: {s2Missions.Length}개 미션\n" +
                 $"- POI 연결 완료\n\n" +
                 "씬을 저장하세요 (Cmd+S)", "확인");
         }
 
         private static void WirePOIsToMissions()
         {
-            // Route A POI assignments
-            AssignPOIs("RouteA_A1", new[] { "RouteA/room_b123", "RouteA/room_b125" });
-            AssignPOIs("RouteA_B1", new[] { "RouteA/room_b127", "RouteA/room_b125" });
-            AssignPOIs("RouteA_A2", new[] { "RouteA/room_b129", "RouteA/room_b130" });
-            AssignPOIs("RouteA_B2", new[] { "RouteA/room_b133", "RouteA/room_b132" });
-            AssignPOIs("RouteA_C1", new[] { "RouteA/room_b132", "RouteA/room_b133" });
+            // Set1 POI assignments (기존 Route B 미션)
+            AssignPOIs("Set1_A1", new[] { "RouteB/room_b107", "RouteB/room_b106" });
+            AssignPOIs("Set1_B1", new[] { "RouteB/room_b105", "RouteB/room_b104" });
+            AssignPOIs("Set1_A2", new[] { "RouteB/room_b101", "RouteB/room_b102" });
+            AssignPOIs("Set1_B2", new[] { "RouteB/room_b102", "RouteB/room_b101" });
+            AssignPOIs("Set1_C1", new[] { "RouteB/room_b104", "RouteB/room_b105" });
 
-            // Route B POI assignments
-            AssignPOIs("RouteB_A1", new[] { "RouteB/room_b121", "RouteB/room_b116" });
-            AssignPOIs("RouteB_B1", new[] { "RouteB/room_b110", "RouteB/room_b116" });
-            AssignPOIs("RouteB_A2", new[] { "RouteB/room_b107", "RouteB/room_b106" });
-            AssignPOIs("RouteB_B2", new[] { "RouteB/room_b101", "RouteB/room_b102" });
-            AssignPOIs("RouteB_C1", new[] { "RouteB/room_b104", "RouteB/room_b105" });
+            // Set2 POI assignments (같은 Route B 경로, 다른 미션)
+            AssignPOIs("Set2_A1", new[] { "RouteB/room_b106", "RouteB/room_b107" });
+            AssignPOIs("Set2_B1", new[] { "RouteB/room_b104", "RouteB/room_b105" });
+            AssignPOIs("Set2_A2", new[] { "RouteB/room_b102", "RouteB/room_b101" });
+            AssignPOIs("Set2_B2", new[] { "RouteB/room_b101", "RouteB/room_b102" });
+            AssignPOIs("Set2_C1", new[] { "RouteB/room_b101", "RouteB/room_b102" });
         }
 
         private static void AssignPOIs(string missionName, string[] poiPaths)

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using ARNavExperiment.Utils;
 
 namespace ARNavExperiment.Presentation.Glass
 {
@@ -24,6 +25,8 @@ namespace ARNavExperiment.Presentation.Glass
 #pragma warning disable CS0414 // !UNITY_EDITOR 블록에서만 사용
         private bool isAttached;
 #pragma warning restore CS0414
+        private int retryCount;
+        private float lastWarningTime;
 
         private void Awake()
         {
@@ -52,6 +55,21 @@ namespace ARNavExperiment.Presentation.Glass
 #if !UNITY_EDITOR
             canvas = GetComponent<Canvas>();
             scaler = GetComponent<CanvasScaler>();
+
+            // 부트 진단 로그
+            var mainCam = Camera.main;
+            var allCams = FindObjectsOfType<Camera>();
+#if XR_ARFOUNDATION
+            var xrOrigin = FindObjectOfType<Unity.XR.CoreUtils.XROrigin>();
+            Debug.Log($"[GlassCanvas] 부트 진단: Camera.main={mainCam?.name ?? "NULL"}, " +
+                $"XROrigin={(xrOrigin != null ? "found" : "NULL")}, " +
+                $"XROrigin.Camera={xrOrigin?.Camera?.name ?? "NULL"}, " +
+                $"모든 Camera 수: {allCams.Length}");
+#else
+            Debug.Log($"[GlassCanvas] 부트 진단: Camera.main={mainCam?.name ?? "NULL"}, " +
+                $"XR_ARFOUNDATION 미정의, 모든 Camera 수: {allCams.Length}");
+#endif
+
             TryAttachToCamera();
 #endif
         }
@@ -60,13 +78,25 @@ namespace ARNavExperiment.Presentation.Glass
         {
 #if !UNITY_EDITOR
             if (!isAttached)
+            {
                 TryAttachToCamera();
+
+                // 5초마다 경고 로그
+                if (Time.time - lastWarningTime >= 5f)
+                {
+                    lastWarningTime = Time.time;
+                    Debug.LogWarning($"[GlassCanvas] 카메라 재시도 {retryCount}회 실패 — " +
+                        $"Camera.main={(Camera.main != null ? Camera.main.name : "NULL")}, " +
+                        $"XRCameraHelper={(XRCameraHelper.GetCamera()?.name ?? "NULL")}");
+                }
+            }
 #endif
         }
 
         private void TryAttachToCamera()
         {
-            var cam = Camera.main;
+            retryCount++;
+            var cam = XRCameraHelper.GetCamera();
             if (cam == null) return;
 
             // WorldSpace로 전환
@@ -106,7 +136,14 @@ namespace ARNavExperiment.Presentation.Glass
             transform.localScale = Vector3.one * canvasScale;
 
             isAttached = true;
-            Debug.Log($"[GlassCanvas] XR 카메라({cam.name})에 부착 완료 — distance={distanceFromCamera}m, scale={canvasScale}");
+            Debug.Log($"[GlassCanvas] XR 카메라({cam.name})에 부착 완료 — retries={retryCount}, " +
+                $"distance={distanceFromCamera}m, scale={canvasScale}, " +
+                $"renderMode={canvas.renderMode}, sizeDelta={rt.sizeDelta}, " +
+                $"rect={rt.rect}, childCount={transform.childCount}, " +
+                $"canvasEnabled={canvas.enabled}");
         }
+
+        /// <summary>캔버스가 카메라에 부착되었는지 여부</summary>
+        public bool IsAttached => isAttached;
     }
 }
