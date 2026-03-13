@@ -44,6 +44,7 @@ namespace ARNavExperiment.Presentation.Mapping
                 mappingModeUI.OnWaypointSelectedEvent += HandleWaypointSelected;
                 mappingModeUI.OnAnchorCreateResult += HandleAnchorResult;
                 mappingModeUI.OnMapZoomToggle += ToggleMapZoom;
+                mappingModeUI.OnReferenceAnchorCreateResult += HandleReferenceAnchorResult;
             }
 
             var anchorMgr = SpatialAnchorManager.Instance;
@@ -85,6 +86,7 @@ namespace ARNavExperiment.Presentation.Mapping
                 mappingModeUI.OnWaypointSelectedEvent -= HandleWaypointSelected;
                 mappingModeUI.OnAnchorCreateResult -= HandleAnchorResult;
                 mappingModeUI.OnMapZoomToggle -= ToggleMapZoom;
+                mappingModeUI.OnReferenceAnchorCreateResult -= HandleReferenceAnchorResult;
             }
 
             var anchorMgr = SpatialAnchorManager.Instance;
@@ -148,6 +150,31 @@ namespace ARNavExperiment.Presentation.Mapping
             else
             {
                 flashText.text = LocalizationManager.Get("overlay.creation_failed");
+                flashText.color = COLOR_FLASH_FAIL;
+            }
+
+            flashText.alpha = 1f;
+            flashTimer = FLASH_DURATION;
+        }
+
+        private void HandleReferenceAnchorResult(string roomId, bool success)
+        {
+            if (flashText == null) return;
+
+            if (success)
+            {
+                flashText.text = $"\u2713 {roomId} " + LocalizationManager.Get("overlay.anchor_created");
+                flashText.color = COLOR_FLASH_SUCCESS;
+                miniMap?.UpdateReferenceMappingStatus();
+
+                // SLAM→FloorPlan 보정 데이터 전달
+                var anchorPos = SpatialAnchorManager.Instance?.GetAnchorPosition(roomId);
+                if (anchorPos.HasValue)
+                    miniMap?.AddCalibrationPoint(roomId, anchorPos.Value);
+            }
+            else
+            {
+                flashText.text = $"\u2717 {roomId} " + LocalizationManager.Get("overlay.creation_failed");
                 flashText.color = COLOR_FLASH_FAIL;
             }
 
@@ -223,7 +250,7 @@ namespace ARNavExperiment.Presentation.Mapping
         {
             if (overlayPanel != null) overlayPanel.SetActive(true);
             if (headerText != null) headerText.text = LocalizationManager.Get("overlay.header");
-            if (routeText != null) routeText.text = $"Route {routeId}";
+            if (routeText != null) routeText.text = LocalizationManager.Get("mapping.title");
             if (waypointText != null)
             {
                 waypointText.text = LocalizationManager.Get("overlay.select_wp");
@@ -241,6 +268,7 @@ namespace ARNavExperiment.Presentation.Mapping
                     mappingModeUI.OnWaypointSelectedEvent += HandleWaypointSelected;
                     mappingModeUI.OnAnchorCreateResult += HandleAnchorResult;
                     mappingModeUI.OnMapZoomToggle += ToggleMapZoom;
+                    mappingModeUI.OnReferenceAnchorCreateResult += HandleReferenceAnchorResult;
                 }
             }
 

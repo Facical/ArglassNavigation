@@ -235,8 +235,28 @@ namespace ARNavExperiment.EditorTools
                 "Back", new Color(0.4f, 0.4f, 0.4f, 1f), 16);
             SetRect(backBtn.gameObject, new Vector2(0.67f, 0.02f), new Vector2(0.97f, 0.09f));
 
+            // === Reference Anchor Section ===
+            var refSectionTitle = CreateTMP("RefSectionTitle", mappingPanel.transform,
+                "Room Reference Anchors", 14, TextAlignmentOptions.Left,
+                new Vector2(0.55f, 0.84f), new Vector2(0.97f, 0.91f));
+            refSectionTitle.color = new Color(0.7f, 0.5f, 1f);
+            refSectionTitle.fontStyle = FontStyles.Bold;
+
+            var refDropdown = CreateDropdown("RefRoomDropdown", mappingPanel.transform);
+            SetRect(refDropdown, new Vector2(0.55f, 0.77f), new Vector2(0.82f, 0.84f));
+
+            var refCreateBtn = CreateButton("RefCreateBtn", mappingPanel.transform,
+                "Create", new Color(0.45f, 0.3f, 0.65f, 1f), 14);
+            SetRect(refCreateBtn.gameObject, new Vector2(0.83f, 0.77f), new Vector2(0.97f, 0.84f));
+
+            var refStatusText = CreateTMP("RefStatusText", mappingPanel.transform,
+                "Room anchors: 0/19", 12, TextAlignmentOptions.Right,
+                new Vector2(0.55f, 0.71f), new Vector2(0.97f, 0.77f));
+            refStatusText.color = new Color(0.6f, 0.6f, 0.7f);
+
             WireMappingModeUI(mappingUI, mappingPanel, mappingTitle, qualityText,
-                qbImg, createAnchorBtn, mapZoomBtn, saveAllBtn, backBtn, routeDropdown, contentGO.transform);
+                qbImg, createAnchorBtn, mapZoomBtn, saveAllBtn, backBtn, routeDropdown, contentGO.transform,
+                refDropdown, refCreateBtn, refStatusText);
 
             // === Relocalization Panel ===
             var relocPanel = CreatePanel("RelocalizationPanel", canvasTransform,
@@ -555,7 +575,9 @@ namespace ARNavExperiment.EditorTools
             TextMeshProUGUI title, TextMeshProUGUI qualityText,
             Image qualityBar, Button createAnchorBtn, Button mapZoomBtn,
             Button saveAllBtn, Button backBtn,
-            GameObject routeDropdown, Transform waypointListContent)
+            GameObject routeDropdown, Transform waypointListContent,
+            GameObject refDropdown = null, Button refCreateBtn = null,
+            TextMeshProUGUI refStatusText = null)
         {
             var so = new SerializedObject(ui);
             so.FindProperty("mappingPanel").objectReferenceValue = panel;
@@ -569,6 +591,26 @@ namespace ARNavExperiment.EditorTools
             so.FindProperty("routeDropdown").objectReferenceValue =
                 routeDropdown.GetComponent<TMP_Dropdown>();
             so.FindProperty("waypointListContent").objectReferenceValue = waypointListContent;
+
+            if (refDropdown != null)
+            {
+                var refDropProp = so.FindProperty("referenceRoomDropdown");
+                if (refDropProp != null)
+                    refDropProp.objectReferenceValue = refDropdown.GetComponent<TMP_Dropdown>();
+            }
+            if (refCreateBtn != null)
+            {
+                var refBtnProp = so.FindProperty("createReferenceAnchorButton");
+                if (refBtnProp != null)
+                    refBtnProp.objectReferenceValue = refCreateBtn;
+            }
+            if (refStatusText != null)
+            {
+                var refStatusProp = so.FindProperty("referenceStatusText");
+                if (refStatusProp != null)
+                    refStatusProp.objectReferenceValue = refStatusText;
+            }
+
             so.ApplyModifiedProperties();
         }
 

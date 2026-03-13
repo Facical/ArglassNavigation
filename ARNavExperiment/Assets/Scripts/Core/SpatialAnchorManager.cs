@@ -48,11 +48,26 @@ namespace ARNavExperiment.Core
     }
 
     [Serializable]
+    public class ReferenceAnchorMapping
+    {
+        public string roomId;       // "REF_B107"
+        public string anchorGuid;
+        public string displayName;  // "B107"
+    }
+
+    [Serializable]
+    public class ReferenceMappingData
+    {
+        public List<ReferenceAnchorMapping> anchors = new List<ReferenceAnchorMapping>();
+    }
+
+    [Serializable]
     public class MappingFileData
     {
         public string createdAt;
         public RouteMappingData routeA = new RouteMappingData();
         public RouteMappingData routeB = new RouteMappingData();
+        public ReferenceMappingData references = new ReferenceMappingData();
     }
 
     /// <summary>
@@ -88,6 +103,12 @@ namespace ARNavExperiment.Core
 
         /// <summary>로드된 앵커 Transform (waypointId → Transform)</summary>
         private Dictionary<string, Transform> anchorTransforms = new Dictionary<string, Transform>();
+
+        /// <summary>보정 앵커 Transform (roomId → Transform)</summary>
+        private Dictionary<string, Transform> referenceAnchorTransforms = new Dictionary<string, Transform>();
+
+        /// <summary>보정 앵커 재인식 결과 (roomId → result)</summary>
+        private Dictionary<string, AnchorRelocResult> referenceRelocResults = new Dictionary<string, AnchorRelocResult>();
 
         /// <summary>개별 앵커 재인식 결과</summary>
         private Dictionary<string, AnchorRelocResult> relocResults = new Dictionary<string, AnchorRelocResult>();
@@ -551,7 +572,7 @@ namespace ARNavExperiment.Core
 
         /// <summary>
         /// 특정 경로의 앵커만 로드합니다.
-        /// routeId가 null이면 Route A + Route B 전체를 로드합니다.
+        /// routeId가 null이면 전체 경로 앵커를 로드합니다.
         /// </summary>
         public void LoadRouteAnchors(string routeId)
         {
@@ -576,12 +597,12 @@ namespace ARNavExperiment.Core
                 return;
             }
 
-            // routeId == null → 전체, 그 외 → 해당 경로만
+            // routeId == null → 전체 (레거시 routeA 포함), 그 외 → 해당 경로만
             List<AnchorMapping> mappings;
             if (routeId == null)
             {
                 mappings = new List<AnchorMapping>();
-                mappings.AddRange(mappingData.routeA.waypoints);
+                mappings.AddRange(mappingData.routeA.waypoints); // 레거시 하위 호환
                 mappings.AddRange(mappingData.routeB.waypoints);
             }
             else
@@ -1015,6 +1036,9 @@ namespace ARNavExperiment.Core
             // 새 이벤트
             OnRelocalizationCompleteWithRate?.Invoke(rate);
 
+            // 보정 앵커 로드 (비critical — navigation 앵커 완료 후)
+            LoadReferenceAnchors();
+
             // 실패한 앵커가 있으면 백그라운드 재인식 시작
             if (TimedOutAnchorCount > 0)
             {
@@ -1123,6 +1147,9 @@ namespace ARNavExperiment.Core
                         }
                     }
                 }
+
+                // 보정 앵커 TimedOut은 allRecovered 판단에서 제외
+                // (WaitForReferenceAnchorTracking 코루틴이 이미 독립적으로 처리)
 
                 if (allRecovered)
                 {
@@ -1250,6 +1277,9 @@ namespace ARNavExperiment.Core
         {
             if (anchorTransforms.TryGetValue(waypointId, out Transform t) && t != null)
                 return t.position;
+            // 보정 앵커에서도 조회
+            if (referenceAnchorTransforms.TryGetValue(waypointId, out Transform rt) && rt != null)
+                return rt.position;
             return null;
         }
 
@@ -1361,6 +1391,213 @@ namespace ARNavExperiment.Core
         }
 
         // =====================================================
+        // 보정 앵커 (Reference Anchor) API
+        // =====================================================
+
+        /// <summary>
+        /// 현재 카메라 위치에 보정 앵커를 생성합니다.
+        /// </summary>
+        public async Task<bool> CreateAndSaveReferenceAnchor(string roomId, string displayName)
+        {
+#if XR_ARFOUNDATION && UNITY_ANDROID && !UNITY_EDITOR
+            if (arAnchorManager == null)
+            {
+                DiagError("ARAnchorManager가 설정되지 않았습니다 (reference anchor).");
+                return false;
+            }
+
+            var slamStatus = GetSlamTrackingStatus();
+            if (!slamStatus.isReady)
+            {
+                DiagWarn($"Reference anchor creation blocked — SLAM not ready: {slamStatus.reasonKey}");
+                return false;
+            }
+
+            var cam = Camera.main;
+            if (cam == null)
+            {
+                DiagWarn("Reference anchor creation failed — Camera.main is null");
+                return false;
+            }
+            var cameraPose = new Pose(cam.transform.position, cam.transform.rotation);
+            var anchorGO = new GameObject($"RefAnchor_{roomId}");
+            anchorGO.transform.SetPositionAndRotation(cameraPose.position, cameraPose.rotation);
+            var arAnchor = anchorGO.AddComponent<ARAnchor>();
+
+            await Task.Delay(500);
+            await ObserveAnchorQuality(arAnchor.trackableId);
+            EnsureMapPath();
+
+            var result = await arAnchorManager.TrySaveAnchorAsync(arAnchor);
+            if (result.success)
+            {
+                string guidStr = GuidToSdkString(result.value.guid);
+                var refMapping = new ReferenceAnchorMapping
+                {
+                    roomId = roomId,
+                    anchorGuid = guidStr,
+                    displayName = displayName
+                };
+
+                if (mappingData == null) mappingData = new MappingFileData();
+                mappingData.references.anchors.RemoveAll(r => r.roomId == roomId);
+                mappingData.references.anchors.Add(refMapping);
+
+                referenceAnchorTransforms[roomId] = anchorGO.transform;
+                SaveMappingToFile();
+
+                Diag($"보정 앵커 저장 완료: {roomId} ({displayName}) → {guidStr}");
+                DomainEventBus.Instance?.Publish(new ReferenceAnchorSaved(roomId, guidStr));
+                return true;
+            }
+            else
+            {
+                Destroy(anchorGO);
+                DiagError($"보정 앵커 저장 실패: {roomId}");
+                return false;
+            }
+#else
+            Debug.Log($"[SpatialAnchorManager] (에디터) 보정 앵커 생성: {roomId} ({displayName})");
+            await Task.CompletedTask;
+
+            if (mappingData == null) mappingData = new MappingFileData();
+            var refMapping = new ReferenceAnchorMapping
+            {
+                roomId = roomId,
+                anchorGuid = Guid.NewGuid().ToString(),
+                displayName = displayName
+            };
+            mappingData.references.anchors.RemoveAll(r => r.roomId == roomId);
+            mappingData.references.anchors.Add(refMapping);
+
+            var simGO = new GameObject($"SimRefAnchor_{roomId}");
+            simGO.transform.position = Camera.main != null ? Camera.main.transform.position : Vector3.zero;
+            referenceAnchorTransforms[roomId] = simGO.transform;
+
+            DomainEventBus.Instance?.Publish(new ReferenceAnchorSaved(roomId, refMapping.anchorGuid));
+            return true;
+#endif
+        }
+
+        /// <summary>
+        /// 보정 앵커를 로드합니다. PriorityLoadAnchors 완료 후 호출됩니다.
+        /// </summary>
+        public void LoadReferenceAnchors()
+        {
+            if (mappingData?.references == null || mappingData.references.anchors.Count == 0)
+            {
+                Diag("LoadReferenceAnchors — 보정 앵커 없음");
+                return;
+            }
+
+            int count = mappingData.references.anchors.Count;
+            Diag($"LoadReferenceAnchors — {count}개 보정 앵커 로드 시작");
+
+#if XR_ARFOUNDATION && UNITY_ANDROID && !UNITY_EDITOR
+            EnsureMapPath();
+            foreach (var refAnchor in mappingData.references.anchors)
+            {
+                if (string.IsNullOrEmpty(refAnchor.anchorGuid)) continue;
+                if (referenceAnchorTransforms.ContainsKey(refAnchor.roomId) &&
+                    referenceAnchorTransforms[refAnchor.roomId] != null) continue;
+
+                var guid = SerializableGuidFromString(refAnchor.anchorGuid);
+                if (arAnchorManager.TryLoadAnchor(guid, out XRAnchor xrAnchor))
+                {
+                    referenceRelocResults[refAnchor.roomId] = new AnchorRelocResult
+                    {
+                        waypointId = refAnchor.roomId,
+                        state = AnchorRelocState.Pending,
+                        elapsedTime = 0f
+                    };
+                    StartCoroutine(WaitForReferenceAnchorTracking(refAnchor.roomId, xrAnchor.trackableId));
+                    Diag($"보정 앵커 로드 요청: {refAnchor.roomId}");
+                }
+                else
+                {
+                    DiagWarn($"보정 앵커 로드 실패: {refAnchor.roomId}");
+                    referenceRelocResults[refAnchor.roomId] = new AnchorRelocResult
+                    {
+                        waypointId = refAnchor.roomId,
+                        state = AnchorRelocState.LoadFailed,
+                        elapsedTime = 0f
+                    };
+                }
+            }
+#else
+            foreach (var refAnchor in mappingData.references.anchors)
+            {
+                referenceRelocResults[refAnchor.roomId] = new AnchorRelocResult
+                {
+                    waypointId = refAnchor.roomId,
+                    state = AnchorRelocState.Tracking,
+                    elapsedTime = 0f
+                };
+                Debug.Log($"[SpatialAnchorManager] (에디터) 보정 앵커 시뮬레이션: {refAnchor.roomId}");
+            }
+#endif
+        }
+
+#if XR_ARFOUNDATION && UNITY_ANDROID && !UNITY_EDITOR
+        private IEnumerator WaitForReferenceAnchorTracking(string roomId, TrackableId trackableId)
+        {
+            float elapsed = 0f;
+            while (elapsed < anchorTrackingTimeout)
+            {
+                foreach (var anchor in arAnchorManager.trackables)
+                {
+                    if (anchor.trackableId == trackableId &&
+                        anchor.trackingState == UnityEngine.XR.ARSubsystems.TrackingState.Tracking)
+                    {
+                        referenceAnchorTransforms[roomId] = anchor.transform;
+                        if (referenceRelocResults.ContainsKey(roomId))
+                        {
+                            referenceRelocResults[roomId].state = AnchorRelocState.Tracking;
+                            referenceRelocResults[roomId].elapsedTime = elapsed;
+                        }
+                        Diag($"보정 앵커 재인식 완료: {roomId} ({elapsed:F1}s)");
+                        OnAnchorLateRecovered?.Invoke(roomId, anchor.transform);
+                        yield break;
+                    }
+                }
+                elapsed += 0.5f;
+                yield return new WaitForSeconds(0.5f);
+            }
+
+            DiagWarn($"보정 앵커 타임아웃: {roomId}");
+            if (referenceRelocResults.ContainsKey(roomId))
+            {
+                referenceRelocResults[roomId].state = AnchorRelocState.TimedOut;
+                referenceRelocResults[roomId].elapsedTime = anchorTrackingTimeout;
+            }
+        }
+#endif
+
+        /// <summary>
+        /// 보정 앵커에서 보정 쌍(SLAM XZ, 도면 XZ)을 반환합니다.
+        /// </summary>
+        public List<(Vector2 slamXZ, Vector2 fallbackXZ)> GetReferenceCalibratedPairs()
+        {
+            var pairs = new List<(Vector2 slamXZ, Vector2 fallbackXZ)>();
+            foreach (var kv in referenceAnchorTransforms)
+            {
+                if (kv.Value == null) continue;
+                var floorPlanPos = Navigation.ReferencePointRegistry.GetFloorPlanPosition(kv.Key);
+                if (!floorPlanPos.HasValue) continue;
+                var slamPos = kv.Value.position;
+                pairs.Add((new Vector2(slamPos.x, slamPos.z), floorPlanPos.Value));
+            }
+            return pairs;
+        }
+
+        /// <summary>매핑 UI용: 현재 매핑된 보정 앵커 목록 반환</summary>
+        public List<ReferenceAnchorMapping> GetReferenceMappings()
+        {
+            if (mappingData?.references == null) return new List<ReferenceAnchorMapping>();
+            return mappingData.references.anchors;
+        }
+
+        // =====================================================
         // JSON 매핑 파일 관리
         // =====================================================
 
@@ -1386,7 +1623,11 @@ namespace ARNavExperiment.Core
             {
                 string json = File.ReadAllText(MappingFilePath);
                 mappingData = JsonUtility.FromJson<MappingFileData>(json);
-                Diag($"매핑 파일 로드: Route A={mappingData.routeA.waypoints.Count}, Route B={mappingData.routeB.waypoints.Count}");
+                // 하위 호환: 기존 JSON에 references 필드가 없으면 빈 리스트로 초기화
+                if (mappingData.references == null)
+                    mappingData.references = new ReferenceMappingData();
+                Diag($"매핑 파일 로드: 경로 앵커={mappingData.routeB.waypoints.Count}, " +
+                    $"레거시 routeA={mappingData.routeA.waypoints.Count}, 보정 앵커={mappingData.references.anchors.Count}");
             }
             else
             {
@@ -1441,6 +1682,26 @@ namespace ARNavExperiment.Core
                     {
                         DiagWarn($"GUID 파싱 실패 (마이그레이션 건너뜀): {m.waypointId} — {m.anchorGuid}");
                     }
+                }
+            }
+
+            foreach (var m in mappingData.references.anchors)
+            {
+                if (string.IsNullOrEmpty(m.anchorGuid)) continue;
+                if (diskFiles.Contains(m.anchorGuid)) continue;
+                try
+                {
+                    string swapped = GuidToSdkString(new Guid(m.anchorGuid));
+                    if (diskFiles.Contains(swapped))
+                    {
+                        Diag($"GUID 마이그레이션 (ref): {m.roomId} — {m.anchorGuid} → {swapped}");
+                        m.anchorGuid = swapped;
+                        changed = true;
+                    }
+                }
+                catch (FormatException)
+                {
+                    DiagWarn($"GUID 파싱 실패 (ref 마이그레이션 건너뜀): {m.roomId} — {m.anchorGuid}");
                 }
             }
 

@@ -18,12 +18,13 @@ namespace ARNavExperiment.Presentation.Mapping
         // === Public 접근자 ===
         public string SelectedWaypointId => selectedWaypointId;
         public string CurrentRoute => currentRoute;
-        public int TotalWaypointCount => routeBWaypoints.Count;
+        public int TotalWaypointCount => waypoints.Count;
 
         // === 이벤트 ===
         public event System.Action<string, string> OnWaypointSelectedEvent;  // (waypointId, locationName)
         public event System.Action<string, bool> OnAnchorCreateResult;       // (waypointId, success)
         public event System.Action OnMapZoomToggle;
+        public event System.Action<string, bool> OnReferenceAnchorCreateResult;  // (roomId, success)
 
         [Header("UI References")]
         [SerializeField] private GameObject mappingPanel;
@@ -39,7 +40,12 @@ namespace ARNavExperiment.Presentation.Mapping
         [SerializeField] private GameObject waypointItemPrefab;
 
         [Header("Waypoint Definitions")]
-        [SerializeField] private List<WaypointDefinition> routeBWaypoints = new List<WaypointDefinition>();
+        [SerializeField] private List<WaypointDefinition> waypoints = new List<WaypointDefinition>();
+
+        [Header("Reference Anchor UI")]
+        [SerializeField] private TMP_Dropdown referenceRoomDropdown;
+        [SerializeField] private Button createReferenceAnchorButton;
+        [SerializeField] private TextMeshProUGUI referenceStatusText;
 
         private string currentRoute = "B";
         private string selectedWaypointId;
@@ -59,14 +65,14 @@ namespace ARNavExperiment.Presentation.Mapping
             if (initialized) return;
             initialized = true;
 
-            if (routeBWaypoints.Count == 0)
+            if (waypoints.Count == 0)
                 SetupDefaultWaypoints();
 
-            // Route B 고정 — 드롭다운 비활성화
+            // 단일 경로 — 드롭다운 비활성화
             if (routeDropdown != null)
             {
                 routeDropdown.options.Clear();
-                routeDropdown.options.Add(new TMP_Dropdown.OptionData("Route B"));
+                routeDropdown.options.Add(new TMP_Dropdown.OptionData("경로"));
                 routeDropdown.value = 0;
                 routeDropdown.RefreshShownValue();
                 routeDropdown.interactable = false;
@@ -77,6 +83,10 @@ namespace ARNavExperiment.Presentation.Mapping
             saveAllButton?.onClick.AddListener(OnSaveAll);
             backButton?.onClick.AddListener(OnBack);
             routeDropdown?.onValueChanged.AddListener(OnRouteChanged);
+
+            // 보정 앵커 UI 초기화
+            createReferenceAnchorButton?.onClick.AddListener(OnCreateReferenceAnchor);
+            InitializeReferenceDropdown();
 
             // 실험 UI 숨기기 (매핑 모드에서는 불필요)
             HideExperimentUI();
@@ -141,25 +151,25 @@ namespace ARNavExperiment.Presentation.Mapping
 
         private void SetupDefaultWaypoints()
         {
-            // Route B: WP00(보정앵커) → B111 시작 → 북상 → NE U턴 → 남하
-            string[] routeBIds =   { "B_WP00", "B_WP01", "B_WP02", "B_WP03", "B_WP04", "B_WP05", "B_WP06", "B_WP07", "B_WP08" };
-            string[] routeBNames = { "B110 근처 (보정앵커)", "B111 근처 ★시작", "B107 전산지능연구실", "B105 송교수실 (T2)", "B103 부근 (경유)", "B101 이교수실", "NE 코너 U턴 (T3)", "B104/B105 비교 (C1)", "B121 남쪽복도 (End)" };
-            float[] routeBRadii =  { 2.5f, 2.5f, 2.5f, 3f, 2.5f, 2.5f, 3f, 2.5f, 2.5f };
+            // WP00(보정앵커) → B111 시작 → 북상 → NE U턴 → 남하
+            string[] wpIds =   { "B_WP00", "B_WP01", "B_WP02", "B_WP03", "B_WP04", "B_WP05", "B_WP06", "B_WP07", "B_WP08" };
+            string[] wpNames = { "B110 근처 (보정앵커)", "B111 근처 ★시작", "B107 전산지능연구실", "B105 송교수실 (T2)", "B103 부근 (경유)", "B101 이교수실", "NE 코너 U턴 (T3)", "B104/B105 비교 (C1)", "B121 남쪽복도 (End)" };
+            float[] wpRadii =  { 2.5f, 2.5f, 2.5f, 3f, 2.5f, 2.5f, 3f, 2.5f, 2.5f };
 
-            for (int i = 0; i < routeBIds.Length; i++)
+            for (int i = 0; i < wpIds.Length; i++)
             {
-                routeBWaypoints.Add(new WaypointDefinition
+                waypoints.Add(new WaypointDefinition
                 {
-                    waypointId = routeBIds[i],
-                    locationName = routeBNames[i],
-                    radius = routeBRadii[i]
+                    waypointId = wpIds[i],
+                    locationName = wpNames[i],
+                    radius = wpRadii[i]
                 });
             }
         }
 
         private void OnRouteChanged(int index)
         {
-            // Route B 고정
+            // 단일 경로 고정
             currentRoute = "B";
             RefreshWaypointList();
         }
@@ -175,13 +185,12 @@ namespace ARNavExperiment.Presentation.Mapping
             itemUIs.Clear();
 
             if (titleText != null)
-                titleText.text = string.Format(LocalizationManager.Get("mapping.title"), currentRoute);
+                titleText.text = LocalizationManager.Get("mapping.title");
 
-            var waypoints = routeBWaypoints;
             var anchorMgr = SpatialAnchorManager.Instance;
             var mappings = anchorMgr != null ? anchorMgr.GetRouteMappings(currentRoute) : new List<AnchorMapping>();
 
-            foreach (var wp in waypoints)
+            foreach (var wp in this.waypoints)
             {
                 var isMapped = mappings.Exists(m => m.waypointId == wp.waypointId);
                 CreateWaypointListItem(wp, isMapped);
@@ -293,8 +302,7 @@ namespace ARNavExperiment.Presentation.Mapping
             }
 
             // 이벤트 발행 (locationName 포함)
-            var waypoints = routeBWaypoints;
-            var wp = waypoints.Find(w => w.waypointId == waypointId);
+            var wp = this.waypoints.Find(w => w.waypointId == waypointId);
             string locationName = wp != null ? wp.locationName : waypointId;
             OnWaypointSelectedEvent?.Invoke(waypointId, locationName);
 
@@ -309,8 +317,7 @@ namespace ARNavExperiment.Presentation.Mapping
                 return;
             }
 
-            var waypoints = routeBWaypoints;
-            var wp = waypoints.Find(w => w.waypointId == selectedWaypointId);
+            var wp = this.waypoints.Find(w => w.waypointId == selectedWaypointId);
             if (wp == null) return;
 
             // Pre-flight SLAM check (defense in depth)
@@ -402,6 +409,94 @@ namespace ARNavExperiment.Presentation.Mapping
         {
             RefreshWaypointList();
             UpdateQualityDisplay();
+            UpdateReferenceStatus();
+        }
+
+        // =====================================================
+        // 보정 앵커 (Reference Anchor) UI
+        // =====================================================
+
+        // 드롭다운 인덱스 → ReferencePoint 매핑 (미매핑 호실만)
+        private readonly System.Collections.Generic.List<Navigation.ReferencePointRegistry.ReferencePoint> unmappedRooms = new();
+
+        private void InitializeReferenceDropdown()
+        {
+            if (referenceRoomDropdown == null) return;
+
+            referenceRoomDropdown.options.Clear();
+            unmappedRooms.Clear();
+
+            var anchorMgr = SpatialAnchorManager.Instance;
+            var existingRefs = anchorMgr != null ? anchorMgr.GetReferenceMappings() : new System.Collections.Generic.List<ReferenceAnchorMapping>();
+            var mappedSet = new System.Collections.Generic.HashSet<string>();
+            foreach (var r in existingRefs) mappedSet.Add(r.roomId);
+
+            foreach (var pt in Navigation.ReferencePointRegistry.AllPoints)
+            {
+                if (mappedSet.Contains(pt.RoomId)) continue;
+                unmappedRooms.Add(pt);
+                referenceRoomDropdown.options.Add(new TMP_Dropdown.OptionData(pt.DisplayName));
+            }
+
+            bool hasUnmapped = unmappedRooms.Count > 0;
+            referenceRoomDropdown.value = 0;
+            referenceRoomDropdown.RefreshShownValue();
+            if (createReferenceAnchorButton != null)
+                createReferenceAnchorButton.interactable = hasUnmapped;
+            UpdateReferenceStatus();
+        }
+
+        private async void OnCreateReferenceAnchor()
+        {
+            if (referenceRoomDropdown == null) return;
+
+            int idx = referenceRoomDropdown.value;
+            if (idx < 0 || idx >= unmappedRooms.Count) return;
+
+            var pt = unmappedRooms[idx];
+
+            var anchorMgr = SpatialAnchorManager.Instance;
+            if (anchorMgr != null && !anchorMgr.GetSlamTrackingStatus().isReady)
+            {
+                Debug.LogWarning("[MappingModeUI] Reference anchor blocked — SLAM not ready");
+                OnReferenceAnchorCreateResult?.Invoke(pt.RoomId, false);
+                return;
+            }
+
+            if (createReferenceAnchorButton != null)
+                createReferenceAnchorButton.interactable = false;
+
+            try
+            {
+                if (anchorMgr != null)
+                {
+                    bool success = await anchorMgr.CreateAndSaveReferenceAnchor(pt.RoomId, pt.DisplayName);
+                    OnReferenceAnchorCreateResult?.Invoke(pt.RoomId, success);
+
+                    if (success)
+                    {
+                        InitializeReferenceDropdown(); // 드롭다운 "(완료)" 갱신
+                    }
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[MappingModeUI] 보정 앵커 생성 실패: {e.Message}");
+                OnReferenceAnchorCreateResult?.Invoke(pt.RoomId, false);
+            }
+
+            if (createReferenceAnchorButton != null)
+                createReferenceAnchorButton.interactable = true;
+        }
+
+        private void UpdateReferenceStatus()
+        {
+            if (referenceStatusText == null) return;
+            var anchorMgr = SpatialAnchorManager.Instance;
+            int mapped = anchorMgr != null ? anchorMgr.GetReferenceMappings().Count : 0;
+            int total = Navigation.ReferencePointRegistry.AllPoints.Length;
+            referenceStatusText.text = string.Format(
+                LocalizationManager.Get("mapping.ref_status"), mapped, total);
         }
 
         private void OnDestroy()

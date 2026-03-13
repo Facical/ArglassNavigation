@@ -44,6 +44,7 @@ namespace ARNavExperiment.EditorTools
             WireBeamProCoordinator();
             WireGlassFlowUI();
             WireImageTrackingAligner();
+            WireMappingModeRefUI();
 
             Debug.Log("[SceneWiring] 모든 참조 연결 완료!");
         }
@@ -851,6 +852,27 @@ namespace ARNavExperiment.EditorTools
                 "Assets/Data/ImageTracking/MarkerMappingData.asset");
             if (mappingData != null)
                 SetObjectRef(so, "markerMapping", mappingData);
+
+            so.ApplyModifiedProperties();
+        }
+
+        private static void WireMappingModeRefUI()
+        {
+            var ui = Object.FindObjectOfType<Presentation.Mapping.MappingModeUI>(true);
+            if (ui == null) return;
+            var so = new SerializedObject(ui);
+
+            var refDropdown = FindComponent<TMP_Dropdown>("RefRoomDropdown");
+            if (refDropdown != null)
+                SetObjectRef(so, "referenceRoomDropdown", refDropdown);
+
+            var refBtn = FindComponent<Button>("RefCreateBtn");
+            if (refBtn != null)
+                SetObjectRef(so, "createReferenceAnchorButton", refBtn);
+
+            var refStatus = FindComponent<TextMeshProUGUI>("RefStatusText");
+            if (refStatus != null)
+                SetObjectRef(so, "referenceStatusText", refStatus);
 
             so.ApplyModifiedProperties();
         }

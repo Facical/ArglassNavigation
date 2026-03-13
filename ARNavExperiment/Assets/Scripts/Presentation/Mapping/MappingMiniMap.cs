@@ -16,9 +16,12 @@ namespace ARNavExperiment.Presentation.Mapping
         private static readonly Color COLOR_MAPPED = new Color(0.3f, 1f, 0.3f, 0.9f);
         private static readonly Color COLOR_SELECTED = new Color(0.3f, 0.7f, 1f, 1f);
         private static readonly Color COLOR_INACTIVE_ROUTE = new Color(0.3f, 0.3f, 0.3f, 0.3f);
+        private static readonly Color COLOR_REF_UNMAPPED = new Color(0.5f, 0.3f, 0.7f, 0.5f);
+        private static readonly Color COLOR_REF_MAPPED = new Color(0.7f, 0.4f, 1f, 0.9f);
 
         private const float MARKER_SIZE = 8f;
         private const float MARKER_SIZE_SELECTED = 12f;
+        private const float REF_MARKER_SIZE = 5f;
         private const float CURRENT_POS_SIZE = 10f;
 
         private const float ZOOMED_MARKER_SIZE = 20f;
@@ -28,7 +31,7 @@ namespace ARNavExperiment.Presentation.Mapping
         // waypointId → (X, Z) 좌표 (WaypointDataGenerator와 동일)
         private static readonly Dictionary<string, Vector2> waypointMapPositions = new()
         {
-            // Route B (실측 기반 좌표, 기둥 간격 9m 기준)
+            // 실측 기반 좌표 (기둥 간격 9m 기준)
             { "B_WP00", new Vector2(36, 24) },
             { "B_WP01", new Vector2(36, 18) },
             { "B_WP02", new Vector2(36, 33) },
@@ -108,6 +111,7 @@ namespace ARNavExperiment.Presentation.Mapping
 
             ClearMarkers();
             CreateMarkers();
+            CreateReferenceMarkers();
             CreateCurrentPositionMarker();
         }
 
@@ -205,6 +209,8 @@ namespace ARNavExperiment.Presentation.Mapping
             base.Hide();
         }
 
+        private readonly Dictionary<string, Image> refMarkerImages = new();
+
         private void CreateMarkers()
         {
             if (markerContainer == null) return;
@@ -224,6 +230,47 @@ namespace ARNavExperiment.Presentation.Mapping
                 markerRects[kvp.Key] = rect;
                 markerImages[kvp.Key] = img;
             }
+        }
+
+        private void CreateReferenceMarkers()
+        {
+            if (markerContainer == null) return;
+            refMarkerImages.Clear();
+
+            var anchorMgr = Core.SpatialAnchorManager.Instance;
+            var mappedRefs = new HashSet<string>();
+            if (anchorMgr != null)
+            {
+                foreach (var r in anchorMgr.GetReferenceMappings())
+                    mappedRefs.Add(r.roomId);
+            }
+
+            foreach (var pt in Navigation.ReferencePointRegistry.AllPoints)
+            {
+                var markerGO = new GameObject(pt.RoomId);
+                var rect = markerGO.AddComponent<RectTransform>();
+                rect.SetParent(markerContainer, false);
+                rect.sizeDelta = new Vector2(REF_MARKER_SIZE, REF_MARKER_SIZE);
+                PlaceMarkerAtWorld(rect, pt.FloorPlanXZ);
+
+                var img = markerGO.AddComponent<Image>();
+                img.color = mappedRefs.Contains(pt.RoomId) ? COLOR_REF_MAPPED : COLOR_REF_UNMAPPED;
+                refMarkerImages[pt.RoomId] = img;
+            }
+        }
+
+        /// <summary>보정 앵커 매핑 상태 갱신</summary>
+        public void UpdateReferenceMappingStatus()
+        {
+            var anchorMgr = Core.SpatialAnchorManager.Instance;
+            if (anchorMgr == null) return;
+
+            var mappedRefs = new HashSet<string>();
+            foreach (var r in anchorMgr.GetReferenceMappings())
+                mappedRefs.Add(r.roomId);
+
+            foreach (var kvp in refMarkerImages)
+                kvp.Value.color = mappedRefs.Contains(kvp.Key) ? COLOR_REF_MAPPED : COLOR_REF_UNMAPPED;
         }
 
         private void RescaleMarkers()
@@ -267,7 +314,18 @@ namespace ARNavExperiment.Presentation.Mapping
         /// </summary>
         public void AddCalibrationPoint(string waypointId, Vector3 slamPosition)
         {
-            if (!waypointMapPositions.TryGetValue(waypointId, out var floorPlanPos)) return;
+            Vector2 floorPlanPos;
+            if (waypointMapPositions.TryGetValue(waypointId, out floorPlanPos))
+            {
+                // WP 좌표에서 찾음
+            }
+            else
+            {
+                // Reference 앵커에서 찾기
+                var refPos = Navigation.ReferencePointRegistry.GetFloorPlanPosition(waypointId);
+                if (!refPos.HasValue) return;
+                floorPlanPos = refPos.Value;
+            }
 
             var slamXZ = new Vector2(slamPosition.x, slamPosition.z);
 

@@ -84,4 +84,32 @@ namespace ARNavExperiment.Domain.Events
             DiagnosticsJson = diagnosticsJson;
         }
     }
+
+    /// <summary>
+    /// 보정 앵커(Reference Anchor) 저장 완료 시 발행.
+    /// </summary>
+    public readonly struct ReferenceAnchorSaved : IDomainEvent
+    {
+        public readonly string RoomId;
+        public readonly string AnchorGuid;
+
+        public ReferenceAnchorSaved(string roomId, string anchorGuid)
+        {
+            RoomId = roomId;
+            AnchorGuid = anchorGuid;
+        }
+    }
+
+    /// <summary>
+    /// 보정 앵커 백그라운드 재인식 성공 시 발행.
+    /// </summary>
+    public readonly struct ReferenceAnchorRecovered : IDomainEvent
+    {
+        public readonly string RoomId;
+
+        public ReferenceAnchorRecovered(string roomId)
+        {
+            RoomId = roomId;
+        }
+    }
 }

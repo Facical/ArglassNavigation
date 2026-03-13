@@ -12,14 +12,12 @@ namespace ARNavExperiment.DebugTools
     {
         [Header("Display")]
 #pragma warning disable CS0414 // Android 빌드 시 미사용 경고 억제 (UNITY_EDITOR 내에서만 참조)
-        [SerializeField] private bool showRouteA = true;
-        [SerializeField] private bool showRouteB = true;
+        [SerializeField] private bool showRoute = true;
         [SerializeField] private bool showLabels = true;
 #pragma warning restore CS0414
 
         [Header("Colors")]
-        [SerializeField] private Color routeAColor = new Color(0.2f, 0.6f, 1f, 0.8f);
-        [SerializeField] private Color routeBColor = new Color(0.9f, 0.5f, 0.1f, 0.8f);
+        [SerializeField] private Color routeColor = new Color(0.9f, 0.5f, 0.1f, 0.8f);
         [SerializeField] private Color activeColor = Color.green;
 
         private void OnDrawGizmos()
@@ -27,14 +25,12 @@ namespace ARNavExperiment.DebugTools
             var wpMgr = GetComponent<WaypointManager>();
             if (wpMgr == null) return;
 
-            // Route A/B are private SerializeField, use SerializedObject in editor
+            // routeB is private SerializeField, use SerializedObject in editor
 #if UNITY_EDITOR
             var so = new UnityEditor.SerializedObject(wpMgr);
 
-            if (showRouteA)
-                DrawRoute(so.FindProperty("routeA"), routeAColor, "A");
-            if (showRouteB)
-                DrawRoute(so.FindProperty("routeB"), routeBColor, "B");
+            if (showRoute)
+                DrawRoute(so.FindProperty("routeB"), routeColor, "");
 #endif
         }
 
@@ -80,8 +76,9 @@ namespace ARNavExperiment.DebugTools
                         fontStyle = FontStyle.Bold,
                         alignment = TextAnchor.MiddleCenter
                     };
+                    string displayLabel = string.IsNullOrEmpty(label) ? wpId : $"[{label}] {wpId}";
                     UnityEditor.Handles.Label(pos + Vector3.up * 1.5f,
-                        $"[Route {label}] {wpId}\n{locName}", style);
+                        $"{displayLabel}\n{locName}", style);
                 }
             }
 

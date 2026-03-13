@@ -19,12 +19,9 @@ namespace ARNavExperiment.Presentation.Mapping
         private Dictionary<string, LineRenderer> pathLines = new Dictionary<string, LineRenderer>();
         private Material runtimeMaterial;
 
-        // Route A: 초록 마커, 파란 경로선
-        private static readonly Color COLOR_MARKER_A = new Color(0.3f, 1f, 0.3f, 0.8f);
-        private static readonly Color COLOR_PATH_A = new Color(0.3f, 0.8f, 1f, 0.5f);
-        // Route B: 노란주황 마커, 주황 경로선
-        private static readonly Color COLOR_MARKER_B = new Color(1f, 0.7f, 0.2f, 0.8f);
-        private static readonly Color COLOR_PATH_B = new Color(1f, 0.5f, 0.1f, 0.5f);
+        // 웨이포인트 마커: 노란주황, 경로선: 주황
+        private static readonly Color COLOR_MARKER_DEFAULT = new Color(1f, 0.7f, 0.2f, 0.8f);
+        private static readonly Color COLOR_PATH_DEFAULT = new Color(1f, 0.5f, 0.1f, 0.5f);
 
         private const float MARKER_SIZE = 0.15f;
         private const float LABEL_OFFSET_Y = 0.3f;
@@ -80,16 +77,8 @@ namespace ARNavExperiment.Presentation.Mapping
 
         private void GetRouteColors(string routeId, out Color markerColor, out Color pathColor)
         {
-            if (routeId == "B")
-            {
-                markerColor = COLOR_MARKER_B;
-                pathColor = COLOR_PATH_B;
-            }
-            else
-            {
-                markerColor = COLOR_MARKER_A;
-                pathColor = COLOR_PATH_A;
-            }
+            markerColor = COLOR_MARKER_DEFAULT;
+            pathColor = COLOR_PATH_DEFAULT;
         }
 
         private void CreateMarker(string waypointId, Vector3 position)
@@ -216,17 +205,14 @@ namespace ARNavExperiment.Presentation.Mapping
             var anchorMgr = SpatialAnchorManager.Instance;
             if (anchorMgr == null) return;
 
-            foreach (string routeId in new[] { "A", "B" })
+            var mappings = anchorMgr.GetRouteMappings("B");
+            foreach (var mapping in mappings)
             {
-                var mappings = anchorMgr.GetRouteMappings(routeId);
-                foreach (var mapping in mappings)
-                {
-                    if (markers.ContainsKey(mapping.waypointId)) continue;
+                if (markers.ContainsKey(mapping.waypointId)) continue;
 
-                    var t = anchorMgr.GetAnchorTransform(mapping.waypointId);
-                    if (t != null)
-                        CreateMarker(mapping.waypointId, t.position);
-                }
+                var t = anchorMgr.GetAnchorTransform(mapping.waypointId);
+                if (t != null)
+                    CreateMarker(mapping.waypointId, t.position);
             }
         }
 

@@ -76,6 +76,8 @@ namespace ARNavExperiment.Application
             bus.Subscribe<RelocalizationStarted>(OnRelocalizationStarted);
             bus.Subscribe<RelocalizationCompleted>(OnRelocalizationCompleted);
             bus.Subscribe<AnchorDiagnostics>(OnAnchorDiagnostics);
+            bus.Subscribe<ReferenceAnchorSaved>(OnReferenceAnchorSaved);
+            bus.Subscribe<ReferenceAnchorRecovered>(OnReferenceAnchorRecovered);
 
             // === Observation ===
             bus.Subscribe<DeviceScreenChanged>(OnDeviceScreenChanged);
@@ -146,6 +148,8 @@ namespace ARNavExperiment.Application
             bus.Unsubscribe<RelocalizationStarted>(OnRelocalizationStarted);
             bus.Unsubscribe<RelocalizationCompleted>(OnRelocalizationCompleted);
             bus.Unsubscribe<AnchorDiagnostics>(OnAnchorDiagnostics);
+            bus.Unsubscribe<ReferenceAnchorSaved>(OnReferenceAnchorSaved);
+            bus.Unsubscribe<ReferenceAnchorRecovered>(OnReferenceAnchorRecovered);
 
             bus.Unsubscribe<DeviceScreenChanged>(OnDeviceScreenChanged);
             bus.Unsubscribe<BeamTabSwitched>(OnBeamTabSwitched);
@@ -282,7 +286,8 @@ namespace ARNavExperiment.Application
 
         private void OnWaypointReached(WaypointReached e)
         {
-            EventLogger.Instance?.LogEvent("WAYPOINT_REACHED", waypointId: e.WaypointId);
+            EventLogger.Instance?.LogEvent("WAYPOINT_REACHED", waypointId: e.WaypointId,
+                extraData: $"{{\"cause\":\"{e.Cause}\",\"is_target\":{e.IsTarget.ToString().ToLower()}}}");
         }
 
         private void OnTriggerActivated(TriggerActivated e)
@@ -383,6 +388,18 @@ namespace ARNavExperiment.Application
         {
             EventLogger.Instance?.LogEvent("ANCHOR_DIAGNOSTICS",
                 extraData: e.DiagnosticsJson);
+        }
+
+        private void OnReferenceAnchorSaved(ReferenceAnchorSaved e)
+        {
+            EventLogger.Instance?.LogEvent("REFERENCE_ANCHOR_SAVED",
+                extraData: $"{{\"room_id\":\"{e.RoomId}\",\"anchor_guid\":\"{e.AnchorGuid}\"}}");
+        }
+
+        private void OnReferenceAnchorRecovered(ReferenceAnchorRecovered e)
+        {
+            EventLogger.Instance?.LogEvent("REFERENCE_ANCHOR_RECOVERED",
+                extraData: $"{{\"room_id\":\"{e.RoomId}\"}}");
         }
 
         // ── Observation ─────────────────────────────────────────

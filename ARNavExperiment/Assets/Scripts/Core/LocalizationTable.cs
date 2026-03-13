@@ -136,7 +136,7 @@ namespace ARNavExperiment.Core
             { "exphud.manual_calibrate", ("Calibrate", "\uc218\ub3d9 \ubcf4\uc815") },
 
             // ===== MappingModeUI =====
-            { "mapping.title", ("Mapping Mode \u2014 Route {0}", "\ub9e4\ud551 \ubaa8\ub4dc \u2014 Route {0}") },
+            { "mapping.title", ("Mapping Mode", "\ub9e4\ud551 \ubaa8\ub4dc") },
             { "mapping.slam_not_ready", ("SLAM not ready", "SLAM \uc900\ube44 \uc548 \ub428") },
             { "mapping.create_anchor", ("Create Anchor: {0}", "\uc575\ucee4 \uc0dd\uc131: {0}") },
             { "mapping.select_waypoint", ("Select a waypoint", "\uc6e8\uc774\ud3ec\uc778\ud2b8\ub97c \uc120\ud0dd\ud558\uc138\uc694") },
@@ -148,6 +148,14 @@ namespace ARNavExperiment.Core
             { "mapping.save_all", ("Save All", "\ubaa8\ub450 \uc800\uc7a5") },
             { "mapping.back", ("Back", "\ub4a4\ub85c") },
             { "mapping.quality_hint", ("Select waypoint & create anchor", "\uc6e8\uc774\ud3ec\uc778\ud2b8\ub97c \uc120\ud0dd\ud558\uace0 \uc575\ucee4\ub97c \uc0dd\uc131\ud558\uc138\uc694") },
+
+            // ===== Reference Anchors =====
+            { "mapping.ref_section_title", ("Room Reference Anchors", "\ud638\uc2e4 \ubcf4\uc815 \uc575\ucee4") },
+            { "mapping.ref_select_room", ("Select room", "\ud638\uc2e4 \uc120\ud0dd") },
+            { "mapping.ref_create", ("Create Ref Anchor", "\ubcf4\uc815 \uc575\ucee4 \uc0dd\uc131") },
+            { "mapping.ref_status", ("Room anchors: {0}/{1}", "\ud638\uc2e4 \uc575\ucee4: {0}/{1}") },
+            { "mapping.ref_mapped", ("Done", "\uc644\ub8cc") },
+            { "mapping.ref_unmapped", ("Not mapped", "\ubbf8\ub9e4\ud551") },
 
             // ===== MappingGlassOverlay =====
             { "overlay.header", ("Mapping Mode", "\ub9e4\ud551 \ubaa8\ub4dc") },
