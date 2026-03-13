@@ -156,7 +156,7 @@ Publish/Subscribe 패턴:
 | **ExperimentEvents** | SessionInitialized(pid,cond,missionSet), ExperimentStateChanged, ConditionChanged, RouteStarted(missionSet), SurveyStarted, ExperimentCompleted | ExperimentManager, ConditionController |
 | **MissionEvents** | MissionStarted/Arrived/Completed, VerificationAnswered, ConfidenceRated, DifficultyRated, BriefingForced, ArrivalForced, MissionForceSkipped, AllMissionsCompleted | MissionManager |
 | **NavigationEvents** | WaypointReached, TriggerActivated/Deactivated, ArrowShown/Hidden/Offset, WaypointFallbackUsed, WaypointLateAnchorBound | WaypointManager, TriggerController, ARArrowRenderer |
-| **SpatialEvents** | RelocalizationStarted/Progress/Completed, AnchorLateRecovered, AnchorSaved, AnchorDiagnostics | SpatialAnchorManager |
+| **SpatialEvents** | RelocalizationStarted/Progress/Completed, AnchorLateRecovered, AnchorSaved, AnchorDiagnostics, ReferenceAnchorSaved, ReferenceAnchorRecovered | SpatialAnchorManager, WaypointManager |
 | **ObservationEvents** | DeviceScreenChanged, BeamTabSwitched, BeamInfoCardToggled, BeamPOI/Comparison/MissionRef/MapZoomed, GlassCaptureStateChanged | BeamPro UI, DeviceStateTracker |
 
 #### Application 레이어 서비스
@@ -176,7 +176,7 @@ Publish/Subscribe 패턴:
 | **Domain** | 이벤트, 인터페이스, 값 객체 | IDomainEvent, MissionResult, 도메인 이벤트 structs |
 | **Application** (5) | 이벤트 버스, 오케스트레이터 | DomainEventBus, ObservationService, NavigationService, BeamProCoordinator, ExperimentAdvancer |
 | **Core** (7) | 상태머신, 조건 전환, 세션, 앵커, 핸드트래킹, 다국어 | ExperimentManager, ConditionController, SpatialAnchorManager, HandTrackingManager |
-| **Navigation** (3) | 경로, AR 화살표, 불확실성 트리거 | WaypointManager, ARArrowRenderer, TriggerController |
+| **Navigation** (4) | 경로, AR 화살표, 불확실성 트리거, 보정 좌표 레지스트리 | WaypointManager, ARArrowRenderer, TriggerController, ReferencePointRegistry |
 | **Mission** (5) | 미션 FSM, SO 데이터 | MissionManager, MissionData, POIData, InfoCardData |
 | **Presentation/Glass** (7) | 글래스 전용 UI | GlassCanvasController, ExperimentHUD, MissionBriefingUI, VerificationUI, ConfidenceRatingUI, DifficultyRatingUI |
 | **Presentation/BeamPro** (9) | 3탭 정보 허브 | BeamProHubController, InteractiveMapController, InfoCardManager, BeamProCanvasController |
@@ -214,6 +214,16 @@ DontDestroyOnLoad 적용: **ExperimentManager**, **EventLogger** (세션 수명)
 
 **Heading 자동 보정**: 앵커 2+개 인식 시 `AutoCalibrateFromAnchors()` — 가장 먼 앵커 쌍의 SLAM/도면 yaw 차이로 좌표계 회전 오프셋 자동 계산. `BindAnchorTransforms()` + `OnAnchorLateRecovered()` 에서 트리거. 시작점에 WP00 보정앵커 배치 (9개 WP). ExperimenterHUD ±5° 미세 조정 버튼 유지
 
+#### 보정 앵커 (Reference Anchor) 시스템
+
+웨이포인트 앵커와 별도로, 호실 문패 앞에 생성하는 보정 전용 앵커. 도면 좌표가 `ReferencePointRegistry`에 정적 등록되어 있어, 재인식 시 SLAM↔도면 보정 쌍을 자동 제공.
+
+- **ReferencePointRegistry** (`Navigation/`): B101\~B121 19개 호실의 도면 좌표(FloorPlanXZ) 정적 레지스트리. `GetByRoomId()`/`GetFloorPlanPosition()`으로 조회
+- **ReferenceAnchorMapping / ReferenceMappingData** (`Core/SpatialAnchorManager.cs`): JSON 직렬화 구조. `anchor_mapping.json`의 `"references"` 필드에 `[{ roomId, anchorGuid, displayName }]` 저장
+- **매핑 UI 흐름**: MappingModeUI 드롭다운(기존 매핑 제외 호실 목록) → `CreateAndSaveReferenceAnchor()` → 품질 관찰(최대 8초) → JSON 저장 → `ReferenceAnchorSaved` 이벤트 발행
+- **재인식**: `LoadReferenceAnchors()` — GUID별 폴링(30초 타임아웃) → 성공 시 `ReferenceAnchorRecovered` 이벤트 → WaypointManager가 보정 쌍에 추가
+- **보정 기여**: 인식된 보정 앵커는 `AutoCalibrateFromAnchors()` 및 `GetAllCalibratedAnchorPairs()`에 (slamPos, floorPlanPos) 쌍으로 참여하여 heading/좌표 보정 정밀도 향상
+
 ## 다국어(Localization) 패턴
 
 - **LocalizationManager**: 싱글턴, `Language.EN`/`KO` enum, `PlayerPrefs("ARNav_Language")` 영속, `OnLanguageChanged` (Action\<Language\>) 이벤트. `Get(string key)` 정적 메서드로 현재 언어에 맞는 문자열 반환
@@ -239,6 +249,7 @@ DontDestroyOnLoad 적용: **ExperimentManager**, **EventLogger** (세션 수명)
 | **도메인 이벤트** 추가 | `Domain/Events/*.cs`에 struct 추가 + `ObservationService`에 Subscribe/Handler 추가 (CSV 로그 호환) |
 | **EventLogger.LogEvent()** 직접 호출 금지 | `DomainEventBus.Publish()` 사용 → ObservationService가 EventLogger 위임 |
 | **Application 서비스** 추가 | SceneSetupTool에 GameObject 생성 추가 + 필요 시 SceneWiringTool에 와이어링 추가 |
+| **ReferencePointRegistry 호실 추가/좌표 변경** | MappingModeUI (드롭다운 목록), FloorPlanMapBase (맵 마커), WaypointGizmoDrawer (씬 기즈모) |
 | **Presentation 클래스 이동** | 네임스페이스 변경 + SceneSetupTool/SceneWiringTool의 타입 참조 업데이트 |
 
 ## 알려진 주의사항
@@ -360,7 +371,7 @@ python3 analysis/analyze_triggers.py
 
 ### 앵커 매핑 (`anchor_mapping.json`)
 
-`Application.persistentDataPath/anchor_mapping.json`에 저장. 구조: `{ createdAt, routeA: { waypoints: [] }, routeB: { waypoints: [{ waypointId, anchorGuid, radius, locationName }] } }`. `routeB` 필드에 9개 웨이포인트 저장 (`routeA`는 하위 호환성을 위해 빈 상태로 유지). 매핑 모드에서 생성, 재인식 시 로드.
+`Application.persistentDataPath/anchor_mapping.json`에 저장. 구조: `{ createdAt, routeA: { waypoints: [] }, routeB: { waypoints: [{ waypointId, anchorGuid, radius, locationName }] }, references: { anchors: [{ roomId, anchorGuid, displayName }] } }`. `routeB` 필드에 9개 웨이포인트, `references` 필드에 보정 앵커 저장 (`routeA`는 하위 호환성을 위해 빈 상태로 유지). 기존 JSON에 `references` 필드가 없으면 로드 시 빈 리스트로 자동 초기화. 매핑 모드에서 생성, 재인식 시 로드.
 
 ## 주요 문서
 
