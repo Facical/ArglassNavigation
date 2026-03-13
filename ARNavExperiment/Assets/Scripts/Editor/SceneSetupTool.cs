@@ -595,7 +595,7 @@ namespace ARNavExperiment.EditorTools
             var mgHeaderLE = mgHeader.gameObject.AddComponent<LayoutElement>();
             mgHeaderLE.flexibleWidth = 1;
 
-            var mgRoute = CreateTMPText("MG_RouteText", mgHeaderBar.transform, "Route A");
+            var mgRoute = CreateTMPText("MG_RouteText", mgHeaderBar.transform, "경로");
             mgRoute.fontSize = FS_MAPPING_QUALITY;
             mgRoute.alignment = TextAlignmentOptions.Center;
             var mgRouteLE = mgRoute.gameObject.AddComponent<LayoutElement>();

@@ -24,7 +24,7 @@ namespace ARNavExperiment.EditorTools
         }
 
         // ==========================================
-        // Set1 InfoCards (기존 Route B)
+        // Set1 InfoCards
         // ==========================================
         private static void GenerateSet1InfoCards()
         {

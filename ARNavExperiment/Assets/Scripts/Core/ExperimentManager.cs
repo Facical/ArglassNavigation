@@ -142,7 +142,7 @@ namespace ARNavExperiment.Core
 
             DomainEventBus.Instance?.Publish(new RouteStarted(session.missionSet, session.condition));
 
-            // Route B 고정 — 단일 경로 사용
+            // 단일 경로 로드
             WaypointManager.Instance?.LoadRoute("B");
         }
 

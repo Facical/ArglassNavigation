@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 프로젝트 개요
 
-스마트 글래스(XReal Air2 Ultra)와 스마트폰(XReal Beam Pro)을 활용한 하이브리드 실내 내비게이션 HCI 연구 프로젝트. **2가지 조건(Glass Only / Hybrid)**을 단일 조건 직접 선택 방식으로 24명 대상 비교 실험. **Route B 단일 경로 + 미션 세트 2개(Set1/Set2)**로 within-subjects 설계 유지. 실험자가 메인 화면에서 참가자 ID, 미션 세트, 조건을 선택하여 단일 조건만 실행. 미션 기반 길찾기 태스크와 4종 불확실성 트리거를 통해 교차검증 행동을 유도. 문서는 주로 한국어로 작성.
+스마트 글래스(XReal Air2 Ultra)와 스마트폰(XReal Beam Pro)을 활용한 하이브리드 실내 내비게이션 HCI 연구 프로젝트. **2가지 조건(Glass Only / Hybrid)**을 단일 조건 직접 선택 방식으로 24명 대상 비교 실험. **단일 경로 + 미션 세트 2개(Set1/Set2)**로 within-subjects 설계 유지. 실험자가 메인 화면에서 참가자 ID, 미션 세트, 조건을 선택하여 단일 조건만 실행. 미션 기반 길찾기 태스크와 4종 불확실성 트리거를 통해 교차검증 행동을 유도. 문서는 주로 한국어로 작성.
 
 ## 저장소 구조
 
@@ -212,7 +212,7 @@ DontDestroyOnLoad 적용: **ExperimentManager**, **EventLogger** (세션 수명)
 
 **Fallback 패턴**: `Waypoint.Position` = `anchorTransform ?? fallbackPosition` — 재인식 실패 시에도 미터 수준 정확도로 내비게이션 지속
 
-**Heading 자동 보정**: 앵커 2+개 인식 시 `AutoCalibrateFromAnchors()` — 가장 먼 앵커 쌍의 SLAM/도면 yaw 차이로 좌표계 회전 오프셋 자동 계산. `BindAnchorTransforms()` + `OnAnchorLateRecovered()` 에서 트리거. Route B 시작점에 WP00 보정앵커 배치 (9개 WP). ExperimenterHUD ±5° 미세 조정 버튼 유지
+**Heading 자동 보정**: 앵커 2+개 인식 시 `AutoCalibrateFromAnchors()` — 가장 먼 앵커 쌍의 SLAM/도면 yaw 차이로 좌표계 회전 오프셋 자동 계산. `BindAnchorTransforms()` + `OnAnchorLateRecovered()` 에서 트리거. 시작점에 WP00 보정앵커 배치 (9개 WP). ExperimenterHUD ±5° 미세 조정 버튼 유지
 
 ## 다국어(Localization) 패턴
 
@@ -360,7 +360,7 @@ python3 analysis/analyze_triggers.py
 
 ### 앵커 매핑 (`anchor_mapping.json`)
 
-`Application.persistentDataPath/anchor_mapping.json`에 저장. 구조: `{ createdAt, routeA: { waypoints: [] }, routeB: { waypoints: [{ waypointId, anchorGuid, radius, locationName }] } }`. Route B만 사용 (routeA는 하위 호환성을 위해 빈 상태로 유지). 매핑 모드에서 생성, 재인식 시 로드.
+`Application.persistentDataPath/anchor_mapping.json`에 저장. 구조: `{ createdAt, routeA: { waypoints: [] }, routeB: { waypoints: [{ waypointId, anchorGuid, radius, locationName }] } }`. `routeB` 필드에 9개 웨이포인트 저장 (`routeA`는 하위 호환성을 위해 빈 상태로 유지). 매핑 모드에서 생성, 재인식 시 로드.
 
 ## 주요 문서
 

@@ -60,14 +60,14 @@ namespace ARNavExperiment.EditorTools
 
         private static void WirePOIsToMissions()
         {
-            // Set1 POI assignments (기존 Route B 미션)
+            // Set1 POI assignments
             AssignPOIs("Set1_A1", new[] { "RouteB/room_b107", "RouteB/room_b106" });
             AssignPOIs("Set1_B1", new[] { "RouteB/room_b105", "RouteB/room_b104" });
             AssignPOIs("Set1_A2", new[] { "RouteB/room_b101", "RouteB/room_b102" });
             AssignPOIs("Set1_B2", new[] { "RouteB/room_b102", "RouteB/room_b101" });
             AssignPOIs("Set1_C1", new[] { "RouteB/room_b104", "RouteB/room_b105" });
 
-            // Set2 POI assignments (같은 Route B 경로, 다른 미션)
+            // Set2 POI assignments
             AssignPOIs("Set2_A1", new[] { "RouteB/room_b106", "RouteB/room_b107" });
             AssignPOIs("Set2_B1", new[] { "RouteB/room_b104", "RouteB/room_b105" });
             AssignPOIs("Set2_A2", new[] { "RouteB/room_b102", "RouteB/room_b101" });

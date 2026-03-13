@@ -30,7 +30,7 @@ namespace ARNavExperiment.EditorTools
             // 24명: S1/S2 교대 배정 (12명씩)
             // S1 = Glass Only → Hybrid
             // S2 = Hybrid → Glass Only
-            // 홀수 번호: Route A 먼저, 짝수 번호: Route B 먼저
+            // (레거시: 단일 경로 전환 전 Route A/B 교대 배정)
             for (int i = 0; i < 24; i++)
             {
                 int pNum = i + 1;
@@ -49,8 +49,7 @@ namespace ARNavExperiment.EditorTools
                 "CounterbalanceConfig 생성 완료!\n\n" +
                 "24명 참가자 배정:\n" +
                 "- S1 (Glass→Hybrid): P01, P03, P05, ... P23\n" +
-                "- S2 (Hybrid→Glass): P02, P04, P06, ... P24\n" +
-                "- 홀수: Route A 먼저 / 짝수: Route B 먼저\n\n" +
+                "- S2 (Hybrid→Glass): P02, P04, P06, ... P24\n\n" +
                 "Assets/Data/CounterbalanceConfig.asset", "확인");
         }
 

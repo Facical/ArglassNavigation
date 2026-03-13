@@ -235,9 +235,9 @@ namespace ARNavExperiment.Presentation.Shared
             var anchorMgr = SpatialAnchorManager.Instance;
             if (anchorMgr != null && anchorMgr.HasMappingData())
             {
-                var routeB = anchorMgr.GetRouteMappings("B");
+                var routeMappings = anchorMgr.GetRouteMappings("B");
                 statusText.text = string.Format(LocalizationManager.Get("appmode.mapping_status"),
-                    routeB.Count);
+                    routeMappings.Count);
                 statusText.color = new Color(0.6f, 1f, 0.6f);
             }
             else

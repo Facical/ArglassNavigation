@@ -94,7 +94,7 @@ namespace ARNavExperiment.Presentation.Experimenter
                 if (state == ExperimentState.Relocalization)
                 {
                     if (relocalizationPanel != null) relocalizationPanel.SetActive(true);
-                    relocalizationUI?.StartRelocalization("B");
+                    relocalizationUI?.StartRelocalization("B"); // routeId 파라미터 유지
                     return;
                 }
                 if (state == ExperimentState.Setup)
@@ -136,9 +136,8 @@ namespace ARNavExperiment.Presentation.Experimenter
             if (relocalizationPanel != null)
                 relocalizationPanel.SetActive(true);
 
-            // Route B 고정
             if (relocalizationUI != null)
-                relocalizationUI.StartRelocalization("B");
+                relocalizationUI.StartRelocalization("B"); // routeId 파라미터 유지
         }
 
         private void ShowSetupTransition()

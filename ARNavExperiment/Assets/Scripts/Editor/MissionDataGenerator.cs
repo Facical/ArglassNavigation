@@ -19,7 +19,7 @@ namespace ARNavExperiment.EditorTools
         }
 
         // ==========================================
-        // Set1 Missions (기존 Route B: B111 시작 → 북상 → NE U턴 → 남하)
+        // Set1 Missions (B111 시작 → 북상 → NE U턴 → 남하)
         // 트리거: T2(정보불일치), T3(해상도부족)
         // ==========================================
         private static void GenerateSet1Missions()
@@ -188,7 +188,7 @@ namespace ARNavExperiment.EditorTools
         }
 
         // ==========================================
-        // Route B POIs (Set1, Set2 공용)
+        // POIs (Set1, Set2 공용)
         // ==========================================
         private static void GenerateRouteBPOIs()
         {
