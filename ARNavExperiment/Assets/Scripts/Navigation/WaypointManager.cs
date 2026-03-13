@@ -133,7 +133,7 @@ namespace ARNavExperiment.Navigation
             PlayerPrefs.DeleteKey("ARNav_HeadingOffset");
             PlayerPrefs.Save();
 
-            // Route B 고정 — 단일 경로 사용
+            // 단일 경로 로드
             activeRoute = routeB;
             CurrentWaypointIndex = 0;
 
@@ -328,6 +328,20 @@ namespace ARNavExperiment.Navigation
         {
             if (activeRoute == null) return;
 
+            // 보정 앵커(REF_ 접두사)인 경우 — waypoint 바인딩 불필요, 보정 재계산만 수행
+            if (waypointId.StartsWith("REF_"))
+            {
+                Debug.Log($"[WaypointManager] Reference anchor recovered: {waypointId} — recalibrating");
+                if (AutoCalibrateFromAnchors())
+                {
+                    headingSource = "auto";
+                    DomainEventBus.Instance?.Publish(new HeadingCalibrationApplied(headingSource, headingCalibrationOffset));
+                }
+                ComputeMapCalibration();
+                DomainEventBus.Instance?.Publish(new Domain.Events.ReferenceAnchorRecovered(waypointId));
+                return;
+            }
+
             foreach (var wp in activeRoute.waypoints)
             {
                 string anchorKey = $"{activeRoute.routeId}_{wp.waypointId}";
@@ -372,7 +386,9 @@ namespace ARNavExperiment.Navigation
                 var playerXZ = new Vector2(playerTransform.position.x, playerTransform.position.z);
                 var playerFloorPlan = SlamToFloorPlan(playerXZ);
                 var wpXZ = new Vector2(wp.fallbackPosition.x, wp.fallbackPosition.z);
-                arrivalRadius = wp.radius * fallbackRadiusMultiplier;
+                // 패치 B: 미션 타겟은 multiplier 미적용 (의도한 반경 유지)
+                bool isTarget = IsMissionTarget(wp.waypointId);
+                arrivalRadius = isTarget ? wp.radius : wp.radius * fallbackRadiusMultiplier;
                 return Vector2.Distance(playerFloorPlan, wpXZ);
             }
             else
@@ -414,7 +430,7 @@ namespace ARNavExperiment.Navigation
                             activeRoute.waypoints[j].waypointId, "look_ahead_skip_to_target"));
                     }
                     CurrentWaypointIndex = i;
-                    ReachWaypoint(wp);
+                    ReachWaypoint(wp, "look_ahead_target");
                     return;
                 }
             }
@@ -431,7 +447,7 @@ namespace ARNavExperiment.Navigation
                 DomainEventBus.Instance?.Publish(new WaypointFallbackUsed(
                     activeRoute.waypoints[CurrentWaypointIndex].waypointId, "look_ahead_skip"));
                 CurrentWaypointIndex = nextIdx;
-                ReachWaypoint(nextWp);
+                ReachWaypoint(nextWp, "look_ahead_skip");
             }
         }
 
@@ -453,7 +469,14 @@ namespace ARNavExperiment.Navigation
 
             if (dist <= arrivalRadius)
             {
-                ReachWaypoint(wp);
+                ReachWaypoint(wp, "radius");
+                return;
+            }
+
+            // 비타겟 WP: 다음 WP 방향으로 20%+ 진행 시 통과 처리
+            if (!IsMissionTarget(wp.waypointId) && HasNextWaypoint && TryPassThrough(wp, NextWaypoint))
+            {
+                ReachWaypoint(wp, "pass_through");
                 return;
             }
 
@@ -482,13 +505,13 @@ namespace ARNavExperiment.Navigation
             }
         }
 
-        private void ReachWaypoint(Waypoint wp)
+        private void ReachWaypoint(Waypoint wp, string cause = "radius")
         {
             bool isTarget = IsMissionTarget(wp.waypointId);
-            DomainEventBus.Instance?.Publish(new WaypointReached(wp.waypointId, isTarget));
+            DomainEventBus.Instance?.Publish(new WaypointReached(wp.waypointId, isTarget, cause));
             OnWaypointReached?.Invoke(wp);
             Debug.Log($"[WaypointManager] Reached {wp.waypointId} ({wp.locationName})" +
-                $"{(isTarget ? " [TARGET]" : "")}");
+                $"{(isTarget ? " [TARGET]" : "")} cause={cause}");
 
             CurrentWaypointIndex++;
             if (CurrentWaypointIndex >= activeRoute.waypoints.Count)
@@ -673,6 +696,55 @@ namespace ARNavExperiment.Navigation
                 $"offset={mapCalibOffset}, source={calibrationSource}, pairs={pairs.Count}");
         }
 
+        /// <summary>
+        /// 비타겟 WP에서 다음 WP 방향으로 충분히 진행했는지 판정합니다.
+        /// 진행률 20%+ AND 횡방향 편차 8m 이내이면 통과 처리.
+        /// </summary>
+        private bool TryPassThrough(Waypoint currentWP, Waypoint nextWP)
+        {
+            Vector2 wpPos, nextPos, playerPos;
+
+            if (hasMapCalibration)
+            {
+                wpPos = ToFloorPlan(currentWP);
+                nextPos = ToFloorPlan(nextWP);
+                playerPos = SlamToFloorPlan(new Vector2(
+                    playerTransform.position.x, playerTransform.position.z));
+            }
+            else if (currentWP.anchorTransform != null && nextWP.anchorTransform != null)
+            {
+                wpPos = new Vector2(currentWP.Position.x, currentWP.Position.z);
+                nextPos = new Vector2(nextWP.Position.x, nextWP.Position.z);
+                playerPos = new Vector2(
+                    playerTransform.position.x, playerTransform.position.z);
+            }
+            else
+            {
+                return false;
+            }
+
+            Vector2 segment = nextPos - wpPos;
+            float segLenSq = segment.sqrMagnitude;
+            if (segLenSq < 0.01f) return false;
+
+            Vector2 offset = playerPos - wpPos;
+            float progress = Vector2.Dot(offset, segment) / segLenSq;
+
+            Vector2 projection = wpPos + progress * segment;
+            float lateralDist = Vector2.Distance(playerPos, projection);
+
+            return progress >= 0.2f && lateralDist < 8f;
+        }
+
+        /// <summary>WP 좌표를 floor-plan 2D로 변환합니다. 앵커 있으면 SLAM→도면, 없으면 fallback 직접.</summary>
+        private Vector2 ToFloorPlan(Waypoint wp)
+        {
+            if (wp.anchorTransform != null)
+                return SlamToFloorPlan(new Vector2(
+                    wp.anchorTransform.position.x, wp.anchorTransform.position.z));
+            return new Vector2(wp.fallbackPosition.x, wp.fallbackPosition.z);
+        }
+
         /// <summary>SLAM XZ 좌표를 도면 XZ 좌표로 변환합니다.</summary>
         private Vector2 SlamToFloorPlan(Vector2 slamXZ)
         {
@@ -704,6 +776,16 @@ namespace ARNavExperiment.Navigation
                 if (wp.anchorTransform != null)
                     anchored.Add((wp.fallbackPosition, wp.anchorTransform.position));
             }
+
+            // 보정 앵커(Reference Anchor) 쌍 추가
+            var anchorMgr = SpatialAnchorManager.Instance;
+            if (anchorMgr != null)
+            {
+                var refPairs = anchorMgr.GetReferenceCalibratedPairs();
+                foreach (var (slamXZ, fallbackXZ) in refPairs)
+                    anchored.Add((new Vector3(fallbackXZ.x, 0, fallbackXZ.y), new Vector3(slamXZ.x, 0, slamXZ.y)));
+            }
+
             if (anchored.Count < 2) return false;
 
             // 가장 먼 쌍을 선택 (정밀도 향상 — 가까운 쌍은 노이즈에 취약)
@@ -767,6 +849,14 @@ namespace ARNavExperiment.Navigation
             // Image Tracking에서 주입된 가상 앵커 쌍 추가
             if (injectedPairs != null)
                 pairs.AddRange(injectedPairs);
+
+            // 보정 앵커(Reference Anchor) 쌍 추가
+            var anchorMgr = SpatialAnchorManager.Instance;
+            if (anchorMgr != null)
+            {
+                var refPairs = anchorMgr.GetReferenceCalibratedPairs();
+                pairs.AddRange(refPairs);
+            }
 
             return pairs;
         }

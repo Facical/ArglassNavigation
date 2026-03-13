@@ -100,7 +100,7 @@ namespace ARNavExperiment.EditorTools
 
                 // Waypoint marker cubes for visual reference
                 CreateWPMarker(envRoot.transform, "Start (계단)", Vector3.zero, Color.red);
-                // Route B markers (단일 경로, 실측 기반 좌표)
+                // 웨이포인트 마커 (실측 기반 좌표)
                 CreateWPMarker(envRoot.transform, "B-WP00 Cal", new Vector3(36, 0, 24), new Color(0.9f, 0.5f, 0.1f));
                 CreateWPMarker(envRoot.transform, "B-WP01", new Vector3(36, 0, 18), new Color(0.9f, 0.5f, 0.1f));
                 CreateWPMarker(envRoot.transform, "B-WP03", new Vector3(36, 0, 45), new Color(0.9f, 0.5f, 0.1f));

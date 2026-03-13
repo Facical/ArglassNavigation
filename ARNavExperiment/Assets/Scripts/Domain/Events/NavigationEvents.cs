@@ -7,11 +7,13 @@ namespace ARNavExperiment.Domain.Events
     {
         public readonly string WaypointId;
         public readonly bool IsTarget;
+        public readonly string Cause; // "radius", "pass_through", "look_ahead_skip", "look_ahead_target", "manual"
 
-        public WaypointReached(string waypointId, bool isTarget)
+        public WaypointReached(string waypointId, bool isTarget, string cause = "radius")
         {
             WaypointId = waypointId;
             IsTarget = isTarget;
+            Cause = cause;
         }
     }
 

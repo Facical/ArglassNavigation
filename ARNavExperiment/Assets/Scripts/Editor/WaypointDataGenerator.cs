@@ -18,8 +18,8 @@ namespace ARNavExperiment.EditorTools
 
             var so = new SerializedObject(wpMgr);
 
-            // === Route B (동쪽복도 B111 시작 → 북상 → NE코너 U턴 → 남하) ===
-            // Route B 단일 경로 사용 (Set1/Set2 미션 세트로 분리)
+            // === 단일 경로 (동쪽복도 B111 시작 → 북상 → NE코너 U턴 → 남하) ===
+            // Set1/Set2 미션 세트로 분리
             var routeB = so.FindProperty("routeB");
             routeB.FindPropertyRelative("routeId").stringValue = "B";
             var wpB = routeB.FindPropertyRelative("waypoints");
@@ -38,10 +38,10 @@ namespace ARNavExperiment.EditorTools
             so.ApplyModifiedProperties();
             EditorUtility.SetDirty(wpMgr);
 
-            Debug.Log("[WaypointDataGenerator] Route B 웨이포인트 설정 완료!");
+            Debug.Log("[WaypointDataGenerator] 웨이포인트 설정 완료!");
             EditorUtility.DisplayDialog("완료",
                 "웨이포인트 경로 설정 완료!\n\n" +
-                "Route B: 9개 WP (WP00 보정앵커→B111→북상→NE U턴→남하→남쪽복도)\n\n" +
+                "9개 WP (WP00 보정앵커→B111→북상→NE U턴→남하→남쪽복도)\n\n" +
                 "※ 좌표는 평면도 기반 추정치입니다.\n" +
                 "현장 답사 후 Inspector에서 직접 조정하세요.\n\n" +
                 "씬을 저장하세요 (Cmd+S)", "확인");
