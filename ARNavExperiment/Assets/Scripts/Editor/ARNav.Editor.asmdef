@@ -10,6 +10,7 @@
         "Unity.InputSystem",
         "Unity.XR.ARFoundation",
         "Unity.XR.ARSubsystems",
+        "Unity.XR.ARSubsystems.Editor",
         "Unity.XR.Interaction.Toolkit",
         "Unity.XR.Hands",
         "Unity.XR.CoreUtils",
