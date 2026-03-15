@@ -4,6 +4,7 @@
 - 트리거 유형별 확신도 변화 분석
 - 트리거 유형별 오방향 선택률
 - 트리거-기기 전환 연관 분석 (Hybrid 조건)
+- [ISMAR] TRIGGER_RESPONSE 이벤트, trigger_id/trigger_type 컬럼, nav_trace 속도 통합
 """
 
 import sys
@@ -19,9 +20,11 @@ import matplotlib
 from scipy import stats
 
 from parse_utils import parse_extra
+from stat_utils import paired_comparison, significance_marker
+from plot_style import (apply_style, save_fig, COLORS_COND, COND_LABELS,
+                        COLOR_GLASS, COLOR_HYBRID, PALETTE, DPI)
 
-matplotlib.rcParams["font.family"] = "AppleGothic"
-matplotlib.rcParams["axes.unicode_minus"] = False
+apply_style()
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # ──────────────────────────────────────────────
@@ -65,15 +68,52 @@ TRIGGER_EXPECTED_CONTENT = {
 
 def load_events(allow_demo: bool = False) -> pd.DataFrame:
     """이벤트 로그 로드 또는 데모 생성."""
-    csv_files = sorted(RAW_DIR.glob("P*_*.csv"))
+    # [ISMAR] sidecar 파일 제외
+    SIDECAR_SUFFIXES = ("_head_pose.csv", "_nav_trace.csv", "_beam_segments.csv",
+                        "_anchor_reloc.csv", "_system_health.csv")
+    csv_files = sorted(
+        f for f in RAW_DIR.glob("P*_*.csv")
+        if not any(f.name.endswith(s) for s in SIDECAR_SUFFIXES)
+    )
     if csv_files:
-        frames = [pd.read_csv(f, parse_dates=["timestamp"]) for f in csv_files]
+        frames = []
+        for f in csv_files:
+            df = pd.read_csv(f, parse_dates=["timestamp"])
+            # [ISMAR] 새 컬럼(trigger_id, trigger_type)이 없으면 빈 값으로 채우기
+            for col in ["trigger_id", "trigger_type"]:
+                if col not in df.columns:
+                    df[col] = ""
+            frames.append(df)
         return pd.concat(frames, ignore_index=True)
     if allow_demo:
         print("[경고] 이벤트 로그 없음. 데모 데이터 생성.")
         return generate_demo_data()
     print(f"[오류] {RAW_DIR}에 이벤트 로그 없음. 데모로 실행하려면 --demo 플래그를 사용하세요.")
     sys.exit(1)
+
+
+def load_nav_trace() -> pd.DataFrame:
+    """[ISMAR] *_nav_trace.csv sidecar 파일이 있으면 로드.
+
+    nav_trace에는 timestamp, session_id, speed_ms 등이 포함.
+    트리거 활성화 시점 전후의 이동 속도 분석에 사용.
+    participant_id가 없으면 session_id에서 추출.
+    """
+    trace_files = sorted(RAW_DIR.glob("*_nav_trace.csv"))
+    if not trace_files:
+        return pd.DataFrame()
+    frames = []
+    for f in trace_files:
+        try:
+            df = pd.read_csv(f, parse_dates=["timestamp"])
+            frames.append(df)
+        except Exception as e:
+            print(f"  [경고] nav_trace 로드 실패: {f.name} — {e}")
+    if frames:
+        combined = pd.concat(frames, ignore_index=True)
+        print(f"  [ISMAR] nav_trace sidecar 로드: {len(combined)}건 ({len(trace_files)} 파일)")
+        return combined
+    return pd.DataFrame()
 
 
 def generate_demo_data() -> pd.DataFrame:
@@ -234,14 +274,69 @@ def _parse_extra(extra_str) -> dict:
 # ──────────────────────────────────────────────
 
 def analyze_trigger_reaction_time(df: pd.DataFrame) -> pd.DataFrame:
-    """트리거 유형별, 조건별 반응시간 분석."""
-    tr = df[df["event_type"] == "TRIGGER_RESPONSE"].copy()
-    tr["parsed"] = tr["extra_data"].apply(_parse_extra)
-    tr["trigger_type"] = tr["parsed"].apply(lambda d: d.get("trigger_type", ""))
-    tr["reaction_time_s"] = tr["parsed"].apply(lambda d: d.get("reaction_time_s", np.nan))
-    tr = tr.dropna(subset=["reaction_time_s"])
+    """트리거 유형별, 조건별 반응시간 분석.
 
-    print("\n=== 트리거 반응시간 분석 ===")
+    [ISMAR] TRIGGER_RESPONSE 이벤트가 있으면 우선 사용.
+    24-column 포맷에서는 trigger_type이 top-level 컬럼으로도 제공될 수 있음.
+    """
+    tr = df[df["event_type"] == "TRIGGER_RESPONSE"].copy()
+
+    if tr.empty:
+        # [ISMAR] Fallback: TRIGGER_RESPONSE 없으면 TRIGGER_ACTIVATED/DEACTIVATED
+        # 페어링으로 반응시간 계산 시도
+        print("  [호환] TRIGGER_RESPONSE 이벤트 없음 — ACTIVATED/DEACTIVATED 페어링으로 대체")
+        activated = df[df["event_type"] == "TRIGGER_ACTIVATED"].copy()
+        deactivated = df[df["event_type"] == "TRIGGER_DEACTIVATED"].copy()
+        if not activated.empty and not deactivated.empty:
+            activated["parsed"] = activated["extra_data"].apply(_parse_extra)
+            # [ISMAR] trigger_type: top-level 컬럼 우선, 없으면 extra_data에서 추출
+            activated["trigger_type_resolved"] = activated.apply(
+                lambda r: r.get("trigger_type", "") if (
+                    "trigger_type" in r.index and r["trigger_type"] not in ("", None, np.nan)
+                ) else r["parsed"].get("trigger_type", ""),
+                axis=1,
+            )
+            rows = []
+            for _, act in activated.iterrows():
+                pid = act["participant_id"]
+                cond = act["condition"]
+                act_time = act["timestamp"]
+                matching_deact = deactivated[
+                    (deactivated["participant_id"] == pid) &
+                    (deactivated["condition"] == cond) &
+                    (deactivated["timestamp"] > act_time) &
+                    (deactivated["timestamp"] < act_time + pd.Timedelta(seconds=60))
+                ]
+                if not matching_deact.empty:
+                    deact_time = matching_deact["timestamp"].iloc[0]
+                    rt = (deact_time - act_time).total_seconds()
+                    rows.append({
+                        "timestamp": act_time,
+                        "participant_id": pid,
+                        "condition": cond,
+                        "trigger_type": act["trigger_type_resolved"],
+                        "reaction_time_s": rt,
+                    })
+            tr = pd.DataFrame(rows)
+            if not tr.empty:
+                tr["timestamp"] = pd.to_datetime(tr["timestamp"])
+        else:
+            print("\n=== 트리거 반응시간 분석 ===")
+            print("  [경고] 트리거 이벤트 없음")
+            return pd.DataFrame()
+    else:
+        tr["parsed"] = tr["extra_data"].apply(_parse_extra)
+        # [ISMAR] trigger_type: top-level 컬럼 우선, 없으면 extra_data
+        tr["trigger_type"] = tr.apply(
+            lambda r: r.get("trigger_type", "") if (
+                "trigger_type" in r.index and r["trigger_type"] not in ("", None, np.nan)
+            ) else r["parsed"].get("trigger_type", ""),
+            axis=1,
+        )
+        tr["reaction_time_s"] = tr["parsed"].apply(lambda d: d.get("reaction_time_s", np.nan))
+        tr = tr.dropna(subset=["reaction_time_s"])
+
+    print("\n=== 트리거 반응시간 분석 [ISMAR: TRIGGER_RESPONSE] ===")
     results = []
     for ttype in TRIGGER_TYPES:
         t_label = TRIGGER_LABELS.get(ttype, ttype)
@@ -323,8 +418,18 @@ def analyze_trigger_confidence_drop(df: pd.DataFrame) -> pd.DataFrame:
 def analyze_wrong_direction(df: pd.DataFrame) -> pd.DataFrame:
     """트리거 유형별 오방향 선택률 분석."""
     tr = df[df["event_type"] == "TRIGGER_RESPONSE"].copy()
+    if tr.empty:
+        print("\n=== 오방향 선택률 분석 ===")
+        print("  [경고] TRIGGER_RESPONSE 이벤트 없음")
+        return pd.DataFrame()
     tr["parsed"] = tr["extra_data"].apply(_parse_extra)
-    tr["trigger_type"] = tr["parsed"].apply(lambda d: d.get("trigger_type", ""))
+    # [ISMAR] trigger_type: top-level 컬럼 우선, 없으면 extra_data
+    tr["trigger_type"] = tr.apply(
+        lambda r: r.get("trigger_type", "") if (
+            "trigger_type" in r.index and r["trigger_type"] not in ("", None, np.nan)
+        ) else r["parsed"].get("trigger_type", ""),
+        axis=1,
+    )
     tr["wrong_direction"] = tr["parsed"].apply(lambda d: d.get("wrong_direction", False))
 
     print("\n=== 오방향 선택률 분석 ===")
@@ -415,6 +520,102 @@ def analyze_trigger_switching(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ──────────────────────────────────────────────
+# 6b. [ISMAR] 트리거 전후 이동 속도 분석
+# ──────────────────────────────────────────────
+
+def analyze_trigger_speed(df: pd.DataFrame, nav_trace: pd.DataFrame) -> pd.DataFrame:
+    """[ISMAR] 트리거 활성화 전후 이동 속도 변화 분석.
+
+    nav_trace sidecar에서 speed_ms 또는 speed_mps 컬럼을 이용하여
+    트리거 활성화 전 10초, 활성화 중, 비활성화 후 10초의 평균 속도를 비교.
+    """
+    # [ISMAR] 속도 컬럼명 호환: speed_ms (실제 데이터) 또는 speed_mps (레거시)
+    speed_col = None
+    for col_name in ["speed_ms", "speed_mps"]:
+        if col_name in nav_trace.columns:
+            speed_col = col_name
+            break
+    if nav_trace.empty or speed_col is None:
+        return pd.DataFrame()
+
+    triggers = df[df["event_type"] == "TRIGGER_ACTIVATED"].copy()
+    deactivated = df[df["event_type"] == "TRIGGER_DEACTIVATED"].copy()
+
+    if triggers.empty:
+        return pd.DataFrame()
+
+    triggers["parsed"] = triggers["extra_data"].apply(_parse_extra)
+    triggers["trigger_type_resolved"] = triggers.apply(
+        lambda r: r.get("trigger_type", "") if (
+            "trigger_type" in r.index and r["trigger_type"] not in ("", None, np.nan)
+        ) else r["parsed"].get("trigger_type", ""),
+        axis=1,
+    )
+
+    # [ISMAR] nav_trace에 participant_id가 없으면 session_id에서 추출
+    if "participant_id" not in nav_trace.columns and "session_id" in nav_trace.columns:
+        # session_id 패턴: "P01_20260315_100000" → participant_id = "P01"
+        nav_trace = nav_trace.copy()
+        nav_trace["participant_id"] = nav_trace["session_id"].str.extract(r"^(P\d+)")[0]
+
+    results = []
+    print("\n=== [ISMAR] 트리거 전후 이동 속도 분석 ===")
+    for _, trig in triggers.iterrows():
+        pid = trig["participant_id"]
+        trig_time = trig["timestamp"]
+        ttype = trig["trigger_type_resolved"]
+
+        # 비활성화 시점 찾기
+        matching_deact = deactivated[
+            (deactivated["participant_id"] == pid) &
+            (deactivated["timestamp"] > trig_time) &
+            (deactivated["timestamp"] < trig_time + pd.Timedelta(seconds=120))
+        ]
+        deact_time = matching_deact["timestamp"].iloc[0] if not matching_deact.empty else (
+            trig_time + pd.Timedelta(seconds=15)
+        )
+
+        pid_trace = nav_trace[nav_trace["participant_id"] == pid] if "participant_id" in nav_trace.columns else nav_trace
+
+        # 전 10초
+        pre_trace = pid_trace[
+            (pid_trace["timestamp"] >= trig_time - pd.Timedelta(seconds=10)) &
+            (pid_trace["timestamp"] < trig_time)
+        ]
+        # 트리거 중
+        during_trace = pid_trace[
+            (pid_trace["timestamp"] >= trig_time) &
+            (pid_trace["timestamp"] <= deact_time)
+        ]
+        # 후 10초
+        post_trace = pid_trace[
+            (pid_trace["timestamp"] > deact_time) &
+            (pid_trace["timestamp"] <= deact_time + pd.Timedelta(seconds=10))
+        ]
+
+        results.append({
+            "participant_id": pid,
+            "trigger_type": ttype,
+            "condition": trig["condition"],
+            "speed_pre_mps": pre_trace[speed_col].mean() if not pre_trace.empty else np.nan,
+            "speed_during_mps": during_trace[speed_col].mean() if not during_trace.empty else np.nan,
+            "speed_post_mps": post_trace[speed_col].mean() if not post_trace.empty else np.nan,
+        })
+
+    speed_df = pd.DataFrame(results)
+    if not speed_df.empty:
+        for ttype in TRIGGER_TYPES:
+            subset = speed_df[speed_df["trigger_type"] == ttype]
+            if not subset.empty:
+                pre = subset["speed_pre_mps"].mean()
+                during = subset["speed_during_mps"].mean()
+                post = subset["speed_post_mps"].mean()
+                print(f"  {ttype}: 전 {pre:.2f} → 중 {during:.2f} → 후 {post:.2f} m/s")
+
+    return speed_df
+
+
+# ──────────────────────────────────────────────
 # 7. 시각화
 # ──────────────────────────────────────────────
 
@@ -441,9 +642,7 @@ def plot_reaction_time_by_trigger(rt_df: pd.DataFrame):
     ax.set_xticklabels([f"{tt}\n({TRIGGER_LABELS[tt]})" for tt in TRIGGER_TYPES])
     ax.legend()
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "trigger_reaction_time.png", dpi=150)
-    print(f"  → {OUTPUT_DIR / 'trigger_reaction_time.png'} 저장")
-    plt.close(fig)
+    save_fig(fig, OUTPUT_DIR / "trigger_reaction_time")
 
 
 def plot_confidence_drop_by_trigger(drop_df: pd.DataFrame):
@@ -476,9 +675,7 @@ def plot_confidence_drop_by_trigger(drop_df: pd.DataFrame):
     ax.set_title("트리거 유형별 확신도 변화량 (Δ)")
     fig.colorbar(im, ax=ax, label="확신도 변화 (Δ)")
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "trigger_confidence_heatmap.png", dpi=150)
-    print(f"  → {OUTPUT_DIR / 'trigger_confidence_heatmap.png'} 저장")
-    plt.close(fig)
+    save_fig(fig, OUTPUT_DIR / "trigger_confidence_heatmap")
 
 
 def plot_trigger_switch_rate(switch_df: pd.DataFrame):
@@ -505,9 +702,7 @@ def plot_trigger_switch_rate(switch_df: pd.DataFrame):
                 f"{height:.0f}%", ha="center", va="bottom")
 
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "trigger_switch_rate.png", dpi=150)
-    print(f"  → {OUTPUT_DIR / 'trigger_switch_rate.png'} 저장")
-    plt.close(fig)
+    save_fig(fig, OUTPUT_DIR / "trigger_switch_rate")
 
 
 # ──────────────────────────────────────────────
@@ -527,11 +722,19 @@ def main():
     df = load_events(allow_demo=args.demo)
     print(f"총 이벤트 수: {len(df)}")
 
+    # [ISMAR] nav_trace sidecar 로드 시도
+    nav_trace = load_nav_trace()
+
     # 분석
     rt_df = analyze_trigger_reaction_time(df)
     drop_df = analyze_trigger_confidence_drop(df)
     wrong_df = analyze_wrong_direction(df)
     switch_df = analyze_trigger_switching(df)
+
+    # [ISMAR] nav_trace가 있으면 트리거 전후 속도 분석
+    speed_df = pd.DataFrame()
+    if not nav_trace.empty:
+        speed_df = analyze_trigger_speed(df, nav_trace)
 
     # 시각화
     print(f"\n=== 시각화 ===")
@@ -543,7 +746,8 @@ def main():
     for name, result_df in [("trigger_reaction_time", rt_df),
                              ("trigger_confidence_drop", drop_df),
                              ("trigger_wrong_direction", wrong_df),
-                             ("trigger_switch_rate", switch_df)]:
+                             ("trigger_switch_rate", switch_df),
+                             ("trigger_speed_analysis", speed_df)]:
         if not result_df.empty:
             result_df.to_csv(OUTPUT_DIR / f"{name}.csv", index=False)
             print(f"  → {OUTPUT_DIR / f'{name}.csv'} 저장")

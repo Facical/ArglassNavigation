@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using ARNavExperiment.Core;
+using ARNavExperiment.Mission;
 using ARNavExperiment.Presentation.Shared;
 
 namespace ARNavExperiment.Presentation.BeamPro
@@ -28,12 +29,20 @@ namespace ARNavExperiment.Presentation.BeamPro
         [Header("GlassOnly Map Toggle")]
         [SerializeField] private UnityEngine.UI.Button glassMapToggleButton;
 
+        [Header("GlassOnly Force Arrival")]
+        [SerializeField] private Button glassForceArrivalButton;
+
+        [Header("Phone Mirror Blocker")]
+        [SerializeField] private GameObject phoneBackground;
+
         public bool IsWorldSpace { get; private set; }
 
         private Canvas canvas;
         private CanvasScaler scaler;
         private GraphicRaycaster originalRaycaster;
         private CanvasGroup canvasGroup;
+
+        private bool isGlassOnlyMode;
 
         // 원본 설정 캐시
         private RenderMode cachedRenderMode;
@@ -63,6 +72,13 @@ namespace ARNavExperiment.Presentation.BeamPro
                 glassMapToggleButton.onClick.AddListener(OnGlassMapToggle);
                 glassMapToggleButton.gameObject.SetActive(false); // 기본 숨김
             }
+
+            // 도착선언 버튼 이벤트 바인딩
+            if (glassForceArrivalButton != null)
+            {
+                glassForceArrivalButton.onClick.AddListener(OnGlassForceArrival);
+                glassForceArrivalButton.gameObject.SetActive(false); // 기본 숨김
+            }
         }
 
         private void OnGlassMapToggle()
@@ -70,6 +86,11 @@ namespace ARNavExperiment.Presentation.BeamPro
             var hub = BeamProHubController.Instance;
             if (hub != null)
                 hub.ToggleMapTab();
+        }
+
+        private void OnGlassForceArrival()
+        {
+            MissionManager.Instance?.ForceArrival();
         }
 
         private void OnEnable()
@@ -108,6 +129,9 @@ namespace ARNavExperiment.Presentation.BeamPro
 
         private void SwitchToWorldSpace()
         {
+            // GlassOnly: 불투명 배경 숨김 (글래스 시야 확보)
+            if (phoneBackground) phoneBackground.SetActive(false);
+
 #if !UNITY_EDITOR
             if (IsWorldSpace) return;
 
@@ -163,11 +187,15 @@ namespace ARNavExperiment.Presentation.BeamPro
             // GlassOnly Map 토글 버튼 표시
             if (glassMapToggleButton) glassMapToggleButton.gameObject.SetActive(true);
 
+            // GlassOnly 도착선언 버튼 — Navigation 상태에서만 표시 (Update에서 갱신)
+            isGlassOnlyMode = true;
+
             IsWorldSpace = true;
             Debug.Log($"[BeamProCanvasCtrl] WorldSpace로 전환 — distance={distanceFromCamera}m, scale={canvasScale}");
 #else
             // 에디터에서는 ScreenSpaceOverlay 유지
             IsWorldSpace = false;
+            isGlassOnlyMode = true;
             if (zoomButtonPanel) zoomButtonPanel.SetActive(true);
             if (glassMapToggleButton) glassMapToggleButton.gameObject.SetActive(true);
             Debug.Log("[BeamProCanvasCtrl] 에디터 — WorldSpace 전환 건너뜀 (ScreenSpaceOverlay 유지)");
@@ -176,6 +204,13 @@ namespace ARNavExperiment.Presentation.BeamPro
 
         private void SwitchToScreenSpace()
         {
+            // Hybrid: 불투명 배경 표시 (폰 스테레오 미러 차단)
+            if (phoneBackground)
+            {
+                phoneBackground.SetActive(true);
+                phoneBackground.transform.SetAsFirstSibling(); // 항상 컨텐츠 뒤에 렌더링
+            }
+
 #if !UNITY_EDITOR
             if (!IsWorldSpace && hasCachedSettings) return;
 
@@ -197,14 +232,34 @@ namespace ARNavExperiment.Presentation.BeamPro
             // GlassOnly Map 토글 버튼 숨김
             if (glassMapToggleButton) glassMapToggleButton.gameObject.SetActive(false);
 
+            // GlassOnly 도착선언 버튼 숨김
+            isGlassOnlyMode = false;
+            if (glassForceArrivalButton) glassForceArrivalButton.gameObject.SetActive(false);
+
             IsWorldSpace = false;
             Debug.Log("[BeamProCanvasCtrl] ScreenSpaceOverlay로 복원");
 #else
             IsWorldSpace = false;
+            isGlassOnlyMode = false;
             if (zoomButtonPanel) zoomButtonPanel.SetActive(false);
             if (glassMapToggleButton) glassMapToggleButton.gameObject.SetActive(false);
+            if (glassForceArrivalButton) glassForceArrivalButton.gameObject.SetActive(false);
             Debug.Log("[BeamProCanvasCtrl] 에디터 — ScreenSpaceOverlay 유지");
 #endif
+        }
+
+        private void Update()
+        {
+            UpdateForceArrivalVisibility();
+        }
+
+        private void UpdateForceArrivalVisibility()
+        {
+            if (glassForceArrivalButton == null) return;
+            bool show = isGlassOnlyMode
+                && MissionManager.Instance != null
+                && MissionManager.Instance.CurrentState == MissionState.Navigation;
+            glassForceArrivalButton.gameObject.SetActive(show);
         }
 
         /// <summary>
@@ -259,6 +314,7 @@ namespace ARNavExperiment.Presentation.BeamPro
 
             canvas.renderMode = cachedRenderMode;
             canvas.sortingOrder = cachedSortOrder;
+            canvas.worldCamera = null;
 
             if (scaler != null)
             {

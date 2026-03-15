@@ -35,11 +35,16 @@ namespace ARNavExperiment.Presentation.Glass
         [SerializeField] private TextMeshProUGUI runningDetailText;
         [SerializeField] private Button runningStartButton;
 
-        [Header("Survey Panel")]
+        [Header("Survey Panel (legacy — PostConditionSurveyController가 대체)")]
         [SerializeField] private GameObject surveyPanel;
         [SerializeField] private TextMeshProUGUI surveyTitleText;
         [SerializeField] private TextMeshProUGUI surveyInstrText;
         [SerializeField] private Button surveyDoneButton;
+
+        [Header("Comparison Survey Panel")]
+        [SerializeField] private GameObject comparisonPanel;
+        [SerializeField] private TextMeshProUGUI comparisonTitleText;
+        [SerializeField] private TextMeshProUGUI comparisonInstrText;
 
         [Header("Completion Panel")]
         [SerializeField] private GameObject completionPanel;
@@ -150,7 +155,10 @@ namespace ARNavExperiment.Presentation.Glass
                     ShowRunningStartPanel();
                     break;
                 case ExperimentState.Survey:
-                    ShowSurveyPanel();
+                    // Survey 패널은 PostConditionSurveyController가 표시하므로 여기서는 숨김 유지
+                    break;
+                case ExperimentState.ComparisonSurvey:
+                    ShowComparisonPanel();
                     break;
                 case ExperimentState.Complete:
                     ShowCompletionPanel();
@@ -213,6 +221,7 @@ namespace ARNavExperiment.Presentation.Glass
             SetPanelActive(setupPanel, false);
             SetPanelActive(runningStartPanel, false);
             SetPanelActive(surveyPanel, false);
+            SetPanelActive(comparisonPanel, false);
             SetPanelActive(completionPanel, false);
         }
 
@@ -581,6 +590,18 @@ namespace ARNavExperiment.Presentation.Glass
             ExperimentManager.Instance?.AdvanceState(); // → Complete
         }
 
+        // === Comparison Survey ===
+
+        private void ShowComparisonPanel()
+        {
+            if (comparisonTitleText != null)
+                comparisonTitleText.text = LocalizationManager.Get("glassflow.comparison_title");
+            if (comparisonInstrText != null)
+                comparisonInstrText.text = LocalizationManager.Get("glassflow.comparison_instr");
+
+            SetPanelActive(comparisonPanel, true);
+        }
+
         // === Completion ===
 
         private void ShowCompletionPanel()
@@ -612,6 +633,7 @@ namespace ARNavExperiment.Presentation.Glass
                           || (setupPanel != null && setupPanel.activeSelf)
                           || (runningStartPanel != null && runningStartPanel.activeSelf)
                           || (surveyPanel != null && surveyPanel.activeSelf)
+                          || (comparisonPanel != null && comparisonPanel.activeSelf)
                           || (completionPanel != null && completionPanel.activeSelf);
 
             // 패널 검증 로그 비활성화 — logcat 디버깅 시 ~5-8회/전환 반복

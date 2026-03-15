@@ -255,4 +255,56 @@ namespace ARNavExperiment.Domain.Events
             HeadingOffset = headingOffset;
         }
     }
+
+    /// <summary>
+    /// 참가자 이동 정지 감지 시 발행 (speed &lt; 0.15 m/s, 2초 연속).
+    /// </summary>
+    public readonly struct MovementPaused : IDomainEvent
+    {
+        public readonly string WaypointId;
+        public readonly string Position;
+
+        public MovementPaused(string waypointId, string position)
+        {
+            WaypointId = waypointId;
+            Position = position;
+        }
+    }
+
+    /// <summary>
+    /// 이동 재개 시 발행 (정지 종료).
+    /// </summary>
+    public readonly struct MovementResumed : IDomainEvent
+    {
+        public readonly string WaypointId;
+        public readonly float PauseDurationSeconds;
+        public readonly string Position;
+
+        public MovementResumed(string waypointId, float pauseDurationSeconds, string position)
+        {
+            WaypointId = waypointId;
+            PauseDurationSeconds = pauseDurationSeconds;
+            Position = position;
+        }
+    }
+
+    /// <summary>
+    /// 불확실성 트리거에 대한 참가자 반응 기록.
+    /// </summary>
+    public readonly struct TriggerResponse : IDomainEvent
+    {
+        public readonly string TriggerId;
+        public readonly string TriggerType;
+        public readonly float ReactionTimeSeconds;
+        public readonly string FirstAction; // "beam_switch", "none", etc.
+
+        public TriggerResponse(string triggerId, string triggerType,
+            float reactionTimeSeconds, string firstAction)
+        {
+            TriggerId = triggerId;
+            TriggerType = triggerType;
+            ReactionTimeSeconds = reactionTimeSeconds;
+            FirstAction = firstAction;
+        }
+    }
 }

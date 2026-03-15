@@ -99,7 +99,8 @@ namespace ARNavExperiment.Presentation.BeamPro
         {
             if (activeCard == null) return;
 
-            DomainEventBus.Instance?.Publish(new BeamInfoCardToggled(activeCard.cardId, false));
+            float viewDuration = Time.time - cardOpenTime;
+            DomainEventBus.Instance?.Publish(new BeamInfoCardToggled(activeCard.cardId, false, viewDuration));
 
             if (cardPanel) cardPanel.SetActive(false);
             if (comparisonCard) comparisonCard.gameObject.SetActive(false);

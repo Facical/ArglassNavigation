@@ -31,6 +31,8 @@ namespace ARNavExperiment.Navigation
         private float[] fanOffsets;
         private bool isFanActive;
         private float lastCameraWarningTime;
+        private bool isTransparentMode;
+        private Color cachedOriginalColor;
 
         private void Start()
         {
@@ -66,6 +68,28 @@ namespace ARNavExperiment.Navigation
                         $"playerPos={xrCam?.transform.position}");
                 }
                 */
+            }
+
+            // 약한 보정 시 반투명 처리
+            if (!isTriggerActive && arrowRenderer != null && WaypointManager.Instance != null)
+            {
+                bool shouldBeTransparent = WaypointManager.Instance.IsWeakCalibration();
+                if (shouldBeTransparent && !isTransparentMode)
+                {
+                    cachedOriginalColor = arrowRenderer.material.color;
+                    SetMaterialTransparent(arrowRenderer.material, 0.4f);
+                    arrowRenderer.material.color = new Color(
+                        cachedOriginalColor.r, cachedOriginalColor.g, cachedOriginalColor.b, 0.4f);
+                    isTransparentMode = true;
+                }
+                else if (!shouldBeTransparent && isTransparentMode)
+                {
+                    arrowRenderer.material.color = cachedOriginalColor;
+                    arrowRenderer.material.SetFloat("_Surface", 0); // Opaque
+                    arrowRenderer.material.SetInt("_ZWrite", 1);
+                    arrowRenderer.material.renderQueue = -1;
+                    isTransparentMode = false;
+                }
             }
 
             // view-locked positioning

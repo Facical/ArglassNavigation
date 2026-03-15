@@ -19,7 +19,7 @@ namespace ARNavExperiment.Presentation.BeamPro
 
         public void LogPOIViewed(POIData poi, float viewDuration)
         {
-            DomainEventBus.Instance?.Publish(new BeamPOIViewed(poi.poiId));
+            DomainEventBus.Instance?.Publish(new BeamPOIViewed(poi.poiId, viewDuration));
         }
 
         public void LogComparisonViewed(ComparisonData data)

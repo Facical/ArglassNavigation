@@ -37,11 +37,13 @@ namespace ARNavExperiment.Domain.Events
     {
         public readonly string CardId;
         public readonly bool Opened;
+        public readonly float ViewDurationSeconds;
 
-        public BeamInfoCardToggled(string cardId, bool opened)
+        public BeamInfoCardToggled(string cardId, bool opened, float viewDurationSeconds = 0f)
         {
             CardId = cardId;
             Opened = opened;
+            ViewDurationSeconds = viewDurationSeconds;
         }
     }
 
@@ -51,8 +53,13 @@ namespace ARNavExperiment.Domain.Events
     public readonly struct BeamPOIViewed : IDomainEvent
     {
         public readonly string POIId;
+        public readonly float ViewDurationSeconds;
 
-        public BeamPOIViewed(string poiId) { POIId = poiId; }
+        public BeamPOIViewed(string poiId, float viewDurationSeconds = 0f)
+        {
+            POIId = poiId;
+            ViewDurationSeconds = viewDurationSeconds;
+        }
     }
 
     /// <summary>

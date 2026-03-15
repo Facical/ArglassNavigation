@@ -17,9 +17,10 @@ namespace ARNavExperiment.EditorTools
             string[] targets = {
                 "AppModeSelectorPanel", "MappingModePanel", "RelocalizationPanel",
                 "ConditionTransitionPanel",
-                "SurveyPromptPanel", "CompletionPanel", "ExperimentFlowUI",
+                "SurveyPromptPanel", "ComparisonSurveyPanel", "CompletionPanel", "ExperimentFlowUI",
                 "GlassRelocPanel", "GlassSetupPanel", "GlassRunningStartPanel",
-                "GlassSurveyPanel", "GlassCompletionPanel", "GlassFlowUI"
+                "GlassSurveyPanel", "GlassComparisonPanel", "GlassCompletionPanel", "GlassFlowUI",
+                "PostConditionSurveyPanel", "ComparisonSurveyFullPanel"
             };
 
             int removed = 0;
@@ -379,6 +380,20 @@ namespace ARNavExperiment.EditorTools
                 "Survey Done", new Color(0.2f, 0.5f, 0.2f, 1f), 20);
             SetRect(surveyDoneBtn.gameObject, new Vector2(0.3f, 0.08f), new Vector2(0.7f, 0.2f));
 
+            // === Comparison Survey Panel (Experimenter) ===
+            var compSurveyPanel = CreatePanel("ComparisonSurveyPanel", canvasTransform,
+                new Color(0.08f, 0.08f, 0.12f, 0.98f));
+            compSurveyPanel.SetActive(false);
+
+            var compSurveyTitle = CreateTMP("CompSurveyTitle", compSurveyPanel.transform,
+                "Comparison Survey", 28, TextAlignmentOptions.Center);
+            SetRect(compSurveyTitle.gameObject, new Vector2(0.1f, 0.8f), new Vector2(0.9f, 0.92f));
+
+            var compSurveyInstr = CreateTMP("CompSurveyInstruction", compSurveyPanel.transform,
+                "", 16, TextAlignmentOptions.Center,
+                new Vector2(0.1f, 0.3f), new Vector2(0.9f, 0.75f));
+            compSurveyInstr.enableWordWrapping = true;
+
             // === Completion Panel ===
             var completePanel = CreatePanel("CompletionPanel", canvasTransform,
                 new Color(0.08f, 0.08f, 0.12f, 0.98f));
@@ -396,9 +411,10 @@ namespace ARNavExperiment.EditorTools
 
             WireFlowUI(flowUI,
                 modeSelectorPanel, relocPanel, relocUI,
-                transPanel, surveyPanel, completePanel,
+                transPanel, surveyPanel, compSurveyPanel, completePanel,
                 transTitle, transDetail, transContinueBtn,
                 surveyTitle, surveyInstr, surveyDoneBtn,
+                compSurveyTitle, compSurveyInstr,
                 completeText);
 
             // === GlassFlowUI (GlassOnly 조건 전용 — ExperimentCanvas에 배치) ===
@@ -490,6 +506,20 @@ namespace ARNavExperiment.EditorTools
                 "GF_SurveyInstr", "", "GF_SurveyDoneBtn", "Done");
             gSurveyPanel.SetActive(false);
 
+            // --- GlassComparisonPanel ---
+            var gComparisonPanel = CreateGlassFlowPanel("GlassComparisonPanel", canvasTransform);
+
+            var gfComparisonTitle = CreateTMP("GF_ComparisonTitle", gComparisonPanel.transform,
+                "Comparison Survey", 48, TextAlignmentOptions.Center,
+                new Vector2(0.1f, 0.6f), new Vector2(0.9f, 0.8f));
+
+            var gfComparisonInstr = CreateTMP("GF_ComparisonInstr", gComparisonPanel.transform,
+                "Please complete the comparison survey\non the phone screen.", 34, TextAlignmentOptions.Center,
+                new Vector2(0.1f, 0.3f), new Vector2(0.9f, 0.55f));
+            gfComparisonInstr.enableWordWrapping = true;
+
+            gComparisonPanel.SetActive(false);
+
             // --- GlassCompletionPanel ---
             var gCompletionPanel = CreateGlassFlowPanel("GlassCompletionPanel", canvasTransform);
 
@@ -546,9 +576,10 @@ namespace ARNavExperiment.EditorTools
         private static void WireFlowUI(ExperimentFlowUI flowUI,
             GameObject modeSelector, GameObject relocPanel, RelocalizationUI relocUI,
             GameObject transition,
-            GameObject survey, GameObject completion,
+            GameObject survey, GameObject comparisonSurvey, GameObject completion,
             TextMeshProUGUI transTitle, TextMeshProUGUI transDetail, Button transContinue,
             TextMeshProUGUI surveyTitle, TextMeshProUGUI surveyInstr, Button surveyDone,
+            TextMeshProUGUI compSurveyTitle, TextMeshProUGUI compSurveyInstr,
             TextMeshProUGUI completeText)
         {
             var so = new SerializedObject(flowUI);
@@ -557,6 +588,7 @@ namespace ARNavExperiment.EditorTools
             so.FindProperty("relocalizationUI").objectReferenceValue = relocUI;
             so.FindProperty("conditionTransitionPanel").objectReferenceValue = transition;
             so.FindProperty("surveyPromptPanel").objectReferenceValue = survey;
+            so.FindProperty("comparisonSurveyPanel").objectReferenceValue = comparisonSurvey;
             so.FindProperty("completionPanel").objectReferenceValue = completion;
 
             so.FindProperty("transitionTitleText").objectReferenceValue = transTitle;
@@ -566,6 +598,9 @@ namespace ARNavExperiment.EditorTools
             so.FindProperty("surveyTitleText").objectReferenceValue = surveyTitle;
             so.FindProperty("surveyInstructionText").objectReferenceValue = surveyInstr;
             so.FindProperty("surveyDoneButton").objectReferenceValue = surveyDone;
+
+            so.FindProperty("comparisonTitleText").objectReferenceValue = compSurveyTitle;
+            so.FindProperty("comparisonInstructionText").objectReferenceValue = compSurveyInstr;
 
             so.FindProperty("completionText").objectReferenceValue = completeText;
             so.ApplyModifiedProperties();

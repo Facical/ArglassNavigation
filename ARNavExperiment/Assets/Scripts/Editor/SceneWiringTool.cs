@@ -30,6 +30,7 @@ namespace ARNavExperiment.EditorTools
             WireExperimentHUD();
             WireExperimenterHUD();
             WireInfoCardManager();
+            WireMissionRefPanel();
             WirePOIDetailPanel();
             WireSpatialAnchorManager();
             WireAppModeSelector();
@@ -45,6 +46,9 @@ namespace ARNavExperiment.EditorTools
             WireGlassFlowUI();
             WireImageTrackingAligner();
             WireMappingModeRefUI();
+            WirePostConditionSurveyController();
+            WireHybridMissionOverlay();
+            WireComparisonSurveyUI();
 
             Debug.Log("[SceneWiring] 모든 참조 연결 완료!");
         }
@@ -278,6 +282,7 @@ namespace ARNavExperiment.EditorTools
             SetObjectRef(so, "verificationUI", FindComponent<Presentation.Glass.VerificationUI>());
             SetObjectRef(so, "confidenceRatingUI", FindComponent<Presentation.Glass.ConfidenceRatingUI>());
             SetObjectRef(so, "difficultyRatingUI", FindComponent<Presentation.Glass.DifficultyRatingUI>());
+            SetObjectRef(so, "hybridOverlay", FindComponent<Presentation.BeamPro.HybridMissionOverlay>());
             SetObjectRef(so, "arrowRenderer", FindComponent<Navigation.ARArrowRenderer>());
 
             so.ApplyModifiedProperties();
@@ -299,6 +304,18 @@ namespace ARNavExperiment.EditorTools
                     case "ConditionText": SetObjectRef(so, "conditionText", t); break;
                     case "MissionText": SetObjectRef(so, "missionText", t); break;
                     case "WPText": SetObjectRef(so, "waypointText", t); break;
+                    case "PhonePromptText": SetObjectRef(so, "phonePromptText", t); break;
+                }
+            }
+
+            // ForceArrival 버튼
+            var btns = panel.GetComponentsInChildren<Button>(true);
+            foreach (var btn in btns)
+            {
+                if (btn.gameObject.name == "ForceArrivalBtn")
+                {
+                    SetObjectRef(so, "forceArrivalButton", btn);
+                    break;
                 }
             }
 
@@ -348,10 +365,66 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireInfoCardManager()
         {
-            var mgr = Object.FindObjectOfType<Presentation.BeamPro.InfoCardManager>();
+            var mgr = Object.FindObjectOfType<Presentation.BeamPro.InfoCardManager>(true);
             if (mgr == null) return;
+            var panel = mgr.gameObject;
             var so = new SerializedObject(mgr);
+
+            var cardPanelT = FindChildRecursive(panel.transform, "CardPanel");
+            if (cardPanelT != null)
+                SetObjectRef(so, "cardPanel", cardPanelT.gameObject);
+
+            var texts = panel.GetComponentsInChildren<TMP_Text>(true);
+            foreach (var t in texts)
+            {
+                switch (t.gameObject.name)
+                {
+                    case "CardTitleText": SetObjectRef(so, "cardTitleText", t); break;
+                    case "CardContentText": SetObjectRef(so, "cardContentText", t); break;
+                }
+            }
+
+            var cardImgT = FindChildRecursive(panel.transform, "CardImage");
+            if (cardImgT != null)
+                SetObjectRef(so, "cardImage", cardImgT.GetComponent<Image>());
+
+            SetObjectRef(so, "closeButton", FindComponent<Button>("CloseButton"));
             SetObjectRef(so, "comparisonCard", FindComponent<Presentation.BeamPro.ComparisonCardUI>());
+
+            so.ApplyModifiedProperties();
+        }
+
+        private static void WireMissionRefPanel()
+        {
+            var panel = Object.FindObjectOfType<Presentation.BeamPro.MissionRefPanel>(true);
+            if (panel == null) return;
+            var go = panel.gameObject;
+            var so = new SerializedObject(panel);
+
+            var texts = go.GetComponentsInChildren<TMP_Text>(true);
+            foreach (var t in texts)
+            {
+                switch (t.gameObject.name)
+                {
+                    case "RefMissionIdText": SetObjectRef(so, "missionIdText", t); break;
+                    case "RefBriefingText": SetObjectRef(so, "briefingText", t); break;
+                    case "RefHintText": SetObjectRef(so, "hintText", t); break;
+                }
+            }
+
+            var containerT = FindChildRecursive(go.transform, "RefImagesContainer");
+            if (containerT != null)
+            {
+                var images = containerT.GetComponentsInChildren<Image>(true);
+                var prop = so.FindProperty("referenceImages");
+                if (prop != null)
+                {
+                    prop.arraySize = images.Length;
+                    for (int i = 0; i < images.Length; i++)
+                        prop.GetArrayElementAtIndex(i).objectReferenceValue = images[i];
+                }
+            }
+
             so.ApplyModifiedProperties();
         }
 
@@ -536,6 +609,13 @@ namespace ARNavExperiment.EditorTools
             var so = new SerializedObject(ctrl);
             SetObjectRef(so, "zoomButtonPanel", FindGO("ZoomButtonPanel"));
             SetObjectRef(so, "glassMapToggleButton", FindComponent<Button>("GlassMapToggleBtn"));
+            SetObjectRef(so, "glassForceArrivalButton", FindComponent<Button>("GlassForceArrivalBtn"));
+
+            var beamProGO = ctrl.gameObject;
+            var phoneBg = FindChildRecursive(beamProGO.transform, "PhoneBackground");
+            if (phoneBg != null)
+                SetObjectRef(so, "phoneBackground", phoneBg.gameObject);
+
             so.ApplyModifiedProperties();
         }
 
@@ -816,6 +896,22 @@ namespace ARNavExperiment.EditorTools
                 }
             }
 
+            // Comparison Panel
+            var compPanel = FindGO("GlassComparisonPanel");
+            SetObjectRef(so, "comparisonPanel", compPanel);
+            if (compPanel != null)
+            {
+                var texts = compPanel.GetComponentsInChildren<TextMeshProUGUI>(true);
+                foreach (var t in texts)
+                {
+                    switch (t.gameObject.name)
+                    {
+                        case "GF_ComparisonTitle": SetObjectRef(so, "comparisonTitleText", t); break;
+                        case "GF_ComparisonInstr": SetObjectRef(so, "comparisonInstrText", t); break;
+                    }
+                }
+            }
+
             // Completion Panel
             var completionPanel = FindGO("GlassCompletionPanel");
             SetObjectRef(so, "completionPanel", completionPanel);
@@ -874,6 +970,149 @@ namespace ARNavExperiment.EditorTools
             if (refStatus != null)
                 SetObjectRef(so, "referenceStatusText", refStatus);
 
+            so.ApplyModifiedProperties();
+        }
+
+        private static void WirePostConditionSurveyController()
+        {
+            var ctrl = Object.FindObjectOfType<Application.PostConditionSurveyController>(true);
+            if (ctrl == null) return;
+            var so = new SerializedObject(ctrl);
+
+            // 컨트롤러는 별도 GO, 패널은 ExperimentCanvas 하위에 위치
+            var panel = FindGO("PostConditionSurveyPanel");
+            if (panel == null)
+            {
+                Debug.LogWarning("[SceneWiring] PostConditionSurveyPanel not found");
+                return;
+            }
+            SetObjectRef(so, "surveyPanel", panel);
+
+            var texts = panel.GetComponentsInChildren<TextMeshProUGUI>(true);
+            foreach (var t in texts)
+            {
+                switch (t.gameObject.name)
+                {
+                    case "SectionHeaderText": SetObjectRef(so, "sectionHeaderText", t); break;
+                    case "ProgressText": SetObjectRef(so, "progressText", t); break;
+                    case "PromptText": SetObjectRef(so, "promptText", t); break;
+                    case "LowLabelText": SetObjectRef(so, "lowLabelText", t); break;
+                    case "HighLabelText": SetObjectRef(so, "highLabelText", t); break;
+                    case "CurrentRatingText": SetObjectRef(so, "currentRatingText", t); break;
+                }
+            }
+
+            var ratingBar = FindChildRecursive(panel.transform, "RatingButtons");
+            if (ratingBar != null)
+            {
+                var btns = ratingBar.GetComponentsInChildren<Button>(true);
+                var btnsProp = so.FindProperty("ratingButtons");
+                if (btnsProp != null)
+                {
+                    btnsProp.arraySize = btns.Length;
+                    for (int i = 0; i < btns.Length; i++)
+                        btnsProp.GetArrayElementAtIndex(i).objectReferenceValue = btns[i];
+                }
+            }
+
+            var allBtns = panel.GetComponentsInChildren<Button>(true);
+            foreach (var btn in allBtns)
+            {
+                if (btn.gameObject.name == "ConfirmRatingBtn")
+                {
+                    SetObjectRef(so, "confirmButton", btn);
+                    break;
+                }
+            }
+
+            so.ApplyModifiedProperties();
+        }
+
+        private static void WireHybridMissionOverlay()
+        {
+            var overlay = Object.FindObjectOfType<Presentation.BeamPro.HybridMissionOverlay>(true);
+            if (overlay == null) return;
+            var panel = overlay.gameObject;
+            var so = new SerializedObject(overlay);
+
+            SetObjectRef(so, "overlayPanel", panel);
+            SetObjectRef(so, "briefingContent",
+                FindChildRecursive(panel.transform, "OverlayBriefingContent")?.gameObject);
+            SetObjectRef(so, "verificationContent",
+                FindChildRecursive(panel.transform, "OverlayVerificationContent")?.gameObject);
+            SetObjectRef(so, "ratingContent",
+                FindChildRecursive(panel.transform, "OverlayRatingContent")?.gameObject);
+
+            // TMP 텍스트 (이름 기반)
+            var texts = panel.GetComponentsInChildren<TMP_Text>(true);
+            foreach (var t in texts)
+            {
+                switch (t.gameObject.name)
+                {
+                    case "OvMissionIdText": SetObjectRef(so, "missionIdText", t); break;
+                    case "OvBriefingText": SetObjectRef(so, "briefingText", t); break;
+                    case "OvQuestionText": SetObjectRef(so, "questionText", t); break;
+                    case "OvRatingTitleText": SetObjectRef(so, "ratingTitleText", t); break;
+                    case "OvRatingPromptText": SetObjectRef(so, "ratingPromptText", t); break;
+                    case "OvCurrentRatingText": SetObjectRef(so, "currentRatingText", t); break;
+                }
+            }
+
+            // 버튼 (이름 기반)
+            var allBtns = panel.GetComponentsInChildren<UnityEngine.UI.Button>(true);
+            foreach (var btn in allBtns)
+            {
+                switch (btn.gameObject.name)
+                {
+                    case "OvConfirmBtn": SetObjectRef(so, "confirmButton", btn); break;
+                    case "OvConfirmRatingBtn": SetObjectRef(so, "confirmRatingButton", btn); break;
+                }
+            }
+
+            // 답변 버튼 배열
+            var answersGO = FindChildRecursive(panel.transform, "OvAnswers");
+            if (answersGO != null)
+            {
+                var answerBtns = answersGO.GetComponentsInChildren<UnityEngine.UI.Button>(true);
+                var prop = so.FindProperty("answerButtons");
+                if (prop != null)
+                {
+                    prop.arraySize = answerBtns.Length;
+                    for (int i = 0; i < answerBtns.Length; i++)
+                        prop.GetArrayElementAtIndex(i).objectReferenceValue = answerBtns[i];
+                }
+            }
+
+            // 평점 버튼 배열
+            var ratingsGO = FindChildRecursive(panel.transform, "OvRatingButtons");
+            if (ratingsGO != null)
+            {
+                var ratingBtns = ratingsGO.GetComponentsInChildren<UnityEngine.UI.Button>(true);
+                var prop = so.FindProperty("ratingButtons");
+                if (prop != null)
+                {
+                    prop.arraySize = ratingBtns.Length;
+                    for (int i = 0; i < ratingBtns.Length; i++)
+                        prop.GetArrayElementAtIndex(i).objectReferenceValue = ratingBtns[i];
+                }
+            }
+
+            so.ApplyModifiedProperties();
+            Debug.Log($"[SceneWiringTool] HybridMissionOverlay wired — " +
+                $"answers={answersGO?.GetComponentsInChildren<UnityEngine.UI.Button>(true)?.Length ?? 0}, " +
+                $"ratings={ratingsGO?.GetComponentsInChildren<UnityEngine.UI.Button>(true)?.Length ?? 0}");
+        }
+
+        private static void WireComparisonSurveyUI()
+        {
+            var ui = Object.FindObjectOfType<Presentation.BeamPro.ComparisonSurveyUI>(true);
+            if (ui == null) return;
+            var panel = ui.gameObject;
+            var so = new SerializedObject(ui);
+            SetObjectRef(so, "surveyPanel", panel);
+
+            // Text fields are wired by name from SceneSetupTool or manually
+            // ComparisonSurveyUI uses runtime self-wiring via SerializeField
             so.ApplyModifiedProperties();
         }
 

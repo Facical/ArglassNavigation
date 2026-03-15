@@ -9,9 +9,13 @@ namespace ARNavExperiment.Logging
         public static HeadTracker Instance { get; private set; }
 
         public Vector3 CurrentRotation { get; private set; }
+        public Vector3 CurrentPosition { get; private set; }
+        public float AngularVelocityYaw { get; private set; }
 
         [SerializeField] private float sampleRate = 10f;
         private float nextSampleTime;
+        private float previousYaw;
+        private bool hasPreviousYaw;
 
         private void Awake()
         {
@@ -22,18 +26,39 @@ namespace ARNavExperiment.Logging
         private void Update()
         {
             if (Time.time < nextSampleTime) return;
-            nextSampleTime = Time.time + (1f / sampleRate);
+            float dt = 1f / sampleRate;
+            nextSampleTime = Time.time + dt;
+
+            Vector3 position = Vector3.zero;
+            Quaternion rotation = Quaternion.identity;
+            bool gotXR = false;
 
             var devices = new List<InputDevice>();
             InputDevices.GetDevicesAtXRNode(XRNode.Head, devices);
-            if (devices.Count > 0 && devices[0].TryGetFeatureValue(CommonUsages.deviceRotation, out Quaternion rotation))
+            if (devices.Count > 0)
             {
-                CurrentRotation = rotation.eulerAngles;
+                if (devices[0].TryGetFeatureValue(CommonUsages.deviceRotation, out rotation))
+                    gotXR = true;
+                devices[0].TryGetFeatureValue(CommonUsages.devicePosition, out position);
             }
-            else if (Camera.main != null)
+
+            if (!gotXR && Camera.main != null)
             {
-                CurrentRotation = Camera.main.transform.eulerAngles;
+                rotation = Camera.main.transform.rotation;
+                position = Camera.main.transform.position;
             }
+
+            CurrentRotation = rotation.eulerAngles;
+            CurrentPosition = position;
+
+            float currentYaw = CurrentRotation.y;
+            if (hasPreviousYaw)
+            {
+                float deltaYaw = Mathf.DeltaAngle(previousYaw, currentYaw);
+                AngularVelocityYaw = deltaYaw / dt;
+            }
+            previousYaw = currentYaw;
+            hasPreviousYaw = true;
         }
     }
 }

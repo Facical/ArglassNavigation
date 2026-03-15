@@ -98,8 +98,11 @@ namespace ARNavExperiment.Presentation.Experimenter
             if (headingOffsetText != null && Navigation.WaypointManager.Instance != null)
             {
                 var wpm = Navigation.WaypointManager.Instance;
-                headingOffsetText.text = $"H:{wpm.HeadingCalibrationOffset:F0}\u00b0({wpm.HeadingSource}) " +
+                bool weak = wpm.IsWeakCalibration();
+                headingOffsetText.text = (weak ? "[!] " : "") +
+                    $"H:{wpm.HeadingCalibrationOffset:F0}\u00b0({wpm.HeadingSource}) " +
                     $"C:{wpm.CalibrationSource}";
+                headingOffsetText.color = weak ? Color.red : Color.white;
             }
 
             // 미션 버튼 라벨 동적 업데이트

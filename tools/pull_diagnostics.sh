@@ -15,8 +15,10 @@ set -euo pipefail
 PACKAGE="com.KIT_HCI.ARNavExperiment"
 DIAG_DIR="/storage/emulated/0/Android/data/${PACKAGE}/files/diagnostics/"
 RAW_DIR="/storage/emulated/0/Android/data/${PACKAGE}/files/data/raw/"
+CALIB_DIR="/storage/emulated/0/Android/data/${PACKAGE}/files/calibration/"
 LOCAL_DIAG="data/diagnostics"
 LOCAL_RAW="data/raw"
+LOCAL_CALIB="data/calibration"
 
 # 선택적 디바이스 시리얼
 DEVICE_ARG=""
@@ -102,7 +104,32 @@ else
     fi
 fi
 
+# --- 위치 보정 로그 전송 ---
+echo ""
+echo "=== 위치 보정 로그 (PositionCalibrationLog) ==="
+CALIB_LIST=$(adb $DEVICE_ARG shell "ls -la ${CALIB_DIR} 2>/dev/null" || true)
+if [ -z "$CALIB_LIST" ] || echo "$CALIB_LIST" | grep -q "No such file"; then
+    echo "위치 보정 로그가 없습니다."
+else
+    echo "$CALIB_LIST"
+    mkdir -p "$LOCAL_CALIB"
+    echo ""
+    echo "=== 보정 로그 전송 중 ==="
+    adb $DEVICE_ARG pull "$CALIB_DIR" "$LOCAL_CALIB/"
+    echo ""
+    echo "보정 로그 전송 완료: ./${LOCAL_CALIB}/"
+
+    # 최신 JSON 미리보기
+    LATEST_CALIB=$(ls -t "$LOCAL_CALIB"/*.json 2>/dev/null | head -1)
+    if [ -n "$LATEST_CALIB" ]; then
+        echo ""
+        echo "=== 최신 보정 로그: $(basename "$LATEST_CALIB") ==="
+        cat "$LATEST_CALIB"
+    fi
+fi
+
 echo ""
 echo "=== 완료 ==="
 echo "진단 로그: ./${LOCAL_DIAG}/"
 echo "이벤트 CSV: ./${LOCAL_RAW}/"
+echo "보정 로그: ./${LOCAL_CALIB}/"

@@ -40,7 +40,7 @@ namespace ARNavExperiment.Navigation
             new ReferencePoint("REF_B104", "B104", 36, 51),
             new ReferencePoint("REF_B103", "B103", 36, 57),
             new ReferencePoint("REF_B102", "B102", 36, 63),
-            new ReferencePoint("REF_B101", "B101", 36, 69),
+            new ReferencePoint("REF_B101", "B101", 36, 66),
             // 동쪽 복도 동쪽 벽 (x=39) — 4개
             new ReferencePoint("REF_B119", "B119", 39, 24),
             new ReferencePoint("REF_B118", "B118", 39, 33),

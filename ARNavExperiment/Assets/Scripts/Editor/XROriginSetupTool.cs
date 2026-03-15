@@ -175,6 +175,13 @@ namespace ARNavExperiment.EditorTools
             // ARSessionOrigin은 XROrigin과 중복 → 추가하지 않음 (deprecated)
             if (xrOriginGO.GetComponent<UnityEngine.XR.ARFoundation.ARAnchorManager>() == null)
                 xrOriginGO.AddComponent<UnityEngine.XR.ARFoundation.ARAnchorManager>();
+
+            // === AR Tracked Image Manager (Image Tracking 보정용) ===
+            if (xrOriginGO.GetComponent<UnityEngine.XR.ARFoundation.ARTrackedImageManager>() == null)
+            {
+                var trackedImageMgr = xrOriginGO.AddComponent<UnityEngine.XR.ARFoundation.ARTrackedImageManager>();
+                trackedImageMgr.enabled = false; // ImageTrackingAligner.StartTracking()에서 활성화
+            }
 #endif
 
             // === XREAL Session Manager ===
@@ -371,6 +378,8 @@ namespace ARNavExperiment.EditorTools
             addedCount += AddBindingIfMissing(actionAsset, "XRI LeftHand Interaction", "Select Value", "<XREALHandTracking>{LeftHand}/pinchStrengthIndex");
             addedCount += AddBindingIfMissing(actionAsset, "XRI LeftHand Interaction", "UI Press", "<XREALHandTracking>{LeftHand}/indexPressed");
             addedCount += AddBindingIfMissing(actionAsset, "XRI LeftHand Interaction", "UI Press Value", "<XREALHandTracking>{LeftHand}/pinchStrengthIndex");
+            addedCount += AddBindingIfMissing(actionAsset, "XRI LeftHand", "Is Tracked", "<XREALHandTracking>{LeftHand}/isTracked");
+            addedCount += AddBindingIfMissing(actionAsset, "XRI LeftHand", "Tracking State", "<XREALHandTracking>{LeftHand}/trackingState");
 
             addedCount += AddBindingIfMissing(actionAsset, "XRI RightHand", "Aim Position", "<XREALHandTracking>{RightHand}/pointerPosition");
             addedCount += AddBindingIfMissing(actionAsset, "XRI RightHand", "Aim Rotation", "<XREALHandTracking>{RightHand}/pointerRotation");
@@ -378,6 +387,8 @@ namespace ARNavExperiment.EditorTools
             addedCount += AddBindingIfMissing(actionAsset, "XRI RightHand Interaction", "Select Value", "<XREALHandTracking>{RightHand}/pinchStrengthIndex");
             addedCount += AddBindingIfMissing(actionAsset, "XRI RightHand Interaction", "UI Press", "<XREALHandTracking>{RightHand}/indexPressed");
             addedCount += AddBindingIfMissing(actionAsset, "XRI RightHand Interaction", "UI Press Value", "<XREALHandTracking>{RightHand}/pinchStrengthIndex");
+            addedCount += AddBindingIfMissing(actionAsset, "XRI RightHand", "Is Tracked", "<XREALHandTracking>{RightHand}/isTracked");
+            addedCount += AddBindingIfMissing(actionAsset, "XRI RightHand", "Tracking State", "<XREALHandTracking>{RightHand}/trackingState");
 
             if (addedCount > 0)
             {

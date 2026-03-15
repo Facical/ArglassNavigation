@@ -70,11 +70,73 @@ namespace ARNavExperiment.Presentation.Shared
             if (LocalizationManager.Instance != null)
                 LocalizationManager.Instance.OnLanguageChanged += OnLanguageChanged;
 
+            // Idle 복귀 감지
+            if (ExperimentManager.Instance != null)
+                ExperimentManager.Instance.OnStateChanged += OnExperimentStateChanged;
+
             RefreshLocalization();
             UpdateSetButtonColors();
 
             if (glassModeStatus != null)
                 glassModeStatus.ShowModeSelection();
+        }
+
+        private void OnExperimentStateChanged(ExperimentState state)
+        {
+            if (state != ExperimentState.Idle) return;
+
+            var em = ExperimentManager.Instance;
+            if (em == null || string.IsNullOrEmpty(em.FirstCondition)) return;
+
+            // 1차 완료 후 Idle 복귀 — 2차 실행 준비
+            Debug.Log("[AppModeSelector] Idle 복귀 — 2차 실행 준비");
+
+            // PID 유지
+            if (participantIdInput != null && em.session != null)
+                participantIdInput.text = em.session.participantId;
+
+            // 완료된 조건 버튼 비활성화
+            if (em.FirstCondition == "glass_only" && glassOnlyButton != null)
+            {
+                glassOnlyButton.interactable = false;
+                var img = glassOnlyButton.GetComponent<UnityEngine.UI.Image>();
+                if (img != null) img.color = new Color(0.25f, 0.25f, 0.25f, 0.6f);
+                var txt = glassOnlyButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null) txt.text = string.Format(
+                    LocalizationManager.Get("appmode.condition_done"),
+                    LocalizationManager.Get("appmode.glass_only_btn"));
+            }
+            else if (em.FirstCondition == "hybrid" && hybridButton != null)
+            {
+                hybridButton.interactable = false;
+                var img = hybridButton.GetComponent<UnityEngine.UI.Image>();
+                if (img != null) img.color = new Color(0.25f, 0.25f, 0.25f, 0.6f);
+                var txt = hybridButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null) txt.text = string.Format(
+                    LocalizationManager.Get("appmode.condition_done"),
+                    LocalizationManager.Get("appmode.hybrid_btn"));
+            }
+
+            // 반대 세트 자동 선택
+            if (em.FirstMissionSet == "Set1")
+            {
+                selectedMissionSet = "Set2";
+                UpdateSetButtonColors();
+            }
+            else
+            {
+                selectedMissionSet = "Set1";
+                UpdateSetButtonColors();
+            }
+
+            // 모드 선택 패널 표시
+            if (modeSelectorPanel != null)
+                modeSelectorPanel.SetActive(true);
+
+            if (glassModeStatus != null)
+                glassModeStatus.ShowModeSelection();
+
+            RefreshLocalization();
         }
 
         // === Condition Selection ===
@@ -281,6 +343,9 @@ namespace ARNavExperiment.Presentation.Shared
         {
             if (LocalizationManager.Instance != null)
                 LocalizationManager.Instance.OnLanguageChanged -= OnLanguageChanged;
+
+            if (ExperimentManager.Instance != null)
+                ExperimentManager.Instance.OnStateChanged -= OnExperimentStateChanged;
         }
     }
 }

@@ -37,6 +37,9 @@ namespace ARNavExperiment.Mission
         [SerializeField] private ConfidenceRatingUI confidenceRatingUI;
         [SerializeField] private DifficultyRatingUI difficultyRatingUI;
 
+        [Header("Hybrid UI (BeamPro)")]
+        [SerializeField] private HybridMissionOverlay hybridOverlay;
+
         [Header("Navigation")]
         [SerializeField] private ARArrowRenderer arrowRenderer;
 
@@ -52,6 +55,8 @@ namespace ARNavExperiment.Mission
 
         public bool HasLoadedMissions => activeMissions != null && activeMissions.Count > 0;
         public bool IsMissionActive => CurrentState != MissionState.Idle && CurrentState != MissionState.Scored;
+
+        private bool IsHybridMode => ConditionController.Instance?.CurrentCondition == ExperimentCondition.Hybrid;
 
         public event System.Action<MissionData> OnMissionStarted;
         public event System.Action<MissionData, bool> OnMissionCompleted;
@@ -153,6 +158,7 @@ namespace ARNavExperiment.Mission
         {
             if (CurrentState != MissionState.Briefing) return;
             briefingUI?.Hide();
+            hybridOverlay?.Hide();
             DomainEventBus.Instance?.Publish(new BriefingForced(CurrentMission?.missionId ?? ""));
             TransitionTo(MissionState.Navigation);
         }
@@ -165,6 +171,11 @@ namespace ARNavExperiment.Mission
             if (CurrentState != MissionState.Navigation) return;
             arrowRenderer?.Hide();
             DomainEventBus.Instance?.Publish(new ArrivalForced(CurrentMission?.missionId ?? ""));
+
+            // WaypointManager를 타겟 WP 이후로 전진 — 후속 미션의 거리/방향 계산 정상화
+            if (CurrentMission != null)
+                WaypointManager.Instance?.ForceAdvancePastWaypoint(CurrentMission.targetWaypointId);
+
             TransitionTo(MissionState.Arrival);
         }
 
@@ -182,6 +193,7 @@ namespace ARNavExperiment.Mission
             verificationUI?.Hide();
             confidenceRatingUI?.Hide();
             difficultyRatingUI?.Hide();
+            hybridOverlay?.Hide();
             arrowRenderer?.Hide();
 
             // 트리거 해제
@@ -270,10 +282,12 @@ namespace ARNavExperiment.Mission
             bool needsExperimentRaycaster = state != MissionState.Navigation;
             glassCanvas.SetRaycasterEnabled(needsExperimentRaycaster);
 
-            // GlassOnly WorldSpace에서 Briefing/Verification/Rating 중 BeamPro 숨김
-            bool showBeamPro = state == MissionState.Navigation || state == MissionState.Idle;
-            if (beamProCanvasCtrl != null)
+            // GlassOnly에서만 BeamPro 가시성 제어 (Hybrid에서는 HybridMissionOverlay가 허브 표시/숨김 담당)
+            if (!IsHybridMode && beamProCanvasCtrl != null)
+            {
+                bool showBeamPro = state == MissionState.Navigation || state == MissionState.Idle;
                 beamProCanvasCtrl.SetGlassVisibility(showBeamPro);
+            }
         }
 
         private void ShowBriefing()
@@ -284,7 +298,11 @@ namespace ARNavExperiment.Mission
                 CurrentMission.type.ToString(),
                 CurrentMission.briefingText ?? ""));
 
-            if (briefingUI != null)
+            if (IsHybridMode && hybridOverlay != null)
+            {
+                hybridOverlay.ShowBriefing(CurrentMission, () => TransitionTo(MissionState.Navigation));
+            }
+            else if (briefingUI != null)
             {
                 briefingUI.Show(CurrentMission, () => TransitionTo(MissionState.Navigation));
             }
@@ -334,7 +352,11 @@ namespace ARNavExperiment.Mission
 
         private void ShowVerification()
         {
-            if (verificationUI != null)
+            if (IsHybridMode && hybridOverlay != null)
+            {
+                hybridOverlay.ShowVerification(CurrentMission, OnVerificationAnswered);
+            }
+            else if (verificationUI != null)
             {
                 verificationUI.Show(CurrentMission, OnVerificationAnswered);
             }
@@ -358,13 +380,17 @@ namespace ARNavExperiment.Mission
 
         private void ShowConfidenceRating()
         {
-            if (confidenceRatingUI != null)
+            string prompt = LocalizationManager.Get("confidence.prompt");
+            if (IsHybridMode && hybridOverlay != null)
             {
-                confidenceRatingUI.Show("How confident are you in your answer?\n(1: Not at all ~ 7: Very confident)", OnConfidenceRated);
+                hybridOverlay.ShowConfidenceRating(prompt, OnConfidenceRated);
+            }
+            else if (confidenceRatingUI != null)
+            {
+                confidenceRatingUI.Show(prompt, OnConfidenceRated);
             }
             else
             {
-                // UI 없으면 건너뛰기
                 TransitionTo(MissionState.Scored);
             }
         }
@@ -379,7 +405,11 @@ namespace ARNavExperiment.Mission
 
         private void ShowDifficultyRating()
         {
-            if (difficultyRatingUI != null)
+            if (IsHybridMode && hybridOverlay != null)
+            {
+                hybridOverlay.ShowDifficultyRating(CurrentMission.missionId, OnDifficultyRated);
+            }
+            else if (difficultyRatingUI != null)
             {
                 difficultyRatingUI.Show(CurrentMission.missionId, OnDifficultyRated);
             }
@@ -398,9 +428,9 @@ namespace ARNavExperiment.Mission
 
         private void CompleteMission()
         {
-            bool correct = false;
-            if (verificationUI != null)
-                correct = verificationUI.LastAnswerCorrect;
+            bool correct = IsHybridMode && hybridOverlay != null
+                ? hybridOverlay.LastAnswerCorrect
+                : (verificationUI?.LastAnswerCorrect ?? false);
 
             float duration = Time.time - missionStartTime;
             DomainEventBus.Instance?.Publish(new MissionCompleted(

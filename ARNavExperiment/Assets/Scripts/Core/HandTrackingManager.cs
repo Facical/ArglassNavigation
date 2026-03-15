@@ -263,6 +263,10 @@ namespace ARNavExperiment.Core
             EnsureControllerActionsEnabled(rightHandRay, "Right");
             EnsureControllerActionsEnabled(leftHandRay, "Left");
 #endif
+#if XR_INTERACTION && !UNITY_EDITOR && ENABLE_INPUT_SYSTEM
+            // Enable 후에도 isTracked/trackingState가 resolve 안 된 경우 인라인 교체
+            FixUnboundTrackingActions();
+#endif
         }
 
 #if XR_INTERACTION && !UNITY_EDITOR
@@ -356,6 +360,53 @@ namespace ARNavExperiment.Core
                     $"<XREALHandTracking>{hand}/pinchStrengthIndex"));
 
             Debug.Log($"[HandTracking] {handedness}: 인라인 XREAL 바인딩 교체 완료 (8개 액션)");
+        }
+
+        /// <summary>
+        /// Enable 상태에서도 isTracked/trackingState controls가 0이면 바인딩 미해석 —
+        /// 인라인 XREAL 바인딩으로 교체. DetectAndFixEmptyBindings()는 positionAction.bindings.Count == 0
+        /// 일 때만 작동하므로, 바인딩은 있지만 XREAL 디바이스에 resolve 안 되는 경우를 잡지 못함.
+        /// </summary>
+        private void FixUnboundTrackingActions()
+        {
+            FixTrackingActionsForHand(rightHandRay, "RightHand");
+            FixTrackingActionsForHand(leftHandRay, "LeftHand");
+        }
+
+        private static void FixTrackingActionsForHand(GameObject handRayGO, string handedness)
+        {
+            if (handRayGO == null) return;
+
+            var controller = handRayGO.GetComponent<UnityEngine.XR.Interaction.Toolkit.ActionBasedController>();
+            if (controller == null) return;
+
+            string hand = "{" + handedness + "}";
+            bool anyFixed = false;
+
+            // isTrackedAction: enabled 상태에서 controls.Count == 0 → 바인딩이 XREAL 디바이스에 resolve 안 됨
+            var isTracked = controller.isTrackedAction.action;
+            if (isTracked == null || (isTracked.enabled && isTracked.controls.Count == 0))
+            {
+                var newAction = new InputAction("IsTracked", InputActionType.Button,
+                    $"<XREALHandTracking>{hand}/isTracked");
+                newAction.Enable();
+                controller.isTrackedAction = new InputActionProperty(newAction);
+                anyFixed = true;
+            }
+
+            // trackingStateAction 동일 처리
+            var trackingState = controller.trackingStateAction.action;
+            if (trackingState == null || (trackingState.enabled && trackingState.controls.Count == 0))
+            {
+                var newAction = new InputAction("TrackingState", InputActionType.Value,
+                    $"<XREALHandTracking>{hand}/trackingState");
+                newAction.Enable();
+                controller.trackingStateAction = new InputActionProperty(newAction);
+                anyFixed = true;
+            }
+
+            if (anyFixed)
+                Debug.LogWarning($"[HandTracking] {handedness}: isTracked/trackingState 바인딩 미해석 — 인라인 XREAL 바인딩으로 교체");
         }
 #endif
 

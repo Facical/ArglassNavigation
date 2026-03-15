@@ -19,7 +19,7 @@ MonoBehaviour:
     Maritime Lab + LGU+ Smart Factory Center
   capacity: 2
   equipment: []
-  mapPosition: {x: 36, y: 69}
+  mapPosition: {x: 36, y: 66}
   icon: {fileID: 0}
   displayNameKo: "B101 \uC774\uC7AC\uBBFC \uAD50\uC218 \uC5F0\uAD6C\uC2E4"
   descriptionKo: "\uC774\uC7AC\uBBFC \uAD50\uC218 \uC5F0\uAD6C\uC2E4 (\uCEF4\uD4E8\uD130\uACF5\uD559\uACFC)

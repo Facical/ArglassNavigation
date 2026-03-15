@@ -40,6 +40,15 @@ namespace ARNavExperiment.Navigation
         private string currentTriggerId;
         private bool triggerCompleted;
 
+        /// <summary>현재 활성 트리거 ID (없으면 null)</summary>
+        public string ActiveTriggerId => activeTrigger != null ? currentTriggerId : null;
+
+        /// <summary>현재 활성 트리거 타입 문자열 (없으면 null)</summary>
+        public string ActiveTriggerType => activeTrigger != null ? currentTriggerType.ToString() : null;
+
+        /// <summary>현재 트리거 시작 시간</summary>
+        public float TriggerStartTime => triggerStartTime;
+
         private void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }

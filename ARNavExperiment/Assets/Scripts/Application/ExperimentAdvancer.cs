@@ -59,6 +59,7 @@ namespace ARNavExperiment.Application
         private void OnAllMissionsCompleted(AllMissionsCompleted e)
         {
             Debug.Log($"[ExperimentAdvancer] All missions completed for route {e.RouteId} — advancing experiment state");
+            DomainEventBus.Instance?.Publish(new RouteCompleted(e.RouteId));
             ExperimentManager.Instance?.AdvanceState();
         }
     }

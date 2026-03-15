@@ -44,7 +44,8 @@ analysis/output/
 debug_captures/
 
 # Data
-data/raw/*.csv
+data/raw/
+data/calibration/
 data/processed/
 data/diagnostics/
 data/frames/

@@ -115,6 +115,10 @@ namespace ARNavExperiment.EditorTools
             var glassCap = CreateGameObject("GlassViewCapture", system.transform);
             glassCap.AddComponent<Logging.GlassViewCapture>();
 
+            // PositionCalibrationLog (도착 시 SLAM 좌표 로깅)
+            var posCalLog = CreateGameObject("PositionCalibrationLog", system.transform);
+            posCalLog.AddComponent<DebugTools.PositionCalibrationLog>();
+
             // XREAL NotificationListener (배터리/온도/SLAM/에러 경고)
             var notifPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Packages/com.xreal.xr/Runtime/Prefabs/NotificationListener.prefab");
@@ -149,6 +153,12 @@ namespace ARNavExperiment.EditorTools
             var expAdvancer = CreateGameObject("ExperimentAdvancer", appLayer.transform);
             expAdvancer.AddComponent<Application.ExperimentAdvancer>();
 
+            var postSurveyCtrl = CreateGameObject("PostConditionSurveyController", appLayer.transform);
+            postSurveyCtrl.AddComponent<Application.PostConditionSurveyController>();
+
+            var compSurveyCtrl = CreateGameObject("ComparisonSurveyController", appLayer.transform);
+            compSurveyCtrl.AddComponent<Application.ComparisonSurveyController>();
+
             // --- Logging ---
             var logging = CreateGameObject("--- Logging ---", null);
 
@@ -160,6 +170,24 @@ namespace ARNavExperiment.EditorTools
 
             var deviceTracker = CreateGameObject("DeviceStateTracker", logging.transform);
             deviceTracker.AddComponent<Logging.DeviceStateTracker>();
+
+            var headPoseTrace = CreateGameObject("HeadPoseTraceLogger", logging.transform);
+            headPoseTrace.AddComponent<Logging.HeadPoseTraceLogger>();
+
+            var navTrace = CreateGameObject("NavigationTraceLogger", logging.transform);
+            navTrace.AddComponent<Logging.NavigationTraceLogger>();
+
+            var anchorReloc = CreateGameObject("AnchorRelocLogger", logging.transform);
+            anchorReloc.AddComponent<Logging.AnchorRelocLogger>();
+
+            var beamSegment = CreateGameObject("BeamSegmentLogger", logging.transform);
+            beamSegment.AddComponent<Logging.BeamSegmentLogger>();
+
+            var sysHealth = CreateGameObject("SystemHealthLogger", logging.transform);
+            sysHealth.AddComponent<Logging.SystemHealthLogger>();
+
+            var sessionMeta = CreateGameObject("SessionMetaWriter", logging.transform);
+            sessionMeta.AddComponent<Logging.SessionMetaWriter>();
         }
 
         private static void CreateARSystem()
@@ -199,6 +227,17 @@ namespace ARNavExperiment.EditorTools
             hub.AddComponent<Presentation.BeamPro.BeamProHubController>();
             hub.AddComponent<Presentation.Shared.BeamProUIAdapter>();
             hub.AddComponent<Presentation.BeamPro.BeamProCanvasController>();
+
+            // Hybrid 모드 스테레오 미러 차단용 불투명 배경
+            var phoneBg = CreateGameObject("PhoneBackground", beamProCanvas.transform);
+            var phoneBgRect = phoneBg.AddComponent<RectTransform>();
+            phoneBgRect.anchorMin = Vector2.zero;
+            phoneBgRect.anchorMax = Vector2.one;
+            phoneBgRect.offsetMin = Vector2.zero;
+            phoneBgRect.offsetMax = Vector2.zero;
+            var phoneBgImg = phoneBg.AddComponent<Image>();
+            phoneBgImg.color = new Color(0.06f, 0.06f, 0.10f, 1f);
+            phoneBg.transform.SetAsFirstSibling();
 
             // Locked Screen
             var locked = CreatePanel("LockedScreen", beamProCanvas.transform, new Color(0.1f, 0.1f, 0.1f, 0.95f));
@@ -291,13 +330,113 @@ namespace ARNavExperiment.EditorTools
             if (mtImg != null) mtImg.color = new Color(0.2f, 0.4f, 0.7f, 0.9f);
             mapToggleBtn.gameObject.SetActive(false); // BeamProCanvasController가 GlassOnly에서 활성화
 
+            // GlassOnly ForceArrival Button (Map 토글 옆, 오른쪽)
+            var forceArrBtn = CreateUIButton("GlassForceArrivalBtn", contentAreaGO.transform, "도착");
+            var faRect = forceArrBtn.GetComponent<RectTransform>();
+            faRect.anchorMin = new Vector2(0.20f, 0.02f);
+            faRect.anchorMax = new Vector2(0.36f, 0.10f);
+            faRect.offsetMin = Vector2.zero;
+            faRect.offsetMax = Vector2.zero;
+            var faImg = forceArrBtn.GetComponent<Image>();
+            if (faImg != null) faImg.color = new Color(0.15f, 0.45f, 0.15f, 0.9f);
+            forceArrBtn.gameObject.SetActive(false); // BeamProCanvasController가 Navigation에서 활성화
+
             var infoPanel = CreatePanel("InfoCardPanel", contentAreaGO.transform, new Color(0, 0, 0, 0));
             infoPanel.AddComponent<Presentation.BeamPro.InfoCardManager>();
             infoPanel.SetActive(false);
 
+            // InfoCardPanel 자식: CardPanel (제목+내용+이미지+닫기)
+            var cardPanel = CreatePanel("CardPanel", infoPanel.transform, new Color(0.12f, 0.12f, 0.18f, 0.95f));
+            var cardLayout = cardPanel.AddComponent<VerticalLayoutGroup>();
+            cardLayout.padding = new RectOffset(30, 30, 20, 20);
+            cardLayout.spacing = 12;
+            cardLayout.childForceExpandWidth = true;
+            cardLayout.childForceExpandHeight = false;
+            cardLayout.childAlignment = TextAnchor.UpperCenter;
+            cardPanel.SetActive(false);
+
+            var cardTitle = CreateTMPText("CardTitleText", cardPanel.transform, "");
+            cardTitle.fontSize = BP_FS_TITLE;
+            cardTitle.fontStyle = TMPro.FontStyles.Bold;
+            cardTitle.alignment = TextAlignmentOptions.Center;
+            var cardTitleLE = cardTitle.gameObject.AddComponent<LayoutElement>();
+            cardTitleLE.minHeight = 50;
+
+            var cardContent = CreateTMPText("CardContentText", cardPanel.transform, "");
+            cardContent.fontSize = BP_FS_BODY;
+            cardContent.alignment = TextAlignmentOptions.TopLeft;
+            var cardContentLE = cardContent.gameObject.AddComponent<LayoutElement>();
+            cardContentLE.flexibleHeight = 1;
+
+            var cardImageGO = CreateGameObject("CardImage", cardPanel.transform);
+            var cardImageRect = cardImageGO.AddComponent<RectTransform>();
+            cardImageRect.sizeDelta = new Vector2(400, 300);
+            var cardImg = cardImageGO.AddComponent<Image>();
+            cardImg.preserveAspect = true;
+            cardImg.color = Color.white;
+            var cardImageLE = cardImageGO.AddComponent<LayoutElement>();
+            cardImageLE.preferredHeight = 300;
+            cardImageLE.flexibleWidth = 1;
+            cardImageGO.SetActive(false);
+
+            var closeBtn = CreateUIButton("CloseButton", cardPanel.transform, "Close");
+            var closeBtnRect = closeBtn.GetComponent<RectTransform>();
+            closeBtnRect.sizeDelta = new Vector2(200, 60);
+            var closeBtnLE = closeBtn.gameObject.AddComponent<LayoutElement>();
+            closeBtnLE.minHeight = 60;
+            closeBtnLE.preferredWidth = 200;
+
             var missionRefPanel = CreatePanel("MissionRefPanel", contentAreaGO.transform, new Color(0, 0, 0, 0));
             missionRefPanel.AddComponent<Presentation.BeamPro.MissionRefPanel>();
             missionRefPanel.SetActive(false);
+
+            // MissionRefPanel 자식: 미션ID, 브리핑, 힌트, 참조이미지
+            var mRefLayout = missionRefPanel.AddComponent<VerticalLayoutGroup>();
+            mRefLayout.padding = new RectOffset(30, 30, 20, 20);
+            mRefLayout.spacing = 12;
+            mRefLayout.childForceExpandWidth = true;
+            mRefLayout.childForceExpandHeight = false;
+            mRefLayout.childAlignment = TextAnchor.UpperCenter;
+
+            var refMissionId = CreateTMPText("RefMissionIdText", missionRefPanel.transform, "");
+            refMissionId.fontSize = BP_FS_TITLE;
+            refMissionId.fontStyle = TMPro.FontStyles.Bold;
+            refMissionId.alignment = TextAlignmentOptions.Center;
+            var refMissionIdLE = refMissionId.gameObject.AddComponent<LayoutElement>();
+            refMissionIdLE.minHeight = 50;
+
+            var refBriefing = CreateTMPText("RefBriefingText", missionRefPanel.transform, "");
+            refBriefing.fontSize = BP_FS_BODY;
+            refBriefing.alignment = TextAlignmentOptions.TopLeft;
+            var refBriefingLE = refBriefing.gameObject.AddComponent<LayoutElement>();
+            refBriefingLE.flexibleHeight = 1;
+
+            var refHint = CreateTMPText("RefHintText", missionRefPanel.transform, "");
+            refHint.fontSize = BP_FS_BODY;
+            refHint.color = new Color(1f, 0.85f, 0.2f, 1f); // 노란색 힌트
+            refHint.alignment = TextAlignmentOptions.TopLeft;
+            var refHintLE = refHint.gameObject.AddComponent<LayoutElement>();
+            refHintLE.minHeight = 40;
+
+            var refImagesContainer = CreateGameObject("RefImagesContainer", missionRefPanel.transform);
+            refImagesContainer.AddComponent<RectTransform>();
+            var refImgLayout = refImagesContainer.AddComponent<HorizontalLayoutGroup>();
+            refImgLayout.spacing = 10;
+            refImgLayout.childForceExpandWidth = true;
+            refImgLayout.childForceExpandHeight = true;
+            var refImgContainerLE = refImagesContainer.AddComponent<LayoutElement>();
+            refImgContainerLE.preferredHeight = 200;
+            refImgContainerLE.flexibleWidth = 1;
+
+            for (int ri = 0; ri < 3; ri++)
+            {
+                var refImgGO = CreateGameObject($"RefImage_{ri}", refImagesContainer.transform);
+                refImgGO.AddComponent<RectTransform>();
+                var refImg = refImgGO.AddComponent<Image>();
+                refImg.preserveAspect = true;
+                refImg.color = Color.white;
+                refImgGO.SetActive(false);
+            }
 
             // POI Detail Panel (overlay) → ContentArea 자식
             var poiDetail = CreatePanel("POIDetailPanel", contentAreaGO.transform, new Color(0.15f, 0.15f, 0.2f, 0.95f));
@@ -309,9 +448,172 @@ namespace ARNavExperiment.EditorTools
             comparison.AddComponent<Presentation.BeamPro.ComparisonCardUI>();
             comparison.SetActive(false);
 
+            // Comparison Survey Full Panel → ContentArea 자식
+            var compSurveyFullPanel = CreatePanel("ComparisonSurveyFullPanel", contentAreaGO.transform,
+                new Color(0.08f, 0.08f, 0.12f, 0.98f));
+            compSurveyFullPanel.AddComponent<Presentation.BeamPro.ComparisonSurveyUI>();
+            compSurveyFullPanel.SetActive(false);
+
+            // Hybrid Mission Overlay → ContentArea 자식
+            CreateHybridMissionOverlay(contentAreaGO.transform);
+
             // BeamPro Event Logger
             var bpLogger = CreateGameObject("BeamProEventLogger", beamProCanvas.transform);
             bpLogger.AddComponent<Presentation.BeamPro.BeamProEventLogger>();
+        }
+
+        // BeamPro 폰트 크기 상수
+        private const int BP_FS_TITLE = 36;
+        private const int BP_FS_BODY = 28;
+        private const int BP_FS_QUESTION = 32;
+        private const int BP_FS_ANSWER = 26;
+        private const int BP_FS_PROMPT = 30;
+        private const int BP_FS_RATING = 28;
+        private const int BP_FS_CONFIRM = 28;
+
+        private static void CreateHybridMissionOverlay(Transform contentArea)
+        {
+            var overlayPanel = CreatePanel("HybridMissionOverlayPanel", contentArea,
+                new Color(0.08f, 0.08f, 0.12f, 0.98f));
+            overlayPanel.AddComponent<Presentation.BeamPro.HybridMissionOverlay>();
+            var overlayLayout = overlayPanel.AddComponent<VerticalLayoutGroup>();
+            overlayLayout.padding = new RectOffset(40, 40, 30, 30);
+            overlayLayout.spacing = 15;
+            overlayLayout.childForceExpandWidth = true;
+            overlayLayout.childForceExpandHeight = false;
+            overlayLayout.childAlignment = TextAnchor.UpperCenter;
+            overlayPanel.SetActive(false);
+
+            // --- Briefing Content ---
+            var briefingGO = CreateGameObject("OverlayBriefingContent", overlayPanel.transform);
+            var briefingRect = briefingGO.AddComponent<RectTransform>();
+            briefingRect.anchorMin = Vector2.zero;
+            briefingRect.anchorMax = Vector2.one;
+            briefingRect.offsetMin = Vector2.zero;
+            briefingRect.offsetMax = Vector2.zero;
+            var briefingLayout = briefingGO.AddComponent<VerticalLayoutGroup>();
+            briefingLayout.padding = new RectOffset(20, 20, 20, 20);
+            briefingLayout.spacing = 15;
+            briefingLayout.childForceExpandWidth = true;
+            briefingLayout.childForceExpandHeight = false;
+            briefingLayout.childAlignment = TextAnchor.UpperCenter;
+
+            var ovMissionId = CreateTMPText("OvMissionIdText", briefingGO.transform, "Mission");
+            ovMissionId.fontSize = BP_FS_TITLE;
+            ovMissionId.fontStyle = FontStyles.Bold;
+            ovMissionId.alignment = TextAlignmentOptions.Center;
+
+            var ovBriefing = CreateTMPText("OvBriefingText", briefingGO.transform, "");
+            ovBriefing.fontSize = BP_FS_BODY;
+            ovBriefing.alignment = TextAlignmentOptions.Center;
+            var briefingLE = ovBriefing.gameObject.AddComponent<LayoutElement>();
+            briefingLE.flexibleHeight = 1;
+
+            var ovConfirmBtn = CreateUIButton("OvConfirmBtn", briefingGO.transform, "Confirm");
+            var confirmRect = ovConfirmBtn.GetComponent<RectTransform>();
+            confirmRect.sizeDelta = new Vector2(0, 80);
+            var confirmLE = ovConfirmBtn.gameObject.AddComponent<LayoutElement>();
+            confirmLE.minHeight = 80;
+            var confirmImg = ovConfirmBtn.GetComponent<Image>();
+            if (confirmImg) confirmImg.color = BTN_PRIMARY;
+            var confirmTxt = ovConfirmBtn.GetComponentInChildren<TextMeshProUGUI>();
+            if (confirmTxt) confirmTxt.fontSize = BP_FS_CONFIRM;
+
+            // --- Verification Content ---
+            var verifyGO = CreateGameObject("OverlayVerificationContent", overlayPanel.transform);
+            var verifyRect = verifyGO.AddComponent<RectTransform>();
+            verifyRect.anchorMin = Vector2.zero;
+            verifyRect.anchorMax = Vector2.one;
+            verifyRect.offsetMin = Vector2.zero;
+            verifyRect.offsetMax = Vector2.zero;
+            var verifyLayout = verifyGO.AddComponent<VerticalLayoutGroup>();
+            verifyLayout.padding = new RectOffset(20, 20, 20, 20);
+            verifyLayout.spacing = 12;
+            verifyLayout.childForceExpandWidth = true;
+            verifyLayout.childForceExpandHeight = false;
+            verifyLayout.childAlignment = TextAnchor.UpperCenter;
+            verifyGO.SetActive(false);
+
+            var ovQuestion = CreateTMPText("OvQuestionText", verifyGO.transform, "");
+            ovQuestion.fontSize = BP_FS_QUESTION;
+            ovQuestion.fontStyle = FontStyles.Bold;
+            ovQuestion.alignment = TextAlignmentOptions.Center;
+
+            var answersGO = CreateGameObject("OvAnswers", verifyGO.transform);
+            answersGO.AddComponent<RectTransform>();
+            var answersLayout = answersGO.AddComponent<VerticalLayoutGroup>();
+            answersLayout.spacing = 10;
+            answersLayout.childForceExpandWidth = true;
+            answersLayout.childForceExpandHeight = false;
+            var answersLE = answersGO.AddComponent<LayoutElement>();
+            answersLE.flexibleHeight = 1;
+
+            for (int i = 0; i < 4; i++)
+            {
+                var ansBtn = CreateUIButton($"OvAnswerBtn_{i}", answersGO.transform, $"{i + 1}. Answer");
+                var ansRect = ansBtn.GetComponent<RectTransform>();
+                ansRect.sizeDelta = new Vector2(0, 70);
+                var ansLE = ansBtn.gameObject.AddComponent<LayoutElement>();
+                ansLE.minHeight = 70;
+                var ansTxt = ansBtn.GetComponentInChildren<TextMeshProUGUI>();
+                if (ansTxt) ansTxt.fontSize = BP_FS_ANSWER;
+            }
+
+            // --- Rating Content (Confidence / Difficulty 공용) ---
+            var ratingGO = CreateGameObject("OverlayRatingContent", overlayPanel.transform);
+            var ratingRect = ratingGO.AddComponent<RectTransform>();
+            ratingRect.anchorMin = Vector2.zero;
+            ratingRect.anchorMax = Vector2.one;
+            ratingRect.offsetMin = Vector2.zero;
+            ratingRect.offsetMax = Vector2.zero;
+            var ratingLayout = ratingGO.AddComponent<VerticalLayoutGroup>();
+            ratingLayout.padding = new RectOffset(20, 20, 30, 20);
+            ratingLayout.spacing = 20;
+            ratingLayout.childForceExpandWidth = true;
+            ratingLayout.childForceExpandHeight = false;
+            ratingLayout.childAlignment = TextAnchor.UpperCenter;
+            ratingGO.SetActive(false);
+
+            var ovRatingTitle = CreateTMPText("OvRatingTitleText", ratingGO.transform, "Rating");
+            ovRatingTitle.fontSize = BP_FS_TITLE;
+            ovRatingTitle.fontStyle = FontStyles.Bold;
+            ovRatingTitle.alignment = TextAlignmentOptions.Center;
+
+            var ovRatingPrompt = CreateTMPText("OvRatingPromptText", ratingGO.transform, "");
+            ovRatingPrompt.fontSize = BP_FS_PROMPT;
+            ovRatingPrompt.alignment = TextAlignmentOptions.Center;
+
+            var ratingBtnsGO = CreateGameObject("OvRatingButtons", ratingGO.transform);
+            ratingBtnsGO.AddComponent<RectTransform>();
+            var ratingBtnsLayout = ratingBtnsGO.AddComponent<HorizontalLayoutGroup>();
+            ratingBtnsLayout.spacing = 8;
+            ratingBtnsLayout.childForceExpandWidth = true;
+            ratingBtnsLayout.childForceExpandHeight = true;
+            var ratingBtnsLE = ratingBtnsGO.AddComponent<LayoutElement>();
+            ratingBtnsLE.minHeight = 70;
+
+            for (int i = 1; i <= 7; i++)
+            {
+                var rBtn = CreateUIButton($"OvRatingBtn_{i}", ratingBtnsGO.transform, i.ToString());
+                var rBtnRect = rBtn.GetComponent<RectTransform>();
+                rBtnRect.sizeDelta = new Vector2(0, 70);
+                var rTxt = rBtn.GetComponentInChildren<TextMeshProUGUI>();
+                if (rTxt) rTxt.fontSize = BP_FS_RATING;
+            }
+
+            var ovCurrentRating = CreateTMPText("OvCurrentRatingText", ratingGO.transform, "");
+            ovCurrentRating.fontSize = BP_FS_BODY;
+            ovCurrentRating.alignment = TextAlignmentOptions.Center;
+
+            var ovConfirmRating = CreateUIButton("OvConfirmRatingBtn", ratingGO.transform, "Confirm");
+            var crRect = ovConfirmRating.GetComponent<RectTransform>();
+            crRect.sizeDelta = new Vector2(0, 80);
+            var crLE = ovConfirmRating.gameObject.AddComponent<LayoutElement>();
+            crLE.minHeight = 80;
+            var crImg = ovConfirmRating.GetComponent<Image>();
+            if (crImg) crImg.color = BTN_PRIMARY;
+            var crTxt = ovConfirmRating.GetComponentInChildren<TextMeshProUGUI>();
+            if (crTxt) crTxt.fontSize = BP_FS_CONFIRM;
         }
 
         private static void CreateExperimenterUI()
@@ -531,6 +833,97 @@ namespace ARNavExperiment.EditorTools
             if (diffConfirmText) diffConfirmText.fontSize = FS_CONFIRM_BTN;
             difficulty.SetActive(false);
 
+            // Post-Condition Survey Panel (NASA-TLX + Trust)
+            // 컨트롤러는 Application 레이어에 별도 GO로 배치 (패널 비활성 시에도 Awake 보장)
+            var postSurvey = CreatePanel("PostConditionSurveyPanel", expCanvas.transform, BG_PANEL);
+            var postSurveyRect = postSurvey.GetComponent<RectTransform>();
+            postSurveyRect.anchorMin = new Vector2(0.1f, 0.1f);
+            postSurveyRect.anchorMax = new Vector2(0.9f, 0.9f);
+            postSurveyRect.offsetMin = Vector2.zero;
+            postSurveyRect.offsetMax = Vector2.zero;
+
+            var postSurveyLayout = postSurvey.AddComponent<VerticalLayoutGroup>();
+            postSurveyLayout.spacing = SPACING_PANEL;
+            postSurveyLayout.padding = new RectOffset(PADDING_RATING, PADDING_RATING, 20, 20);
+            postSurveyLayout.childForceExpandWidth = true;
+            postSurveyLayout.childForceExpandHeight = false;
+            postSurveyLayout.childControlWidth = true;
+            postSurveyLayout.childControlHeight = true;
+            postSurveyLayout.childAlignment = TextAnchor.MiddleCenter;
+
+            var psSectionHeader = CreateTMPText("SectionHeaderText", postSurvey.transform, "NASA-TLX (1/6)");
+            psSectionHeader.fontSize = FS_BODY;
+            psSectionHeader.fontStyle = FontStyles.Bold;
+            psSectionHeader.alignment = TextAlignmentOptions.Center;
+            var psSectionLE = psSectionHeader.gameObject.AddComponent<LayoutElement>();
+            psSectionLE.minHeight = 45;
+
+            var psProgress = CreateTMPText("ProgressText", postSurvey.transform, "1 / 13");
+            psProgress.fontSize = 26;
+            psProgress.alignment = TextAlignmentOptions.Center;
+            psProgress.color = new Color(0.7f, 0.7f, 0.7f);
+            var psProgressLE = psProgress.gameObject.AddComponent<LayoutElement>();
+            psProgressLE.minHeight = 30;
+
+            var psPrompt = CreateTMPText("PromptText", postSurvey.transform, "");
+            psPrompt.fontSize = FS_PROMPT;
+            psPrompt.alignment = TextAlignmentOptions.Center;
+            psPrompt.enableWordWrapping = true;
+            var psPromptLE = psPrompt.gameObject.AddComponent<LayoutElement>();
+            psPromptLE.minHeight = 80;
+
+            // Low/High labels row
+            var psLabelRow = CreateGameObject("LabelRow", postSurvey.transform);
+            psLabelRow.AddComponent<RectTransform>();
+            var psLabelHL = psLabelRow.AddComponent<HorizontalLayoutGroup>();
+            psLabelHL.childForceExpandWidth = true;
+            psLabelHL.childControlWidth = true;
+            psLabelHL.childControlHeight = true;
+            var psLabelLE = psLabelRow.AddComponent<LayoutElement>();
+            psLabelLE.minHeight = 30;
+
+            var psLowLabel = CreateTMPText("LowLabelText", psLabelRow.transform, "Very Low");
+            psLowLabel.fontSize = 24;
+            psLowLabel.alignment = TextAlignmentOptions.Left;
+            psLowLabel.color = new Color(0.6f, 0.6f, 0.6f);
+
+            var psHighLabel = CreateTMPText("HighLabelText", psLabelRow.transform, "Very High");
+            psHighLabel.fontSize = 24;
+            psHighLabel.alignment = TextAlignmentOptions.Right;
+            psHighLabel.color = new Color(0.6f, 0.6f, 0.6f);
+
+            // Rating buttons
+            var psRatingBar = CreateGameObject("RatingButtons", postSurvey.transform);
+            psRatingBar.AddComponent<RectTransform>();
+            var psHL = psRatingBar.AddComponent<HorizontalLayoutGroup>();
+            psHL.spacing = 10;
+            psHL.padding = new RectOffset(10, 10, 0, 0);
+            psHL.childForceExpandWidth = true;
+            psHL.childForceExpandHeight = false;
+            psHL.childAlignment = TextAnchor.MiddleCenter;
+            var psRatingBarLE = psRatingBar.AddComponent<LayoutElement>();
+            psRatingBarLE.minHeight = BTN_H_RATING;
+            for (int i = 1; i <= 7; i++)
+            {
+                var psRBtn = CreateUIButton($"RatingBtn_{i}", psRatingBar.transform, $"{i}");
+                var psRBtnText = psRBtn.GetComponentInChildren<TextMeshProUGUI>();
+                if (psRBtnText) psRBtnText.fontSize = FS_RATING_BTN;
+            }
+
+            var psCurRating = CreateTMPText("CurrentRatingText", postSurvey.transform, "");
+            psCurRating.fontSize = FS_BODY;
+            psCurRating.alignment = TextAlignmentOptions.Center;
+            var psCurLE = psCurRating.gameObject.AddComponent<LayoutElement>();
+            psCurLE.minHeight = 40;
+
+            var psConfirmBtn = CreateUIButton("ConfirmRatingBtn", postSurvey.transform, "Confirm");
+            var psConfirmLE = psConfirmBtn.gameObject.AddComponent<LayoutElement>();
+            psConfirmLE.minHeight = BTN_H_CONFIRM;
+            psConfirmBtn.GetComponent<Image>().color = BTN_PRIMARY;
+            var psConfirmText = psConfirmBtn.GetComponentInChildren<TextMeshProUGUI>();
+            if (psConfirmText) psConfirmText.fontSize = FS_CONFIRM_BTN;
+            postSurvey.SetActive(false);
+
             // Experiment HUD (표시 전용 — 버튼은 ExperimenterHUD로 이동)
             var hud = CreatePanel("ExperimentHUD", expCanvas.transform, BG_HUD);
             hud.AddComponent<Presentation.Glass.ExperimentHUD>();
@@ -557,6 +950,28 @@ namespace ARNavExperiment.EditorTools
             mt.fontSize = FS_HUD;
             var wt = CreateTMPText("WPText", hud.transform, "WP: -");
             wt.fontSize = FS_HUD;
+
+            // Glass ForceArrival 버튼 (Glass Only 조건에서만 표시)
+            var forceArrivalBtn = CreateUIButton("ForceArrivalBtn", hud.transform, "도착");
+            var fabRect = forceArrivalBtn.GetComponent<RectTransform>();
+            fabRect.sizeDelta = new Vector2(180, 70);
+            var fabImg = forceArrivalBtn.GetComponent<Image>();
+            fabImg.color = new Color(0.15f, 0.45f, 0.15f, 1f);
+            var fabColors = forceArrivalBtn.colors;
+            fabColors.normalColor = new Color(0.15f, 0.45f, 0.15f, 1f);
+            fabColors.highlightedColor = new Color(0.2f, 0.6f, 0.2f, 1f);
+            fabColors.pressedColor = new Color(0.1f, 0.3f, 0.1f, 1f);
+            forceArrivalBtn.colors = fabColors;
+            var fabText = forceArrivalBtn.GetComponentInChildren<TextMeshProUGUI>();
+            if (fabText) fabText.fontSize = FS_HUD;
+            forceArrivalBtn.gameObject.SetActive(false);
+
+            // Hybrid 폰 안내 텍스트 (Hybrid 모드에서 Briefing/Verification/Rating 시 표시)
+            var phonePrompt = CreateTMPText("PhonePromptText", hud.transform, "");
+            phonePrompt.fontSize = FS_HUD;
+            phonePrompt.alignment = TextAlignmentOptions.Center;
+            phonePrompt.color = new Color(1f, 0.85f, 0.2f, 1f); // 노란색 강조
+            phonePrompt.gameObject.SetActive(false);
 
             // T4 Proximity Text (for TriggerController)
             var proximityText = CreateTMPText("ProximityText", expCanvas.transform, "Near destination");

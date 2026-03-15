@@ -698,6 +698,28 @@
                     "action": "Aim Rotation",
                     "isComposite": false,
                     "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "85c6c0d2-e2de-423d-93d3-9c8fa793ca6e",
+                    "path": "<XREALHandTracking>{LeftHand}/isTracked",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Generic XR Controller",
+                    "action": "Is Tracked",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "28ddf3f3-bb5f-4120-8df1-c575f6a2c351",
+                    "path": "<XREALHandTracking>{LeftHand}/trackingState",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Generic XR Controller",
+                    "action": "Tracking State",
+                    "isComposite": false,
+                    "isPartOfComposite": false
                 }
             ]
         },
@@ -1558,6 +1580,28 @@
                     "processors": "",
                     "groups": "Generic XR Controller",
                     "action": "Aim Rotation",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "b1d9e8a5-0934-4fe9-b235-2874b75f7a5d",
+                    "path": "<XREALHandTracking>{RightHand}/isTracked",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Generic XR Controller",
+                    "action": "Is Tracked",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "21e4ee94-d3f8-42f3-9a43-cf92b368b1a6",
+                    "path": "<XREALHandTracking>{RightHand}/trackingState",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Generic XR Controller",
+                    "action": "Tracking State",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

@@ -8,14 +8,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 프로젝트 개요
 
-스마트 글래스(XReal Air2 Ultra)와 스마트폰(XReal Beam Pro)을 활용한 하이브리드 실내 내비게이션 HCI 연구 프로젝트. **2가지 조건(Glass Only / Hybrid)**을 단일 조건 직접 선택 방식으로 24명 대상 비교 실험. **단일 경로 + 미션 세트 2개(Set1/Set2)**로 within-subjects 설계 유지. 실험자가 메인 화면에서 참가자 ID, 미션 세트, 조건을 선택하여 단일 조건만 실행. 미션 기반 길찾기 태스크와 4종 불확실성 트리거를 통해 교차검증 행동을 유도. 문서는 주로 한국어로 작성.
+스마트 글래스(XReal Air2 Ultra)와 스마트폰(XReal Beam Pro)을 활용한 하이브리드 실내 내비게이션 HCI 연구 프로젝트. **2가지 조건(Glass Only / Hybrid)**을 within-subjects 설계로 24명 대상 비교 실험. **단일 경로 + 미션 세트 2개(Set1/Set2)**. 실험자가 메인 화면에서 참가자 ID, 미션 세트, 조건을 선택 → 1차 조건 → 인앱 설문(NASA-TLX+Trust) → 자동 복귀 → 2차 조건 → 인앱 설문 → 비교 설문 → Complete. 미션 기반 길찾기 태스크와 4종 불확실성 트리거를 통해 교차검증 행동을 유도. 문서는 주로 한국어로 작성.
 
 ## 저장소 구조
 
 ```
 ARglasses/
-├── ARNavExperiment/   # Unity 프로젝트 (단일 씬, C# 63개)
-├── analysis/          # Python 분석 스크립트 4개 (→ analysis/output/)
+├── ARNavExperiment/   # Unity 프로젝트 (단일 씬, C# ~97개)
+├── analysis/          # Python 분석 스크립트 11개 + 유틸 4개 (→ analysis/output/)
 ├── data/raw/          # 실험 CSV 로그 (디바이스에서 수집)
 ├── docs/              # 실험 설계, 프로토콜, 설문지 등
 └── tools/             # adb 유틸리티, 도면 추출 (pull_glass_captures.sh, pull_diagnostics.sh, extract_floorplan.py)
@@ -111,9 +111,9 @@ WASD(이동), Shift(달리기), 우클릭 드래그(시점), N(상태전환), M(
 
 ### 실험 상태머신 (2중 구조)
 
-**ExperimentManager** (외부, 6상태): `Idle → Relocalization → Setup → Running → Survey → Complete`
+**ExperimentManager** (외부, 7상태): `Idle → Relocalization → Setup → Running → Survey → ComparisonSurvey → Complete`
 
-단일 조건 실행 방식: 실험자가 메인 화면(AppModeSelector)에서 PID, Route, Condition을 직접 선택 → 해당 조건 1회만 실행.
+다중 조건 실행: 실험자가 메인 화면(AppModeSelector)에서 PID, Set, Condition 선택 → 1차 조건 실행 → 인앱 설문(NASA-TLX+Trust) → AppModeSelector 복귀 → 2차 조건 → 인앱 설문 → 비교 설문 → Complete.
 
 **MissionManager** (내부, Running 동안 반복): `Idle → Briefing → Navigation → Arrival → Verification → ConfidenceRating → DifficultyRating → Scored`
 
@@ -157,6 +157,7 @@ Publish/Subscribe 패턴:
 | **MissionEvents** | MissionStarted/Arrived/Completed, VerificationAnswered, ConfidenceRated, DifficultyRated, BriefingForced, ArrivalForced, MissionForceSkipped, AllMissionsCompleted | MissionManager |
 | **NavigationEvents** | WaypointReached, TriggerActivated/Deactivated, ArrowShown/Hidden/Offset, WaypointFallbackUsed, WaypointLateAnchorBound | WaypointManager, TriggerController, ARArrowRenderer |
 | **SpatialEvents** | RelocalizationStarted/Progress/Completed, AnchorLateRecovered, AnchorSaved, AnchorDiagnostics, ReferenceAnchorSaved, ReferenceAnchorRecovered | SpatialAnchorManager, WaypointManager |
+| **SurveyEvents** | SurveyItemAnswered, SurveyCompleted, ComparisonSurveyAnswered, ComparisonSurveyCompleted | PostConditionSurveyController, ComparisonSurveyController |
 | **ObservationEvents** | DeviceScreenChanged, BeamTabSwitched, BeamInfoCardToggled, BeamPOI/Comparison/MissionRef/MapZoomed, GlassCaptureStateChanged | BeamPro UI, DeviceStateTracker |
 
 #### Application 레이어 서비스
@@ -168,29 +169,31 @@ Publish/Subscribe 패턴:
 | **NavigationService** | TriggerController 래퍼 (트리거 활성화/비활성화) |
 | **BeamProCoordinator** | MissionStarted 구독 → BeamPro 허브 데이터 로드 |
 | **ExperimentAdvancer** | AllMissionsCompleted 구독 → ExperimentManager.AdvanceState() |
+| **PostConditionSurveyController** | Survey 상태에서 NASA-TLX(6)+Trust(7) 13항목 순차 설문 → AdvanceState() |
+| **ComparisonSurveyController** | ComparisonSurvey 상태에서 비교 설문 진행 → AdvanceState() |
 
 ### 레이어 구조
 
 | 레이어 | 주요 역할 | 핵심 클래스 |
 |--------|----------|------------|
 | **Domain** | 이벤트, 인터페이스, 값 객체 | IDomainEvent, MissionResult, 도메인 이벤트 structs |
-| **Application** (5) | 이벤트 버스, 오케스트레이터 | DomainEventBus, ObservationService, NavigationService, BeamProCoordinator, ExperimentAdvancer |
+| **Application** (7) | 이벤트 버스, 오케스트레이터, 설문 | DomainEventBus, ObservationService, NavigationService, BeamProCoordinator, ExperimentAdvancer, PostConditionSurveyController, ComparisonSurveyController |
 | **Core** (7) | 상태머신, 조건 전환, 세션, 앵커, 핸드트래킹, 다국어 | ExperimentManager, ConditionController, SpatialAnchorManager, HandTrackingManager |
 | **Navigation** (4) | 경로, AR 화살표, 불확실성 트리거, 보정 좌표 레지스트리 | WaypointManager, ARArrowRenderer, TriggerController, ReferencePointRegistry |
 | **Mission** (5) | 미션 FSM, SO 데이터 | MissionManager, MissionData, POIData, InfoCardData |
 | **Presentation/Glass** (7) | 글래스 전용 UI | GlassCanvasController, ExperimentHUD, MissionBriefingUI, VerificationUI, ConfidenceRatingUI, DifficultyRatingUI |
-| **Presentation/BeamPro** (9) | 3탭 정보 허브 | BeamProHubController, InteractiveMapController, InfoCardManager, BeamProCanvasController |
+| **Presentation/BeamPro** (11) | 3탭 정보 허브 + 비교 설문 + 미션 오버레이 | BeamProHubController, InteractiveMapController, InfoCardManager, BeamProCanvasController, ComparisonSurveyUI, HybridMissionOverlay |
 | **Presentation/Experimenter** (3) | 실험자 UI | ExperimenterHUD, ExperimentFlowUI, RelocalizationUI |
 | **Presentation/Mapping** (4) | 매핑 모드 UI | MappingModeUI, MappingGlassOverlay, MappingMiniMap, MappingAnchorVisualizer |
 | **Presentation/Shared** (4) | 공통 UI | AppModeSelector, FloorPlanMapBase, PanelFader, BeamProUIAdapter |
-| **Logging** (3) | CSV 이벤트 로거 | EventLogger, DeviceStateTracker, HeadTracker |
-| **Debug** (4) | 에디터 이동, 글래스 캡처 | EditorPlayerController, GlassViewCapture, HandJointVisualizer |
+| **Logging** (10) | CSV 이벤트 로거, 전문 트레이스 로거, 세션 메타 | EventLogger, DeviceStateTracker, HeadTracker, GlassViewCapture, NavigationTraceLogger, HeadPoseTraceLogger, AnchorRelocLogger, BeamSegmentLogger, SessionMetaWriter, SystemHealthLogger |
+| **Debug** (4) | 에디터 이동, 보정 로그, 기즈모 | EditorPlayerController, HandJointVisualizer, PositionCalibrationLog, WaypointGizmoDrawer |
 | **Utils** (2) | CSV 유틸, 카운터밸런싱 | CSVWriter, CounterbalanceConfig |
 | **Editor** (13) | 씬 자동 구성, 빌드 검증 | MasterSetupTool, SceneWiringTool, SceneSetupTool |
 
 ### 싱글턴 (13개)
 
-DontDestroyOnLoad 적용: **ExperimentManager**, **EventLogger** (세션 수명). 나머지(ConditionController, SpatialAnchorManager, HandTrackingManager, WaypointManager, TriggerController, MissionManager, BeamProHubController, DeviceStateTracker, HeadTracker, GlassViewCapture, **LocalizationManager**)는 씬 종속.
+DontDestroyOnLoad 적용: **ExperimentManager**, **EventLogger** (세션 수명). 나머지(ConditionController, SpatialAnchorManager, HandTrackingManager, WaypointManager, TriggerController, MissionManager, BeamProHubController, DeviceStateTracker, HeadTracker, GlassViewCapture(Logging에 위치), **LocalizationManager**)는 씬 종속.
 
 초기화 순서: Awake(ExperimentManager, EventLogger) → Start(SpatialAnchorManager.LoadMapping, ConditionController.BeamPro탭숨김) → 지연 초기화(HandTrackingManager: 1초 대기 + 3회 재시도)
 
@@ -239,7 +242,7 @@ DontDestroyOnLoad 적용: **ExperimentManager**, **EventLogger** (세션 수명)
 | **GameObject 이름** | SceneWiringTool 재실행 필수 (이름 기반 리플렉션 와이어링, 경고 없이 실패) |
 | **웨이포인트 ID/fallbackPosition** | WaypointDataGenerator, MappingModeUI, MappingMiniMap, DebugToolsSetup, EditorPlayerController |
 | **이벤트 시그니처** 변경 | "이벤트 통신 흐름" 섹션의 구독자 전체 확인 |
-| **ExperimentState enum** 추가 | ExperimentManager (6상태: Idle/Relocalization/Setup/Running/Survey/Complete), ExperimentFlowUI, ExperimentHUD, ExperimenterHUD |
+| **ExperimentState enum** 추가 | ExperimentManager (7상태: Idle/Relocalization/Setup/Running/Survey/ComparisonSurvey/Complete), ExperimentFlowUI, ExperimentHUD, ExperimenterHUD, GlassFlowUI |
 | **MissionState enum** 추가 | MissionManager + 해당 상태의 UI 패널 |
 | **ScriptableObject 필드** 추가 | 해당 SO의 Editor Generator + Inspector 사용처 |
 | **BeamPro 탭** 추가/제거 | BeamProHubController.tabPanels/tabButtons 배열 + SceneWiringTool 와이어링 순서 |
@@ -329,10 +332,24 @@ python3 tools/extract_floorplan.py
 
 ```bash
 pip3 install numpy pandas scipy matplotlib pingouin  # 의존성
-python3 analysis/analyze_device_switching.py
-python3 analysis/analyze_trust_performance.py
-python3 analysis/analyze_verification.py
-python3 analysis/analyze_triggers.py
+
+# 핵심 분석 (RQ별)
+python3 analysis/analyze_device_switching.py     # RQ-a: 디바이스 전환 패턴
+python3 analysis/analyze_trust_performance.py    # RQ-b: 신뢰 보정
+python3 analysis/analyze_verification.py         # 미션 정답률
+python3 analysis/analyze_triggers.py             # 불확실성 트리거 반응
+
+# 확장 분석
+python3 analysis/analyze_survey_inapp.py         # 인앱 설문 (NASA-TLX, Trust)
+python3 analysis/analyze_trajectory.py           # 이동 경로 분석
+python3 analysis/analyze_anchor_robustness.py    # 앵커 재인식 안정성
+python3 analysis/analyze_rq_deep.py              # RQ 심층 분석
+python3 analysis/analyze_comprehensive.py        # 종합 분석
+python3 analysis/analyze_strategies.py           # 전략 패턴 분석
+python3 analysis/diagnose_distance.py            # 거리 진단
+
+# 유틸리티 모듈 (직접 실행 아님)
+# parse_utils.py, plot_style.py, stat_utils.py, trajectory_utils.py
 ```
 
 `data/raw/` 비어 있으면 데모 데이터 자동 생성. 결과: `analysis/output/`.

@@ -120,6 +120,7 @@ namespace ARNavExperiment.Core
             { "hud.no_mission", ("No active mission", "\ud65c\uc131 \ubbf8\uc158 \uc5c6\uc74c") },
             { "hud.waypoint", ("WP: {0} ({1}m)", "WP: {0} ({1}m)") },
             { "hud.no_waypoint", ("No waypoint", "\uc6e8\uc774\ud3ec\uc778\ud2b8 \uc5c6\uc74c") },
+            { "hud.see_phone", ("Check phone for mission info", "\ud3f0\uc5d0\uc11c \ubbf8\uc158 \uc815\ubcf4\ub97c \ud655\uc778\ud558\uc138\uc694") },
 
             // ===== ExperimenterHUD =====
             { "exphud.map_assist", ("\ud83d\udccd Map-assist: {0} WP", "\ud83d\udccd \ub3c4\uba74\ubcf4\uc815: {0} WP") },
@@ -134,6 +135,9 @@ namespace ARNavExperiment.Core
             { "exphud.heading_left", ("\u2190 5\u00b0", "\u2190 5\u00b0") },
             { "exphud.heading_right", ("5\u00b0 \u2192", "5\u00b0 \u2192") },
             { "exphud.manual_calibrate", ("Calibrate", "\uc218\ub3d9 \ubcf4\uc815") },
+
+            // ===== Glass ForceArrival =====
+            { "glass.force_arrival", ("Arrived", "\ub3c4\ucc29") },
 
             // ===== MappingModeUI =====
             { "mapping.title", ("Mapping Mode", "\ub9e4\ud551 \ubaa8\ub4dc") },
@@ -217,6 +221,69 @@ namespace ARNavExperiment.Core
             // ===== GlassFlowUI Image Tracking =====
             { "glassflow.image_scan", ("Scan the marker...", "\ub9c8\ucee4\ub97c \uc2a4\uce94\ud558\uc138\uc694...") },
             { "glassflow.image_marker_found", ("\u2713 {0} found!", "\u2713 {0} \ubc1c\uacac!") },
+
+            // ===== Post-Condition Survey (NASA-TLX + Trust) =====
+            { "survey.section_header", ("{0} ({1}/{2})", "{0} ({1}/{2})") },
+            { "survey.progress", ("{0} / {1}", "{0} / {1}") },
+            { "survey.nasa_section", ("NASA-TLX", "NASA-TLX") },
+            { "survey.trust_section", ("System Trust", "\uc2dc\uc2a4\ud15c \uc2e0\ub8b0") },
+            { "survey.confirm", ("Confirm", "\ud655\uc778") },
+            { "survey.rating_label", ("{0}/7", "{0}/7") },
+            { "survey.low_label", ("Very Low", "\ub9e4\uc6b0 \ub0ae\uc74c") },
+            { "survey.high_label", ("Very High", "\ub9e4\uc6b0 \ub192\uc74c") },
+
+            // NASA-TLX 6 items
+            { "survey.nasa_mental_demand", ("How mentally demanding was the navigation task?", "\ub0b4\ube44\uac8c\uc774\uc158 \uc791\uc5c5\uc740 \uc815\uc2e0\uc801\uc73c\ub85c \uc5bc\ub9c8\ub098 \ubd80\ub2f4\uc2a4\ub7ec\uc6e0\uc2b5\ub2c8\uae4c?") },
+            { "survey.nasa_physical_demand", ("How physically demanding was the task?", "\uc791\uc5c5\uc740 \uc2e0\uccb4\uc801\uc73c\ub85c \uc5bc\ub9c8\ub098 \ubd80\ub2f4\uc2a4\ub7ec\uc6e0\uc2b5\ub2c8\uae4c?") },
+            { "survey.nasa_temporal_demand", ("How hurried or rushed was the pace?", "\uc791\uc5c5 \uc18d\ub3c4\uac00 \uc5bc\ub9c8\ub098 \uae09\ud588\uc2b5\ub2c8\uae4c?") },
+            { "survey.nasa_performance", ("How successful were you in accomplishing the task?", "\uc791\uc5c5\uc744 \uc5bc\ub9c8\ub098 \uc131\uacf5\uc801\uc73c\ub85c \uc218\ud589\ud588\uc2b5\ub2c8\uae4c?") },
+            { "survey.nasa_effort", ("How hard did you have to work to accomplish the task?", "\uc791\uc5c5\uc744 \uc218\ud589\ud558\uae30 \uc704\ud574 \uc5bc\ub9c8\ub098 \ub9ce\uc740 \ub178\ub825\uc774 \ud544\uc694\ud588\uc2b5\ub2c8\uae4c?") },
+            { "survey.nasa_frustration", ("How insecure, discouraged, or stressed were you?", "\uc5bc\ub9c8\ub098 \ubd88\uc548\ud558\uac70\ub098 \uc88c\uc808\uac10\uc744 \ub290\uaf08\uc2b5\ub2c8\uae4c?") },
+
+            // Trust 7 items
+            { "survey.trust_direction", ("The system provided correct directional guidance.", "\uc2dc\uc2a4\ud15c\uc774 \uc815\ud655\ud55c \ubc29\ud5a5 \uc548\ub0b4\ub97c \uc81c\uacf5\ud588\ub2e4.") },
+            { "survey.trust_reliability", ("The system operated reliably without errors.", "\uc2dc\uc2a4\ud15c\uc774 \uc624\ub958 \uc5c6\uc774 \uc548\uc815\uc801\uc73c\ub85c \uc791\ub3d9\ud588\ub2e4.") },
+            { "survey.trust_confidence", ("I felt confident following the system's guidance.", "\uc2dc\uc2a4\ud15c\uc758 \uc548\ub0b4\ub97c \ub530\ub97c \ub54c \ud655\uc2e0\uc774 \ub4e4\uc5c8\ub2e4.") },
+            { "survey.trust_accuracy", ("The system accurately showed my location and destination.", "\uc2dc\uc2a4\ud15c\uc774 \ub0b4 \uc704\uce58\uc640 \ubaa9\uc801\uc9c0\ub97c \uc815\ud655\ud558\uac8c \ud45c\uc2dc\ud588\ub2e4.") },
+            { "survey.trust_safety", ("I felt safe using the system for navigation.", "\uc2dc\uc2a4\ud15c\uc744 \uc0ac\uc6a9\ud558\uc5ec \ub0b4\ube44\uac8c\uc774\uc158\ud560 \ub54c \uc548\uc804\ud558\ub2e4\uace0 \ub290\uaf08\ub2e4.") },
+            { "survey.trust_destination", ("I believed the system would lead me to the correct destination.", "\uc2dc\uc2a4\ud15c\uc774 \uc62c\ubc14\ub978 \ubaa9\uc801\uc9c0\ub85c \uc548\ub0b4\ud560 \uac83\uc774\ub77c \ubbff\uc5c8\ub2e4.") },
+            { "survey.trust_reuse", ("I would be willing to use this system again.", "\uc774 \uc2dc\uc2a4\ud15c\uc744 \ub2e4\uc2dc \uc0ac\uc6a9\ud560 \uc758\ud5a5\uc774 \uc788\ub2e4.") },
+
+            // ===== GlassFlowUI: Comparison Survey Guide =====
+            { "glassflow.comparison_title", ("Comparison Survey", "\ube44\uad50 \uc124\ubb38") },
+            { "glassflow.comparison_instr", ("Please complete the comparison survey\non the phone screen.", "Beam Pro \ud654\uba74\uc5d0\uc11c\n\ube44\uad50 \uc124\ubb38\uc744 \uc644\ub8cc\ud574 \uc8fc\uc138\uc694.") },
+
+            // ===== ExperimentFlowUI: Comparison Survey =====
+            { "flow.comparison_title", ("Comparison Survey", "\ube44\uad50 \uc124\ubb38") },
+            { "flow.comparison_instr", ("Comparison survey in progress on Beam Pro.\nPlease wait for the participant to finish.", "Beam Pro\uc5d0\uc11c \ube44\uad50 \uc124\ubb38 \uc9c4\ud589 \uc911.\n\ucc38\uac00\uc790\uac00 \uc644\ub8cc\ud560 \ub54c\uae4c\uc9c0 \ub300\uae30\ud574 \uc8fc\uc138\uc694.") },
+
+            // ===== Comparison Survey UI (BeamPro) =====
+            { "comparison.title", ("Comparison Survey", "\ube44\uad50 \uc124\ubb38") },
+            { "comparison.page", ("Page {0}/{1}", "\ud398\uc774\uc9c0 {0}/{1}") },
+            { "comparison.preferred", ("Which condition did you prefer for navigation?", "\ub0b4\ube44\uac8c\uc774\uc158\uc5d0 \uc5b4\ub5a4 \uc870\uac74\uc744 \uc120\ud638\ud558\uc2ed\ub2c8\uae4c?") },
+            { "comparison.glass_only", ("Glass Only", "\uae00\ub798\uc2a4 \uc804\uc6a9") },
+            { "comparison.hybrid", ("Hybrid", "\ud558\uc774\ube0c\ub9ac\ub4dc") },
+            { "comparison.no_difference", ("No Difference", "\ucc28\uc774 \uc5c6\uc74c") },
+            { "comparison.trust_compare", ("In which condition did you feel more trust in the system?", "\uc5b4\ub5a4 \uc870\uac74\uc5d0\uc11c \uc2dc\uc2a4\ud15c\uc5d0 \ub300\ud55c \uc2e0\ub8b0\uac00 \ub354 \ub192\uc558\uc2b5\ub2c8\uae4c?") },
+            { "comparison.glass_higher", ("Glass Only higher", "\uae00\ub798\uc2a4 \uc804\uc6a9\uc774 \ub354 \ub192\uc74c") },
+            { "comparison.hybrid_higher", ("Hybrid higher", "\ud558\uc774\ube0c\ub9ac\ub4dc\uac00 \ub354 \ub192\uc74c") },
+            { "comparison.same", ("Same", "\ub3d9\uc77c") },
+            { "comparison.preference_reason", ("Why did you prefer that condition?", "\ud574\ub2f9 \uc870\uac74\uc744 \uc120\ud638\ud55c \uc774\uc720\ub294 \ubb34\uc5c7\uc785\ub2c8\uae4c?") },
+            { "comparison.switching_behavior", ("When did you decide to look at the phone or switch devices?", "\uc5b8\uc81c \ud3f0\uc744 \ubcf4\uac70\ub098 \uae30\uae30\ub97c \uc804\ud658\ud558\uae30\ub85c \uacb0\uc815\ud588\uc2b5\ub2c8\uae4c?") },
+            { "comparison.suggestions", ("Any suggestions for improvement?", "\uac1c\uc120\uc744 \uc704\ud55c \uc81c\uc548\uc774 \uc788\uc2b5\ub2c8\uae4c?") },
+            { "comparison.text_placeholder", ("Enter your response...", "\uc751\ub2f5\uc744 \uc785\ub825\ud558\uc138\uc694...") },
+            { "comparison.prev", ("Previous", "\uc774\uc804") },
+            { "comparison.next", ("Next", "\ub2e4\uc74c") },
+            { "comparison.submit", ("Submit", "\uc81c\ucd9c") },
+
+            // ===== Hybrid Mission Overlay =====
+            { "hybrid.confirm", ("Confirm", "\ud655\uc778") },
+            { "hybrid.verify_title", ("Verification", "\uac80\uc99d") },
+            { "hybrid.confidence_title", ("Confidence Rating", "\ud655\uc2e0\ub3c4 \ud3c9\uac00") },
+            { "hybrid.difficulty_title", ("Difficulty Rating", "\ub09c\uc774\ub3c4 \ud3c9\uac00") },
+
+            // ===== AppModeSelector: 2nd run =====
+            { "appmode.condition_done", ("{0} (Done)", "{0} (\uc644\ub8cc)") },
         };
 
         public static string GetEN(string key)

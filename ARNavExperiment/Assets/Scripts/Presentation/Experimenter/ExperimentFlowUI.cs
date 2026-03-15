@@ -19,6 +19,7 @@ namespace ARNavExperiment.Presentation.Experimenter
         [SerializeField] private GameObject relocalizationPanel;
         [SerializeField] private GameObject conditionTransitionPanel;
         [SerializeField] private GameObject surveyPromptPanel;
+        [SerializeField] private GameObject comparisonSurveyPanel;
         [SerializeField] private GameObject completionPanel;
 
         [Header("Relocalization")]
@@ -30,10 +31,14 @@ namespace ARNavExperiment.Presentation.Experimenter
 
         [SerializeField] private Button transitionContinueButton;
 
-        [Header("Survey Prompt")]
+        [Header("Survey Prompt (legacy — PostConditionSurveyController가 대체)")]
         [SerializeField] private TextMeshProUGUI surveyTitleText;
         [SerializeField] private TextMeshProUGUI surveyInstructionText;
         [SerializeField] private Button surveyDoneButton;
+
+        [Header("Comparison Survey")]
+        [SerializeField] private TextMeshProUGUI comparisonTitleText;
+        [SerializeField] private TextMeshProUGUI comparisonInstructionText;
 
         [Header("Completion")]
         [SerializeField] private TextMeshProUGUI completionText;
@@ -81,6 +86,7 @@ namespace ARNavExperiment.Presentation.Experimenter
             if (relocalizationPanel) relocalizationPanel.SetActive(false);
             if (conditionTransitionPanel) conditionTransitionPanel.SetActive(false);
             if (surveyPromptPanel) surveyPromptPanel.SetActive(false);
+            if (comparisonSurveyPanel) comparisonSurveyPanel.SetActive(false);
             if (completionPanel) completionPanel.SetActive(false);
         }
 
@@ -102,6 +108,29 @@ namespace ARNavExperiment.Presentation.Experimenter
                     ShowSetupTransition();
                     return;
                 }
+                // GlassOnly에서도 Idle 복귀 시 모드 선택 화면 표시
+                if (state == ExperimentState.Idle)
+                {
+                    if (appModeSelectorPanel != null)
+                        appModeSelectorPanel.SetActive(true);
+                    return;
+                }
+                if (state == ExperimentState.Survey)
+                {
+                    // GlassOnly에서도 Survey 시 실험자 폰에 안내 표시
+                    ShowSurveyPrompt();
+                    return;
+                }
+                if (state == ExperimentState.ComparisonSurvey)
+                {
+                    ShowComparisonSurvey();
+                    return;
+                }
+                if (state == ExperimentState.Complete)
+                {
+                    ShowCompletion();
+                    return;
+                }
                 return;
             }
 
@@ -109,6 +138,11 @@ namespace ARNavExperiment.Presentation.Experimenter
 
             switch (state)
             {
+                case ExperimentState.Idle:
+                    if (appModeSelectorPanel != null)
+                        appModeSelectorPanel.SetActive(true);
+                    break;
+
                 case ExperimentState.Relocalization:
                     ShowRelocalization();
                     break;
@@ -122,7 +156,13 @@ namespace ARNavExperiment.Presentation.Experimenter
                     break;
 
                 case ExperimentState.Survey:
+                    // Survey는 PostConditionSurveyController가 글래스에서 진행
+                    // 실험자 폰에는 안내만 표시
                     ShowSurveyPrompt();
+                    break;
+
+                case ExperimentState.ComparisonSurvey:
+                    ShowComparisonSurvey();
                     break;
 
                 case ExperimentState.Complete:
@@ -223,6 +263,17 @@ namespace ARNavExperiment.Presentation.Experimenter
                     LocalizationManager.Get("flow.survey_title_single"), conditionLabel);
             if (surveyInstructionText)
                 surveyInstructionText.text = LocalizationManager.Get("flow.survey_instr");
+        }
+
+        private void ShowComparisonSurvey()
+        {
+            if (comparisonSurveyPanel != null)
+                comparisonSurveyPanel.SetActive(true);
+
+            if (comparisonTitleText != null)
+                comparisonTitleText.text = LocalizationManager.Get("flow.comparison_title");
+            if (comparisonInstructionText != null)
+                comparisonInstructionText.text = LocalizationManager.Get("flow.comparison_instr");
         }
 
         private void ShowCompletion()

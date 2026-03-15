@@ -5,6 +5,7 @@
 - 미션별 소요시간 분석
 - 난이도 평정 분석
 - 통계: Paired t-test / Wilcoxon signed-rank
+- [ISMAR] view_duration_s (BEAM_INFO_CARD_CLOSED), duration_s (MISSION_COMPLETE) 통합
 """
 
 import sys
@@ -20,9 +21,11 @@ import matplotlib
 from scipy import stats
 
 from parse_utils import parse_extra
+from stat_utils import paired_comparison, significance_marker, add_significance_bracket
+from plot_style import (apply_style, save_fig, violin_with_dots,
+                        COLORS_COND, COND_LABELS, COLOR_GLASS, COLOR_HYBRID, DPI)
 
-matplotlib.rcParams["font.family"] = "AppleGothic"
-matplotlib.rcParams["axes.unicode_minus"] = False
+apply_style()
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # ──────────────────────────────────────────────
@@ -52,7 +55,13 @@ N_PARTICIPANTS = 24
 
 def load_events(allow_demo: bool = False) -> pd.DataFrame:
     """이벤트 로그 로드 또는 데모 생성."""
-    csv_files = sorted(RAW_DIR.glob("P*_*.csv"))
+    # [ISMAR] sidecar 파일 제외
+    SIDECAR_SUFFIXES = ("_head_pose.csv", "_nav_trace.csv", "_beam_segments.csv",
+                        "_anchor_reloc.csv", "_system_health.csv")
+    csv_files = sorted(
+        f for f in RAW_DIR.glob("P*_*.csv")
+        if not any(f.name.endswith(s) for s in SIDECAR_SUFFIXES)
+    )
     if csv_files:
         frames = [pd.read_csv(f, parse_dates=["timestamp"]) for f in csv_files]
         return pd.concat(frames, ignore_index=True)
@@ -337,11 +346,28 @@ def analyze_verification_behavior(df: pd.DataFrame) -> pd.DataFrame:
 # ──────────────────────────────────────────────
 
 def analyze_mission_duration(df: pd.DataFrame) -> pd.DataFrame:
-    """조건별, 미션 타입별 소요시간 분석."""
+    """조건별, 미션 타입별 소요시간 분석.
+
+    [ISMAR] duration_s가 top-level 컬럼으로 존재하면 우선 사용 (24-column 포맷).
+    없으면 extra_data JSON에서 추출 (하위 호환).
+    """
     mc = df[df["event_type"] == "MISSION_COMPLETE"].copy()
     mc["parsed"] = mc["extra_data"].apply(_parse_extra)
     mc["mission_id"] = mc["parsed"].apply(lambda d: d.get("mission_id", ""))
-    mc["duration_s"] = mc["parsed"].apply(lambda d: d.get("duration_s", np.nan))
+
+    # [ISMAR] duration_s: top-level 컬럼 우선, 없으면 extra_data에서 추출
+    if "duration_s" in mc.columns and mc["duration_s"].notna().any():
+        # top-level 컬럼이 있고 값이 존재하면 사용
+        mc["duration_s"] = pd.to_numeric(mc["duration_s"], errors="coerce")
+        # NaN인 행만 extra_data에서 보충
+        mask = mc["duration_s"].isna()
+        mc.loc[mask, "duration_s"] = mc.loc[mask, "parsed"].apply(
+            lambda d: d.get("duration_s", np.nan)
+        )
+        print("  [ISMAR] MISSION_COMPLETE duration_s 컬럼 사용")
+    else:
+        mc["duration_s"] = mc["parsed"].apply(lambda d: d.get("duration_s", np.nan))
+
     mc["mission_type"] = mc["mission_id"].map(MISSION_TYPES)
     mc = mc.dropna(subset=["duration_s"])
 
@@ -372,7 +398,9 @@ def analyze_difficulty_ratings(df: pd.DataFrame) -> pd.DataFrame:
     dr = df[df["event_type"] == "DIFFICULTY_RATED"].copy()
     dr["parsed"] = dr["extra_data"].apply(_parse_extra)
     dr["mission_id"] = dr["parsed"].apply(lambda d: d.get("mission_id", ""))
-    dr["rating"] = dr["parsed"].apply(lambda d: d.get("rating", np.nan))
+    dr["rating"] = pd.to_numeric(
+        dr["parsed"].apply(lambda d: d.get("rating", np.nan)), errors="coerce"
+    )
     dr["mission_type"] = dr["mission_id"].map(MISSION_TYPES)
     dr = dr.dropna(subset=["rating"])
 
@@ -456,6 +484,103 @@ def analyze_content_accuracy_correlation(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ──────────────────────────────────────────────
+# 6c. [ISMAR] 열람 시간 → 정확도 상관 분석
+# ──────────────────────────────────────────────
+
+def analyze_viewing_time_accuracy(df: pd.DataFrame) -> pd.DataFrame:
+    """[ISMAR] BEAM_INFO_CARD_CLOSED의 view_duration_s를 이용한 열람 시간-정확도 상관 분석.
+
+    extra_data JSON에서 view_duration_s를 추출하여,
+    미션 완료 직전 정보 카드 열람 시간이 길수록 정확도가 높은지 검증.
+    """
+    hybrid = df[df["condition"] == "hybrid"]
+
+    # BEAM_INFO_CARD_CLOSED에서 view_duration_s 추출
+    card_closed = hybrid[hybrid["event_type"] == "BEAM_INFO_CARD_CLOSED"].copy()
+    if card_closed.empty:
+        print("\n=== [ISMAR] 열람 시간-정확도 상관 분석 ===")
+        print("  [경고] BEAM_INFO_CARD_CLOSED 이벤트 없음")
+        return pd.DataFrame()
+
+    card_closed["parsed"] = card_closed["extra_data"].apply(_parse_extra)
+    card_closed["view_duration_s"] = card_closed["parsed"].apply(
+        lambda d: d.get("view_duration_s", np.nan)
+    )
+    card_closed = card_closed.dropna(subset=["view_duration_s"])
+
+    if card_closed.empty:
+        print("\n=== [ISMAR] 열람 시간-정확도 상관 분석 ===")
+        print("  [경고] view_duration_s 데이터 없음")
+        return pd.DataFrame()
+
+    # MISSION_COMPLETE에서 정확도 추출
+    mc = hybrid[hybrid["event_type"] == "MISSION_COMPLETE"].copy()
+    mc["parsed_mc"] = mc["extra_data"].apply(_parse_extra)
+    mc["mission_id"] = mc["parsed_mc"].apply(lambda d: d.get("mission_id", ""))
+    mc["correct"] = mc["parsed_mc"].apply(lambda d: d.get("correct", None))
+    mc = mc.dropna(subset=["correct"])
+
+    if mc.empty:
+        print("\n=== [ISMAR] 열람 시간-정확도 상관 분석 ===")
+        print("  [경고] MISSION_COMPLETE 정확도 데이터 없음")
+        return pd.DataFrame()
+
+    # 각 미션 완료 이전 120초 이내의 카드 열람 시간 집계
+    results = []
+    for _, m_row in mc.iterrows():
+        pid = m_row["participant_id"]
+        mc_time = m_row["timestamp"]
+        m_id = m_row["mission_id"]
+
+        recent_cards = card_closed[
+            (card_closed["participant_id"] == pid) &
+            (card_closed["timestamp"] < mc_time) &
+            (card_closed["timestamp"] > mc_time - pd.Timedelta(seconds=120))
+        ]
+
+        if not recent_cards.empty:
+            total_view_time = recent_cards["view_duration_s"].sum()
+            mean_view_time = recent_cards["view_duration_s"].mean()
+            n_cards = len(recent_cards)
+        else:
+            total_view_time = 0
+            mean_view_time = 0
+            n_cards = 0
+
+        results.append({
+            "participant_id": pid,
+            "mission_id": m_id,
+            "correct": int(m_row["correct"]),
+            "total_view_time_s": round(total_view_time, 1),
+            "mean_view_time_s": round(mean_view_time, 1),
+            "n_cards_viewed": n_cards,
+        })
+
+    view_df = pd.DataFrame(results)
+
+    print("\n=== [ISMAR] 열람 시간-정확도 상관 분석 ===")
+    if not view_df.empty and view_df["n_cards_viewed"].sum() > 0:
+        # 카드를 열람한 경우만 상관 분석
+        with_cards = view_df[view_df["n_cards_viewed"] > 0]
+        if len(with_cards) >= 5:
+            from scipy.stats import pointbiserialr
+            r, p = pointbiserialr(with_cards["correct"], with_cards["total_view_time_s"])
+            print(f"  총 열람시간 vs 정확도: r_pb={r:.3f}, p={p:.4f} (n={len(with_cards)})")
+
+            r2, p2 = pointbiserialr(with_cards["correct"], with_cards["mean_view_time_s"])
+            print(f"  평균 열람시간 vs 정확도: r_pb={r2:.3f}, p={p2:.4f}")
+
+        # 열람 vs 미열람 정확도 비교
+        viewed = view_df[view_df["n_cards_viewed"] > 0]
+        not_viewed = view_df[view_df["n_cards_viewed"] == 0]
+        if len(viewed) > 0 and len(not_viewed) > 0:
+            print(f"  카드 열람 시 정확도: {viewed['correct'].mean():.1%} (n={len(viewed)})")
+            print(f"  카드 미열람 정확도: {not_viewed['correct'].mean():.1%} (n={len(not_viewed)})")
+
+    return view_df
+
+
+# ──────────────────────────────────────────────
 # 7. 통계 검정 유틸리티
 # ──────────────────────────────────────────────
 
@@ -469,9 +594,9 @@ def _run_paired_test(data: pd.DataFrame, dv: str, label: str):
         )
         if not test.empty:
             row = test.iloc[0]
-            print(f"    Paired t-test ({label}): t={row['T']:.2f}, p={row['p-unc']:.4f}, "
+            print(f"    Paired t-test ({label}): t={row['T']:.2f}, p={row.get('p-unc', row.get('p_unc', 0)):.4f}, "
                   f"d={row['hedges']:.2f}")
-    except ImportError:
+    except (ImportError, ValueError):
         glass_vals = data[data["condition"] == "glass_only"][dv].dropna().values
         hybrid_vals = data[data["condition"] == "hybrid"][dv].dropna().values
         min_len = min(len(glass_vals), len(hybrid_vals))
@@ -513,10 +638,31 @@ def plot_accuracy_by_type(df: pd.DataFrame, type_results: pd.DataFrame):
     ax.set_xticklabels([f"{k}\n({v})" for k, v in MISSION_TYPE_LABELS.items()])
     ax.legend()
     ax.set_ylim(0, 100)
+    # Add significance markers for each mission type
+    for j, mt in enumerate(mission_types):
+        mc_data = df[df["event_type"] == "MISSION_COMPLETE"].copy()
+        mc_data["parsed_sig"] = mc_data["extra_data"].apply(_parse_extra)
+        mc_data["mission_id_sig"] = mc_data["parsed_sig"].apply(lambda d: d.get("mission_id", ""))
+        mc_data["correct_sig"] = mc_data["parsed_sig"].apply(lambda d: d.get("correct", None))
+        mc_data["mission_type_sig"] = mc_data["mission_id_sig"].map(MISSION_TYPES)
+        mc_mt = mc_data[(mc_data["mission_type_sig"] == mt)].dropna(subset=["correct_sig"])
+        if not mc_mt.empty:
+            mc_mt["correct_num_sig"] = mc_mt["correct_sig"].astype(int)
+            pid_acc = mc_mt.groupby(["participant_id", "condition"])["correct_num_sig"].mean().reset_index(name="accuracy_sig")
+            if pid_acc["condition"].nunique() == 2:
+                res = paired_comparison(pid_acc, "accuracy_sig", condition_col="condition")
+                marker = significance_marker(res["p"])
+                if marker and marker != "n.s.":
+                    y_max = max(accs[j] for accs in [[type_results[(type_results["mission_type"] == mt) &
+                                (type_results["condition"] == label)]["accuracy"].values[0] * 100
+                                if len(type_results[(type_results["mission_type"] == mt) &
+                                (type_results["condition"] == label)]) > 0 else 0
+                                for label in CONDITION_LABELS] for _ in [0]][0])
+                    ax.text(j + width / 2, y_max + 5, marker,
+                            ha="center", va="bottom", fontsize=11, fontweight="bold")
+
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "mission_accuracy_by_type.png", dpi=150)
-    print(f"  → {OUTPUT_DIR / 'mission_accuracy_by_type.png'} 저장")
-    plt.close(fig)
+    save_fig(fig, OUTPUT_DIR / "mission_accuracy_by_type")
 
 
 def plot_behavior_distribution(beh_df: pd.DataFrame):
@@ -541,9 +687,7 @@ def plot_behavior_distribution(beh_df: pd.DataFrame):
 
     fig.suptitle("Hybrid 조건 — 검증 행동 유형 분포", fontsize=14)
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "verification_behavior.png", dpi=150)
-    print(f"  → {OUTPUT_DIR / 'verification_behavior.png'} 저장")
-    plt.close(fig)
+    save_fig(fig, OUTPUT_DIR / "verification_behavior")
 
 
 # ──────────────────────────────────────────────
@@ -570,6 +714,9 @@ def main():
     diff_results = analyze_difficulty_ratings(df)
     content_corr = analyze_content_accuracy_correlation(df)
 
+    # [ISMAR] 열람 시간-정확도 상관 분석
+    view_time_df = analyze_viewing_time_accuracy(df)
+
     # 시각화
     print(f"\n=== 시각화 ===")
     plot_accuracy_by_type(df, type_results)
@@ -591,6 +738,11 @@ def main():
     if not content_corr.empty:
         content_corr.to_csv(OUTPUT_DIR / "content_accuracy_correlation.csv", index=False)
         print(f"  → {OUTPUT_DIR / 'content_accuracy_correlation.csv'} 저장")
+
+    # [ISMAR] 열람 시간-정확도 결과 저장
+    if not view_time_df.empty:
+        view_time_df.to_csv(OUTPUT_DIR / "viewing_time_accuracy.csv", index=False)
+        print(f"  → {OUTPUT_DIR / 'viewing_time_accuracy.csv'} 저장")
 
     print("\n분석 완료.")
 

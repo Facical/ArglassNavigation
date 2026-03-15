@@ -4,6 +4,7 @@
 - 검증 에피소드 추출 및 교차검증 지수(CVI) 계산 (v2)
 - 2조건 간 Paired t-test / Wilcoxon signed-rank 비교
 - 시각화: 조건별 boxplot, 트리거 전후 timeline
+- [ISMAR] PAUSE_START/PAUSE_END 이벤트, ROUTE_END 기반 완료시간, beam_segments sidecar
 """
 
 import os
@@ -21,9 +22,11 @@ import matplotlib
 from scipy import stats
 
 from parse_utils import parse_extra
+from stat_utils import paired_comparison, significance_marker, add_significance_bracket
+from plot_style import (apply_style, save_fig, violin_with_dots,
+                        COLORS_COND, COND_LABELS, COLOR_GLASS, COLOR_HYBRID, DPI)
 
-matplotlib.rcParams["font.family"] = "AppleGothic"
-matplotlib.rcParams["axes.unicode_minus"] = False
+apply_style()
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # ──────────────────────────────────────────────
@@ -49,9 +52,24 @@ N_PARTICIPANTS = 24
 N_WAYPOINTS = 8
 
 
+def _detect_csv_format(path: Path) -> int:
+    """[ISMAR] CSV 컬럼 수를 감지하여 포맷 버전 반환 (15=legacy, 24+=ISMAR)."""
+    try:
+        sample = pd.read_csv(path, nrows=1)
+        return len(sample.columns)
+    except Exception:
+        return 15  # fallback to legacy
+
+
 def load_all_events(allow_demo: bool = False) -> pd.DataFrame:
     """data/raw/ 내 모든 이벤트 로그 CSV를 통합하여 반환."""
-    csv_files = sorted(RAW_DIR.glob("P*_*.csv"))
+    # [ISMAR] sidecar 파일 제외 (head_pose, nav_trace, beam_segments 등)
+    SIDECAR_SUFFIXES = ("_head_pose.csv", "_nav_trace.csv", "_beam_segments.csv",
+                        "_anchor_reloc.csv", "_system_health.csv")
+    csv_files = sorted(
+        f for f in RAW_DIR.glob("P*_*.csv")
+        if not any(f.name.endswith(s) for s in SIDECAR_SUFFIXES)
+    )
     if not csv_files:
         if allow_demo:
             print(f"[경고] {RAW_DIR}에 CSV 파일이 없습니다. 데모 데이터를 생성합니다.")
@@ -63,9 +81,49 @@ def load_all_events(allow_demo: bool = False) -> pd.DataFrame:
 
     frames = []
     for f in csv_files:
+        # [ISMAR] 포맷 감지: 컬럼 수에 따라 호환 처리
+        ncols = _detect_csv_format(f)
         df = pd.read_csv(f, parse_dates=["timestamp"])
+        if ncols <= 15:
+            # Legacy 15-column format — 누락 컬럼 채우기
+            for col in ["trigger_id", "trigger_type", "duration_s"]:
+                if col not in df.columns:
+                    df[col] = ""
         frames.append(df)
     return pd.concat(frames, ignore_index=True)
+
+
+def load_beam_segments() -> pd.DataFrame:
+    """[ISMAR] *_beam_segments.csv sidecar 파일이 있으면 로드하여 반환.
+
+    실제 파일 컬럼: segment_id, on_ts, off_ts, duration_s, mission_id,
+    start_wp, end_wp, trigger_active, primary_tab, poi_view_count, ...
+    participant_id는 파일명에서 추출.
+    """
+    seg_files = sorted(RAW_DIR.glob("*_beam_segments.csv"))
+    if not seg_files:
+        return pd.DataFrame()
+    frames = []
+    for f in seg_files:
+        try:
+            # [ISMAR] 타임스탬프 컬럼명 호환: on_ts/off_ts 또는 start_time/end_time
+            df = pd.read_csv(f)
+            for ts_col in ["on_ts", "off_ts", "start_time", "end_time"]:
+                if ts_col in df.columns:
+                    df[ts_col] = pd.to_datetime(df[ts_col])
+            # 파일명에서 participant_id 추출 (예: P01_hybrid_Set1_..._beam_segments.csv)
+            import re
+            match = re.match(r"(P\d+)_", f.name)
+            if match:
+                df["participant_id"] = match.group(1)
+            frames.append(df)
+        except Exception as e:
+            print(f"  [경고] beam_segments 로드 실패: {f.name} — {e}")
+    if frames:
+        combined = pd.concat(frames, ignore_index=True)
+        print(f"  [ISMAR] beam_segments sidecar 로드: {len(combined)}건 ({len(seg_files)} 파일)")
+        return combined
+    return pd.DataFrame()
 
 
 def generate_demo_data() -> pd.DataFrame:
@@ -245,7 +303,7 @@ def _event(t, pid, cond, etype, wp, **extra) -> dict:
 # 2. 기기 전환 분석
 # ──────────────────────────────────────────────
 
-def analyze_switching(df: pd.DataFrame) -> pd.DataFrame:
+def analyze_switching(df: pd.DataFrame, beam_segments: pd.DataFrame = None) -> pd.DataFrame:
     """하이브리드 조건의 기기 전환 통계 산출."""
     hybrid = df[df["condition"] == "hybrid"]
     beam_on = hybrid[hybrid["event_type"] == "BEAM_SCREEN_ON"]
@@ -254,21 +312,32 @@ def analyze_switching(df: pd.DataFrame) -> pd.DataFrame:
     # 참가자별 전환 횟수
     switch_counts = beam_on.groupby("participant_id").size().reset_index(name="switch_count")
 
-    # 전환 지속시간 (BEAM_SCREEN_OFF의 duration_s)
-    durations = []
-    for _, row in beam_off.iterrows():
-        d = parse_extra(row.get("extra_data", "{}"))
-        dur = d.get("duration_s", np.nan)
-        durations.append({"participant_id": row["participant_id"], "duration_s": dur})
-
-    dur_df = pd.DataFrame(durations)
-    if not dur_df.empty:
-        avg_dur = dur_df.groupby("participant_id")["duration_s"].mean().reset_index(
+    # [ISMAR] beam_segments sidecar가 있으면 우선 사용, 없으면 기존 방식
+    if beam_segments is not None and not beam_segments.empty and "duration_s" in beam_segments.columns:
+        print("  [ISMAR] beam_segments sidecar 데이터를 지속시간 분석에 사용합니다.")
+        avg_dur = beam_segments.groupby("participant_id")["duration_s"].mean().reset_index(
             name="avg_switch_duration_s"
         )
         switch_counts = switch_counts.merge(avg_dur, on="participant_id", how="left")
+        # sidecar에 content_type 등 추가 컬럼이 있으면 요약 출력
+        if "content_types_accessed" in beam_segments.columns:
+            print(f"    sidecar 콘텐츠 유형 필드 감지 — 세그먼트별 콘텐츠 분석 가능")
     else:
-        switch_counts["avg_switch_duration_s"] = np.nan
+        # 기존 방식: BEAM_SCREEN_OFF extra_data에서 duration_s 추출
+        durations = []
+        for _, row in beam_off.iterrows():
+            d = parse_extra(row.get("extra_data", "{}"))
+            dur = d.get("duration_s", np.nan)
+            durations.append({"participant_id": row["participant_id"], "duration_s": dur})
+
+        dur_df = pd.DataFrame(durations)
+        if not dur_df.empty:
+            avg_dur = dur_df.groupby("participant_id")["duration_s"].mean().reset_index(
+                name="avg_switch_duration_s"
+            )
+            switch_counts = switch_counts.merge(avg_dur, on="participant_id", how="left")
+        else:
+            switch_counts["avg_switch_duration_s"] = np.nan
 
     # 트리거 전후 전환율
     trigger_switches = beam_on[beam_on["waypoint_id"].isin(TRIGGER_WAYPOINTS)]
@@ -514,7 +583,12 @@ def analyze_information_utilization(df: pd.DataFrame) -> pd.DataFrame:
 # ──────────────────────────────────────────────
 
 def analyze_pauses(df: pd.DataFrame) -> pd.DataFrame:
-    """조건별 정지 횟수 및 총 정지 시간 비교."""
+    """조건별 정지 횟수 및 총 정지 시간 비교.
+
+    [ISMAR] PAUSE_START/PAUSE_END 이벤트를 사용하여 이동 정지 구간을 분석.
+    PAUSE_END의 extra_data에 pause_duration_s가 있으면 해당 값을 사용하고,
+    없으면 PAUSE_START/PAUSE_END 타임스탬프 차이로 계산 (하위 호환).
+    """
     pause_starts = df[df["event_type"] == "PAUSE_START"]
     pause_ends = df[df["event_type"] == "PAUSE_END"]
 
@@ -527,7 +601,24 @@ def analyze_pauses(df: pd.DataFrame) -> pd.DataFrame:
     pause_durations = []
     for _, row in pause_ends.iterrows():
         d = parse_extra(row.get("extra_data", "{}"))
-        dur = d.get("pause_duration_s", 0)
+        dur = d.get("pause_duration_s", None)
+
+        # [ISMAR] pause_duration_s가 extra_data에 없으면 타임스탬프 매칭으로 계산
+        if dur is None:
+            pid = row["participant_id"]
+            cond = row["condition"]
+            end_time = row["timestamp"]
+            matching_starts = pause_starts[
+                (pause_starts["participant_id"] == pid) &
+                (pause_starts["condition"] == cond) &
+                (pause_starts["timestamp"] < end_time)
+            ]
+            if not matching_starts.empty:
+                start_time = matching_starts["timestamp"].iloc[-1]
+                dur = (end_time - start_time).total_seconds()
+            else:
+                dur = 0
+
         pause_durations.append({
             "participant_id": row["participant_id"],
             "condition": row["condition"],
@@ -543,11 +634,14 @@ def analyze_pauses(df: pd.DataFrame) -> pd.DataFrame:
     else:
         pause_counts["total_pause_s"] = 0
 
-    print(f"\n=== 정지 분석 (2조건) ===")
+    print(f"\n=== 정지 분석 (2조건) [ISMAR: PAUSE_START/PAUSE_END] ===")
     for cond, label in zip(CONDITIONS, CONDITION_LABELS):
         subset = pause_counts[pause_counts["condition"] == cond]
-        print(f"  {label}: 평균 {subset['pause_count'].mean():.1f}회, "
-              f"총 {subset['total_pause_s'].mean():.1f}s")
+        if not subset.empty:
+            print(f"  {label}: 평균 {subset['pause_count'].mean():.1f}회, "
+                  f"총 {subset['total_pause_s'].mean():.1f}s")
+        else:
+            print(f"  {label}: PAUSE 이벤트 없음")
 
     return pause_counts
 
@@ -557,21 +651,53 @@ def analyze_pauses(df: pd.DataFrame) -> pd.DataFrame:
 # ──────────────────────────────────────────────
 
 def analyze_completion_time(df: pd.DataFrame) -> pd.DataFrame:
-    """조건별 과제 완료 시간 산출."""
-    starts = df[df["event_type"] == "ROUTE_START"][["participant_id", "condition", "timestamp"]]
-    ends = df[df["event_type"] == "ROUTE_END"][["participant_id", "condition", "timestamp"]]
+    """조건별 과제 완료 시간 산출.
 
+    [ISMAR] ROUTE_END 이벤트를 우선 사용하여 실제 경로 완료 시간을 정확히 측정.
+    ROUTE_END가 없으면 마지막 WAYPOINT_REACHED 또는 MISSION_COMPLETE 타임스탬프로
+    fallback하여 하위 호환성 유지.
+    """
+    starts = df[df["event_type"] == "ROUTE_START"][["participant_id", "condition", "timestamp"]]
     starts = starts.rename(columns={"timestamp": "start_time"})
-    ends = ends.rename(columns={"timestamp": "end_time"})
+
+    # [ISMAR] ROUTE_END 이벤트 우선 사용
+    route_ends = df[df["event_type"] == "ROUTE_END"]
+    if not route_ends.empty:
+        ends = route_ends[["participant_id", "condition", "timestamp"]].copy()
+        ends = ends.rename(columns={"timestamp": "end_time"})
+        print("  [ISMAR] ROUTE_END 이벤트를 사용하여 완료 시간 산출")
+    else:
+        # Fallback: 마지막 WAYPOINT_REACHED 또는 MISSION_COMPLETE 이벤트
+        fallback_events = df[df["event_type"].isin(["WAYPOINT_REACHED", "MISSION_COMPLETE"])]
+        if not fallback_events.empty:
+            ends = (
+                fallback_events.groupby(["participant_id", "condition"])["timestamp"]
+                .max()
+                .reset_index()
+                .rename(columns={"timestamp": "end_time"})
+            )
+            print("  [호환] ROUTE_END 없음 — 마지막 WP/미션 이벤트로 대체")
+        else:
+            ends = pd.DataFrame(columns=["participant_id", "condition", "end_time"])
 
     merged = starts.merge(ends, on=["participant_id", "condition"])
+    if merged.empty:
+        print(f"\n=== 과제 완료 시간 (2조건) ===")
+        print("  [경고] ROUTE_START/종료 이벤트 매칭 불가")
+        return pd.DataFrame(columns=["participant_id", "condition", "completion_time_s"])
+    # 타입 안전: datetime으로 변환
+    merged["start_time"] = pd.to_datetime(merged["start_time"])
+    merged["end_time"] = pd.to_datetime(merged["end_time"])
     merged["completion_time_s"] = (merged["end_time"] - merged["start_time"]).dt.total_seconds()
 
     print(f"\n=== 과제 완료 시간 (2조건) ===")
     for cond, label in zip(CONDITIONS, CONDITION_LABELS):
         subset = merged[merged["condition"] == cond]
-        print(f"  {label}: M={subset['completion_time_s'].mean():.1f}s, "
-              f"SD={subset['completion_time_s'].std():.1f}s")
+        if not subset.empty:
+            print(f"  {label}: M={subset['completion_time_s'].mean():.1f}s, "
+                  f"SD={subset['completion_time_s'].std():.1f}s")
+        else:
+            print(f"  {label}: 완료 시간 데이터 없음")
 
     return merged[["participant_id", "condition", "completion_time_s"]]
 
@@ -591,9 +717,14 @@ def run_paired_test(data: pd.DataFrame, dv: str, label: str):
         print(f"\n=== Paired t-test: {label} ===")
         if not test.empty:
             row = test.iloc[0]
-            print(f"  {row['A']} vs {row['B']}: t={row['T']:.2f}, p={row['p-unc']:.4f}, "
+            print(f"  {row['A']} vs {row['B']}: t={row['T']:.2f}, p={row.get('p-unc', row.get('p_unc', 0)):.4f}, "
                   f"d={row['hedges']:.2f}")
-    except ImportError:
+    except (ImportError, ValueError) as e:
+        if isinstance(e, ImportError):
+            pass
+        else:
+            print(f"\n=== {label}: pingouin 검정 실패 ({e}), scipy fallback ===")
+        # fallback
         print(f"\n=== Wilcoxon signed-rank: {label} ===")
         print("  (pingouin 미설치 → scipy.stats.wilcoxon 사용)")
         glass_vals = data[data["condition"] == "glass_only"][dv].values
@@ -619,49 +750,46 @@ def run_paired_test(data: pd.DataFrame, dv: str, label: str):
 # ──────────────────────────────────────────────
 
 def plot_switching_boxplot(switch_df: pd.DataFrame):
-    """하이브리드 조건 기기 전환 횟수 boxplot."""
-    fig, ax = plt.subplots(1, 1, figsize=(6, 5))
-    ax.boxplot([switch_df["switch_count"].values], tick_labels=["Hybrid"])
-    ax.set_ylabel("기기 전환 횟수")
-    ax.set_title("하이브리드 조건 - 기기 전환 횟수 분포")
+    """하이브리드 조건 기기 전환 횟수 violin + dots."""
+    fig, ax = plt.subplots(1, 1, figsize=(4, 5))
+    data = switch_df["switch_count"].dropna().values
+    violin_with_dots(ax, [data], [1], [COLOR_HYBRID], ["Hybrid"],
+                     ylabel="Device Switching Count",
+                     title="Hybrid — Device Switching Distribution")
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "switching_boxplot.png", dpi=150)
-    print(f"  → {OUTPUT_DIR / 'switching_boxplot.png'} 저장")
-    plt.close(fig)
+    save_fig(fig, OUTPUT_DIR / "switching_boxplot")
 
 
 def plot_pause_comparison(pause_df: pd.DataFrame):
-    """2조건 정지 횟수 비교 boxplot."""
+    """2조건 정지 횟수 비교 violin + dots + significance."""
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
-    data_count = [pause_df[pause_df["condition"] == c]["pause_count"].values for c in CONDITIONS]
+    data_count = [pause_df[pause_df["condition"] == c]["pause_count"].dropna().values for c in CONDITIONS]
+    res_count = paired_comparison(pause_df, "pause_count")
+    violin_with_dots(axes[0], data_count, [1, 2], COLORS_COND, COND_LABELS,
+                     p_value=res_count["p"], ylabel="Pause Count",
+                     title="Pause Count by Condition")
 
-    axes[0].boxplot(data_count, tick_labels=CONDITION_LABELS)
-    axes[0].set_ylabel("정지 횟수")
-    axes[0].set_title("조건별 정지 횟수")
-
-    data_time = [pause_df[pause_df["condition"] == c]["total_pause_s"].values for c in CONDITIONS]
-    axes[1].boxplot(data_time, tick_labels=CONDITION_LABELS)
-    axes[1].set_ylabel("총 정지 시간 (s)")
-    axes[1].set_title("조건별 총 정지 시간")
+    data_time = [pause_df[pause_df["condition"] == c]["total_pause_s"].dropna().values for c in CONDITIONS]
+    res_time = paired_comparison(pause_df, "total_pause_s")
+    violin_with_dots(axes[1], data_time, [1, 2], COLORS_COND, COND_LABELS,
+                     p_value=res_time["p"], ylabel="Total Pause Time (s)",
+                     title="Pause Duration by Condition")
 
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "pause_comparison.png", dpi=150)
-    print(f"  → {OUTPUT_DIR / 'pause_comparison.png'} 저장")
-    plt.close(fig)
+    save_fig(fig, OUTPUT_DIR / "pause_comparison")
 
 
 def plot_completion_time(ct_df: pd.DataFrame):
-    """2조건 과제 완료 시간 비교 boxplot."""
-    fig, ax = plt.subplots(1, 1, figsize=(6, 5))
-    data = [ct_df[ct_df["condition"] == c]["completion_time_s"].values for c in CONDITIONS]
-    ax.boxplot(data, tick_labels=CONDITION_LABELS)
-    ax.set_ylabel("과제 완료 시간 (s)")
-    ax.set_title("조건별 과제 완료 시간")
+    """2조건 과제 완료 시간 비교 violin + dots + significance."""
+    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+    data = [ct_df[ct_df["condition"] == c]["completion_time_s"].dropna().values for c in CONDITIONS]
+    res = paired_comparison(ct_df, "completion_time_s")
+    violin_with_dots(ax, data, [1, 2], COLORS_COND, COND_LABELS,
+                     p_value=res["p"], ylabel="Completion Time (s)",
+                     title="Task Completion Time")
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "completion_time.png", dpi=150)
-    print(f"  → {OUTPUT_DIR / 'completion_time.png'} 저장")
-    plt.close(fig)
+    save_fig(fig, OUTPUT_DIR / "completion_time")
 
 
 def plot_trigger_timeline(df: pd.DataFrame):
@@ -693,9 +821,7 @@ def plot_trigger_timeline(df: pd.DataFrame):
     ax.legend(handles=legend_elements)
 
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "trigger_timeline.png", dpi=150)
-    print(f"  → {OUTPUT_DIR / 'trigger_timeline.png'} 저장")
-    plt.close(fig)
+    save_fig(fig, OUTPUT_DIR / "trigger_timeline")
 
 
 def plot_content_heatmap(pattern_df: pd.DataFrame):
@@ -724,9 +850,7 @@ def plot_content_heatmap(pattern_df: pd.DataFrame):
     ax.set_title("미션 타입 × 콘텐츠 유형 접근 빈도 (Hybrid)")
     fig.colorbar(im, ax=ax, label="접근 횟수")
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "content_access_heatmap.png", dpi=150)
-    print(f"  → {OUTPUT_DIR / 'content_access_heatmap.png'} 저장")
-    plt.close(fig)
+    save_fig(fig, OUTPUT_DIR / "content_access_heatmap")
 
 
 # ──────────────────────────────────────────────
@@ -748,8 +872,11 @@ def main():
     print(f"참가자 수: {df['participant_id'].nunique()}")
     print(f"조건: {df['condition'].unique().tolist()}")
 
+    # [ISMAR] beam_segments sidecar 로드 시도
+    beam_segments = load_beam_segments()
+
     # 분석
-    switch_df = analyze_switching(df)
+    switch_df = analyze_switching(df, beam_segments=beam_segments)
     cvi_df = analyze_cross_verification(df)
     ep_df = analyze_verification_episodes(df)
     content_df = analyze_content_access_patterns(df)

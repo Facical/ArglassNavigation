@@ -37,7 +37,7 @@ namespace ARNavExperiment.Presentation.Mapping
             { "B_WP02", new Vector2(36, 33) },
             { "B_WP03", new Vector2(36, 45) },
             { "B_WP04", new Vector2(36, 57) },
-            { "B_WP05", new Vector2(36, 69) },
+            { "B_WP05", new Vector2(36, 66) },
             { "B_WP06", new Vector2(39, 72) },
             { "B_WP07", new Vector2(36, 48) },
             { "B_WP08", new Vector2(36, -7) },

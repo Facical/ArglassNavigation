@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using ARNavExperiment.Domain.Events;
 using ARNavExperiment.Application;
+using ARNavExperiment.Logging;
 #if XR_ARFOUNDATION
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
@@ -924,6 +925,11 @@ namespace ARNavExperiment.Core
                         state = AnchorRelocState.LoadFailed,
                         elapsedTime = 0f
                     };
+                    bool isCrit = activeCriticalSet?.Contains(mapping.waypointId) == true;
+                    AnchorRelocLogger.Instance?.LogAnchorResult(
+                        mapping.waypointId, mapping.anchorGuid, isCrit,
+                        AnchorRelocState.LoadFailed, 0f, slamAtFail.reasonKey,
+                        0, fileExists, false);
                     RecordAnchorProcessed(mapping.waypointId, AnchorRelocState.LoadFailed);
                 }
             }
@@ -958,6 +964,10 @@ namespace ARNavExperiment.Core
                         }
 
                         Diag($"앵커 재인식 완료: {waypointId} ({elapsed:F1}s)");
+                        string guid = GetAnchorGuid(waypointId);
+                        AnchorRelocLogger.Instance?.LogAnchorResult(
+                            waypointId, guid, isCritical,
+                            AnchorRelocState.Tracking, elapsed);
                         RecordAnchorProcessed(waypointId, AnchorRelocState.Tracking);
                         yield break;
                     }
@@ -969,6 +979,9 @@ namespace ARNavExperiment.Core
                     lastSlamLog = elapsed;
                     var slam = GetSlamTrackingStatus();
                     Diag($"Waiting {waypointId} ({elapsed:F0}s/{timeout:F0}s) — SLAM: {slam.reasonKey}, critical={isCritical}");
+                    string progGuid = GetAnchorGuid(waypointId);
+                    AnchorRelocLogger.Instance?.LogAnchorProgress(
+                        waypointId, progGuid, isCritical, elapsed, slam.reasonKey);
                 }
 
                 // TryRemap으로 재인식 촉진 (critical: 3초 간격, 나머지: 10초)
@@ -996,7 +1009,19 @@ namespace ARNavExperiment.Core
                 relocResults[waypointId].elapsedTime = timeout;
             }
 
+            string toGuid = GetAnchorGuid(waypointId);
+            AnchorRelocLogger.Instance?.LogAnchorResult(
+                waypointId, toGuid, isCritical,
+                AnchorRelocState.TimedOut, timeout, finalSlam.reasonKey);
             RecordAnchorProcessed(waypointId, AnchorRelocState.TimedOut);
+        }
+
+        private string GetAnchorGuid(string waypointId)
+        {
+            if (lastLoadedMappings == null) return "";
+            foreach (var m in lastLoadedMappings)
+                if (m.waypointId == waypointId) return m.anchorGuid ?? "";
+            return "";
         }
 
         /// <summary>앵커 처리 완료 공통 로직 — 카운터/이벤트 관리</summary>

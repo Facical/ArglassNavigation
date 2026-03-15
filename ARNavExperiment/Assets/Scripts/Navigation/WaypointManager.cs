@@ -25,11 +25,30 @@ namespace ARNavExperiment.Navigation
             : fallbackPosition;
     }
 
+    public enum SegmentType
+    {
+        Corridor,  // 직선 복도 — 세그먼트 방향으로 안내
+        Turn       // 방향 전환점 — 세그먼트 방향 사용 (자연스러운 전환)
+    }
+
+    [Serializable]
+    public class RouteSegment
+    {
+        public int fromIndex;
+        public int toIndex;
+        public SegmentType type;
+
+        // 런타임 계산값
+        [NonSerialized] public Vector3 direction; // XZ 정규화 방향
+        [NonSerialized] public float length;
+    }
+
     [Serializable]
     public class RouteData
     {
         public string routeId;
         public List<Waypoint> waypoints = new List<Waypoint>();
+        public List<RouteSegment> segments = new List<RouteSegment>();
     }
 
     public class WaypointManager : MonoBehaviour
@@ -92,6 +111,17 @@ namespace ARNavExperiment.Navigation
         private Vector2 manualCalibSlamXZ_1;
         private Vector2 manualCalibFallbackXZ_1;
 
+        /// <summary>보정 품질이 낮은 상태인지 확인 (none 또는 auto_zero_anchor)</summary>
+        public bool IsWeakCalibration()
+        {
+            return calibrationSource == "none" || calibrationSource == "auto_zero_anchor";
+        }
+
+        private int DefaultStartIndex()
+        {
+            return (activeRoute != null && activeRoute.waypoints.Count > 1) ? 1 : 0;
+        }
+
         /// <summary>현재 heading 보정 오프셋 (도 단위)</summary>
         public float HeadingCalibrationOffset => headingCalibrationOffset;
 
@@ -127,6 +157,16 @@ namespace ARNavExperiment.Navigation
                 anchorMgr.OnAnchorLateRecovered -= OnAnchorLateRecovered;
         }
 
+        /// <summary>
+        /// 경로 상태를 초기화합니다. 1차 조건 완료 → Idle 복귀 시 호출.
+        /// </summary>
+        public void ResetRoute()
+        {
+            activeRoute = null;
+            CurrentWaypointIndex = 0;
+            Debug.Log("[WaypointManager] Route reset");
+        }
+
         public void LoadRoute(string routeId)
         {
             // 세션간 heading 오염 차단 — 이전 세션의 stored heading 삭제
@@ -135,7 +175,7 @@ namespace ARNavExperiment.Navigation
 
             // 단일 경로 로드
             activeRoute = routeB;
-            CurrentWaypointIndex = 0;
+            CurrentWaypointIndex = DefaultStartIndex();
 
             var cam = XRCameraHelper.GetCamera();
             if (cam != null)
@@ -145,6 +185,9 @@ namespace ARNavExperiment.Navigation
 
             // SpatialAnchorManager에서 앵커 Transform 바인딩
             BindAnchorTransforms(routeId);
+
+            // 세그먼트 방향/길이 계산
+            BuildSegmentDirections();
 
             // Heading 보정: auto → fallback (stored 분기 제거)
             bool autoCalibrated = AutoCalibrateFromAnchors();
@@ -173,7 +216,7 @@ namespace ARNavExperiment.Navigation
 
             // 앵커 바인딩 후 가장 가까운 웨이포인트를 시작 인덱스로 설정
             int nearestIdx = FindNearestWaypointIndex();
-            if (nearestIdx > 0)
+            if (nearestIdx != CurrentWaypointIndex)
             {
                 CurrentWaypointIndex = nearestIdx;
                 Debug.Log($"[WaypointManager] Start index adjusted to {nearestIdx} " +
@@ -190,10 +233,19 @@ namespace ARNavExperiment.Navigation
         /// </summary>
         private int FindNearestWaypointIndex()
         {
-            if (activeRoute == null || playerTransform == null) return 0;
+            int defaultIdx = DefaultStartIndex();
+            if (activeRoute == null || playerTransform == null) return defaultIdx;
 
+            // 약한 보정 시 snap 비활성화 — 부정확한 위치 기반 점프 방지
+            if (IsWeakCalibration())
+            {
+                Debug.Log($"[WaypointManager] Weak calibration ({calibrationSource}) — skipping nearest snap, using default index {defaultIdx}");
+                return defaultIdx;
+            }
+
+            const float maxSnapDistance = 5f;
             float minDist = float.MaxValue;
-            int nearestIdx = 0;
+            int nearestIdx = defaultIdx;
             bool hasAnyCandidate = false;
             var playerXZ = new Vector2(playerTransform.position.x, playerTransform.position.z);
 
@@ -229,8 +281,15 @@ namespace ARNavExperiment.Navigation
 
             if (!hasAnyCandidate)
             {
-                Debug.LogWarning("[WaypointManager] No distance-comparable waypoints — using index 0");
-                return 0;
+                Debug.LogWarning($"[WaypointManager] No distance-comparable waypoints — using default index {defaultIdx}");
+                return defaultIdx;
+            }
+
+            // 최소 거리가 snap 제한 초과 시 기본 인덱스 사용
+            if (minDist > maxSnapDistance)
+            {
+                Debug.Log($"[WaypointManager] Nearest waypoint [{nearestIdx}] too far ({minDist:F1}m > {maxSnapDistance}m) — using default index {defaultIdx}");
+                return defaultIdx;
             }
 
             Debug.Log($"[WaypointManager] Nearest waypoint: [{nearestIdx}] " +
@@ -287,6 +346,32 @@ namespace ARNavExperiment.Navigation
 
         }
 
+        /// <summary>
+        /// 각 세그먼트의 방향 벡터와 길이를 (재)계산합니다.
+        /// 앵커 바인딩 후, 앵커 late recovery 후에 호출.
+        /// </summary>
+        private void BuildSegmentDirections()
+        {
+            if (activeRoute == null || activeRoute.segments == null) return;
+
+            foreach (var seg in activeRoute.segments)
+            {
+                if (seg.fromIndex < 0 || seg.toIndex < 0 ||
+                    seg.fromIndex >= activeRoute.waypoints.Count ||
+                    seg.toIndex >= activeRoute.waypoints.Count)
+                    continue;
+
+                var fromWP = activeRoute.waypoints[seg.fromIndex];
+                var toWP = activeRoute.waypoints[seg.toIndex];
+                Vector3 dir = toWP.Position - fromWP.Position;
+                dir.y = 0;
+                seg.length = dir.magnitude;
+                seg.direction = seg.length > 0.001f ? dir / seg.length : Vector3.forward;
+            }
+
+            Debug.Log($"[WaypointManager] BuildSegmentDirections: {activeRoute.segments.Count} segments computed");
+        }
+
         private void PublishRouteBindingSummary(string routeId)
         {
             if (activeRoute == null) return;
@@ -338,6 +423,7 @@ namespace ARNavExperiment.Navigation
                     DomainEventBus.Instance?.Publish(new HeadingCalibrationApplied(headingSource, headingCalibrationOffset));
                 }
                 ComputeMapCalibration();
+                BuildSegmentDirections();
                 DomainEventBus.Instance?.Publish(new Domain.Events.ReferenceAnchorRecovered(waypointId));
                 return;
             }
@@ -365,6 +451,7 @@ namespace ARNavExperiment.Navigation
                     }
                     // 맵 보정 재계산 (앵커 추가로 정밀도 향상)
                     ComputeMapCalibration();
+                    BuildSegmentDirections();
                     break;
                 }
             }
@@ -386,9 +473,10 @@ namespace ARNavExperiment.Navigation
                 var playerXZ = new Vector2(playerTransform.position.x, playerTransform.position.z);
                 var playerFloorPlan = SlamToFloorPlan(playerXZ);
                 var wpXZ = new Vector2(wp.fallbackPosition.x, wp.fallbackPosition.z);
-                // 패치 B: 미션 타겟은 multiplier 미적용 (의도한 반경 유지)
                 bool isTarget = IsMissionTarget(wp.waypointId);
-                arrivalRadius = isTarget ? wp.radius : wp.radius * fallbackRadiusMultiplier;
+                float baseRadius = isTarget ? wp.radius : wp.radius * fallbackRadiusMultiplier;
+                // 보정 품질 기반 반경 부스트: 앵커 수가 적을수록 위치 오차 보상 확대
+                arrivalRadius = baseRadius * GetCalibrationRadiusBoost();
                 return Vector2.Distance(playerFloorPlan, wpXZ);
             }
             else
@@ -396,6 +484,21 @@ namespace ARNavExperiment.Navigation
                 arrivalRadius = wp.radius;
                 return float.MaxValue;
             }
+        }
+
+        /// <summary>보정 앵커 수에 따른 도착 반경 부스트 계수. 앵커 적을수록 위치 불확실성 보상.</summary>
+        private float GetCalibrationRadiusBoost()
+        {
+            if (calibrationSource == "none" || calibrationSource == "auto_zero_anchor")
+                return 2.5f;
+            if (calibrationSource == "anchor_1")
+                return 2.0f;
+            if (calibrationSource == "anchor_2")
+                return 1.8f;
+            if (calibrationSource == "anchor_3")
+                return 1.4f;
+            // anchor_4+, manual, injected
+            return 1.0f;
         }
 
         /// <summary>현재 미션의 타겟 웨이포인트인지 확인합니다.</summary>
@@ -463,6 +566,7 @@ namespace ARNavExperiment.Navigation
             {
                 lastArrivalCheckLogTime = Time.time;
                 Debug.Log($"[ArrivalCheck] wp={wp.waypointId}, dist={dist:F2}, radius={arrivalRadius:F2}, " +
+                    $"boost={GetCalibrationRadiusBoost():F1}x, " +
                     $"anchor={(wp.anchorTransform != null)}, heading={headingCalibrationOffset:F1}, " +
                     $"source={headingSource}, calib={calibrationSource}");
             }
@@ -521,6 +625,34 @@ namespace ARNavExperiment.Navigation
             }
         }
 
+        /// <summary>
+        /// 강제 도착 시 CurrentWaypointIndex를 타겟 웨이포인트 이후로 전진시킵니다.
+        /// MissionManager.ForceArrival()에서 호출.
+        /// </summary>
+        public void ForceAdvancePastWaypoint(string targetWaypointId)
+        {
+            if (activeRoute == null) return;
+
+            for (int i = CurrentWaypointIndex; i < activeRoute.waypoints.Count; i++)
+            {
+                if (activeRoute.waypoints[i].waypointId == targetWaypointId)
+                {
+                    int oldIdx = CurrentWaypointIndex;
+                    CurrentWaypointIndex = i + 1;
+                    Debug.Log($"[WaypointManager] ForceAdvancePastWaypoint: index {oldIdx} → {CurrentWaypointIndex} (past {targetWaypointId})");
+
+                    if (CurrentWaypointIndex >= activeRoute.waypoints.Count)
+                    {
+                        OnRouteComplete?.Invoke();
+                        Debug.Log("[WaypointManager] Route complete (force advance)");
+                    }
+                    return;
+                }
+            }
+
+            Debug.LogWarning($"[WaypointManager] ForceAdvancePastWaypoint: {targetWaypointId} not found after index {CurrentWaypointIndex}");
+        }
+
         public Vector3 GetDirectionToNext()
         {
             if (playerTransform == null || CurrentWaypoint == null)
@@ -532,8 +664,36 @@ namespace ARNavExperiment.Navigation
 
             if (target.anchorTransform != null)
             {
-                // 앵커 바인딩 있음 → 정확한 SLAM 좌표 기반 방향
-                return (target.Position - playerTransform.position).normalized;
+                // 앵커 바인딩 있음 → 세그먼트 방향 + 직접 방향 블렌딩
+                // 세그먼트 방향 (prevWP → currentWP)
+                Vector3 segDir;
+                if (CurrentWaypointIndex > 0)
+                {
+                    var prev = activeRoute.waypoints[CurrentWaypointIndex - 1];
+                    segDir = target.Position - prev.Position;
+                }
+                else
+                {
+                    segDir = target.Position - playerTransform.position;
+                }
+                segDir.y = 0;
+                if (segDir.sqrMagnitude < 0.001f) return Vector3.forward;
+                segDir = segDir.normalized;
+
+                // 직접 방향
+                Vector3 directDir = target.Position - playerTransform.position;
+                directDir.y = 0;
+                if (directDir.sqrMagnitude < 0.001f) return segDir;
+                directDir = directDir.normalized;
+
+                // 블렌딩: 멀면 세그먼트 방향, 가까우면 직접 방향
+                float dist = Vector3.Distance(
+                    new Vector3(playerTransform.position.x, 0, playerTransform.position.z),
+                    new Vector3(target.Position.x, 0, target.Position.z));
+                float blendRadius = target.radius * 2.5f;
+                float t = Mathf.Clamp01(dist / blendRadius); // 1.0=far→seg, 0.0=close→direct
+
+                return Vector3.Slerp(directDir, segDir, t).normalized;
             }
             else
             {
@@ -544,20 +704,52 @@ namespace ARNavExperiment.Navigation
                     var playerFloorPlan = SlamToFloorPlan(playerXZ);
 
                     var wpXZ = new Vector2(target.fallbackPosition.x, target.fallbackPosition.z);
-                    Vector2 dirFloorPlan = wpXZ - playerFloorPlan;
 
-                    if (dirFloorPlan.sqrMagnitude < 0.001f)
+                    // 세그먼트 방향 (도면 좌표계)
+                    Vector2 segDirFP;
+                    if (CurrentWaypointIndex > 0)
+                    {
+                        var prevWP = activeRoute.waypoints[CurrentWaypointIndex - 1];
+                        var prevXZ = new Vector2(prevWP.fallbackPosition.x, prevWP.fallbackPosition.z);
+                        segDirFP = wpXZ - prevXZ;
+                    }
+                    else
+                    {
+                        segDirFP = wpXZ - playerFloorPlan;
+                    }
+
+                    Vector2 directDirFP = wpXZ - playerFloorPlan;
+                    if (directDirFP.sqrMagnitude < 0.001f)
                         return Vector3.forward;
 
-                    // 역회전 (도면→SLAM): R^T × dir (직교행렬이므로 전치 = 역)
-                    float slamX = dirFloorPlan.x * mapCalibCos + dirFloorPlan.y * mapCalibSin;
-                    float slamZ = -dirFloorPlan.x * mapCalibSin + dirFloorPlan.y * mapCalibCos;
+                    // 블렌딩 (도면 좌표 거리 기반)
+                    float distFP = directDirFP.magnitude;
+                    float blendRadius = target.radius * 2.5f;
+                    float t = Mathf.Clamp01(distFP / blendRadius);
+
+                    Vector2 blendedFP;
+                    if (segDirFP.sqrMagnitude < 0.001f)
+                    {
+                        blendedFP = directDirFP.normalized;
+                    }
+                    else
+                    {
+                        // 2D Slerp 근사: 각도 보간
+                        float directAngle = Mathf.Atan2(directDirFP.y, directDirFP.x);
+                        float segAngle = Mathf.Atan2(segDirFP.y, segDirFP.x);
+                        float blendedAngle = Mathf.LerpAngle(directAngle * Mathf.Rad2Deg, segAngle * Mathf.Rad2Deg, t) * Mathf.Deg2Rad;
+                        blendedFP = new Vector2(Mathf.Cos(blendedAngle), Mathf.Sin(blendedAngle));
+                    }
+
+                    // 역회전 (도면→SLAM): R^T × dir
+                    float slamX = blendedFP.x * mapCalibCos + blendedFP.y * mapCalibSin;
+                    float slamZ = -blendedFP.x * mapCalibSin + blendedFP.y * mapCalibCos;
 
                     return new Vector3(slamX, 0, slamZ).normalized;
                 }
                 else
                 {
-                    // 보정 불가: 이전 WP→현재 WP 상대 방향 + heading 회전 (기존 로직)
+                    // 보정 불가: 이전 WP→현재 WP 상대 방향 + heading 회전
                     Vector3 from;
                     if (CurrentWaypointIndex > 0)
                         from = activeRoute.waypoints[CurrentWaypointIndex - 1].fallbackPosition;
@@ -592,7 +784,10 @@ namespace ARNavExperiment.Navigation
             var wp = activeRoute.waypoints[CurrentWaypointIndex];
             if (wp.anchorTransform != null)
             {
-                return Vector3.Distance(playerTransform.position, wp.anchorTransform.position);
+                var wpPos = wp.anchorTransform.position;
+                return Vector3.Distance(
+                    new Vector3(playerTransform.position.x, 0, playerTransform.position.z),
+                    new Vector3(wpPos.x, 0, wpPos.z));
             }
             else if (hasMapCalibration)
             {
@@ -702,6 +897,8 @@ namespace ARNavExperiment.Navigation
         /// </summary>
         private bool TryPassThrough(Waypoint currentWP, Waypoint nextWP)
         {
+            if (IsWeakCalibration()) return false;
+
             Vector2 wpPos, nextPos, playerPos;
 
             if (hasMapCalibration)
@@ -733,7 +930,9 @@ namespace ARNavExperiment.Navigation
             Vector2 projection = wpPos + progress * segment;
             float lateralDist = Vector2.Distance(playerPos, projection);
 
-            return progress >= 0.2f && lateralDist < 8f;
+            float boost = GetCalibrationRadiusBoost();
+            float lateralThreshold = Mathf.Min(currentWP.radius * 0.8f * boost, 1.8f * boost);
+            return progress >= 0.55f && lateralDist < lateralThreshold;
         }
 
         /// <summary>WP 좌표를 floor-plan 2D로 변환합니다. 앵커 있으면 SLAM→도면, 없으면 fallback 직접.</summary>

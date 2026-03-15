@@ -5,9 +5,11 @@
 - 확신도-정확도 보정(calibration) 분석 (v2)
 - 트리거 유형별 확신도 분석 (v2)
 - 통계: Paired t-test / Wilcoxon signed-rank
+- [ISMAR] head_pose sidecar에서 head scanning amplitude / angular_velocity_yaw 분석
 """
 
 import sys
+import json
 import argparse
 import warnings
 from pathlib import Path
@@ -19,9 +21,12 @@ import matplotlib
 from scipy import stats
 
 from parse_utils import parse_extra
+from stat_utils import paired_comparison, significance_marker, add_significance_bracket
+from plot_style import (apply_style, save_fig, violin_with_dots, spaghetti_plot,
+                        COLORS_COND, COND_LABELS, COLOR_GLASS, COLOR_HYBRID,
+                        COLOR_TRIGGER, DPI)
 
-matplotlib.rcParams["font.family"] = "AppleGothic"
-matplotlib.rcParams["axes.unicode_minus"] = False
+apply_style()
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # ──────────────────────────────────────────────
@@ -121,7 +126,13 @@ def _generate_demo_trust() -> pd.DataFrame:
 
 def load_confidence_from_events(allow_demo: bool = False) -> pd.DataFrame:
     """이벤트 로그에서 확신도 데이터 추출 또는 데모 생성."""
-    csv_files = sorted(RAW_DIR.glob("P*_*.csv"))
+    # [ISMAR] sidecar 파일 제외
+    SIDECAR_SUFFIXES = ("_head_pose.csv", "_nav_trace.csv", "_beam_segments.csv",
+                        "_anchor_reloc.csv", "_system_health.csv")
+    csv_files = sorted(
+        f for f in RAW_DIR.glob("P*_*.csv")
+        if not any(f.name.endswith(s) for s in SIDECAR_SUFFIXES)
+    )
     if csv_files:
         frames = []
         for f in csv_files:
@@ -350,7 +361,185 @@ def analyze_trigger_type_effects(events_df: pd.DataFrame = None):
 
 
 # ──────────────────────────────────────────────
-# 5c. 정보 접근량 vs NASA-TLX 관계 분석 — v2.1
+# 5c. [ISMAR] head_pose sidecar 로드 및 분석
+# ──────────────────────────────────────────────
+
+def load_head_pose() -> pd.DataFrame:
+    """[ISMAR] *_head_pose.csv sidecar 파일이 있으면 로드.
+
+    head_pose에는 timestamp, participant_id, condition, yaw, pitch, roll 등이 포함.
+    head scanning amplitude 및 angular_velocity_yaw 분석에 사용.
+    """
+    pose_files = sorted(RAW_DIR.glob("*_head_pose.csv"))
+    if not pose_files:
+        return pd.DataFrame()
+    frames = []
+    for f in pose_files:
+        try:
+            df = pd.read_csv(f, parse_dates=["timestamp"])
+            frames.append(df)
+        except Exception as e:
+            print(f"  [경고] head_pose 로드 실패: {f.name} — {e}")
+    if frames:
+        combined = pd.concat(frames, ignore_index=True)
+        print(f"  [ISMAR] head_pose sidecar 로드: {len(combined)}건 ({len(pose_files)} 파일)")
+        return combined
+    return pd.DataFrame()
+
+
+def analyze_head_scanning(head_pose: pd.DataFrame, events_df: pd.DataFrame = None) -> pd.DataFrame:
+    """[ISMAR] head_pose 데이터로 미션별 head scanning amplitude 및 angular_velocity_yaw 분석.
+
+    - head scanning amplitude: 미션 구간 내 yaw의 range (max - min)
+    - angular_velocity_yaw: 연속 프레임 간 yaw 변화율의 통계 (mean, std, max)
+    """
+    if head_pose.empty or "yaw" not in head_pose.columns:
+        return pd.DataFrame()
+
+    # yaw 컬럼이 있는지 확인
+    if "participant_id" not in head_pose.columns or "timestamp" not in head_pose.columns:
+        print("  [경고] head_pose에 필수 컬럼(participant_id, timestamp) 없음")
+        return pd.DataFrame()
+
+    # 미션 구간 정보 추출 (events_df에서)
+    if events_df is not None and "MISSION_START" in events_df["event_type"].values:
+        mission_starts = events_df[events_df["event_type"] == "MISSION_START"].copy()
+        mission_completes = events_df[events_df["event_type"] == "MISSION_COMPLETE"].copy()
+
+        mission_starts["parsed"] = mission_starts["extra_data"].apply(parse_extra)
+        mission_starts["mission_id"] = mission_starts["parsed"].apply(lambda d: d.get("mission_id", ""))
+        mission_completes["parsed"] = mission_completes["extra_data"].apply(parse_extra)
+        mission_completes["mission_id"] = mission_completes["parsed"].apply(lambda d: d.get("mission_id", ""))
+    else:
+        # 미션 구간 정보 없으면 참가자별 전체 구간으로 분석
+        mission_starts = None
+
+    results = []
+
+    if mission_starts is not None and not mission_starts.empty:
+        # 미션별 분석
+        for _, ms in mission_starts.iterrows():
+            pid = ms["participant_id"]
+            cond = ms["condition"]
+            m_id = ms["mission_id"]
+            start_time = ms["timestamp"]
+
+            # 미션 완료 시점 찾기
+            matching_mc = mission_completes[
+                (mission_completes["participant_id"] == pid) &
+                (mission_completes["condition"] == cond) &
+                (mission_completes["mission_id"] == m_id)
+            ]
+            if matching_mc.empty:
+                continue
+            end_time = matching_mc["timestamp"].iloc[0]
+
+            # 해당 구간의 head_pose 데이터
+            pose_segment = head_pose[
+                (head_pose["participant_id"] == pid) &
+                (head_pose["timestamp"] >= start_time) &
+                (head_pose["timestamp"] <= end_time)
+            ].sort_values("timestamp")
+
+            if len(pose_segment) < 3:
+                continue
+
+            yaw_vals = pose_segment["yaw"].values
+
+            # head scanning amplitude (yaw range)
+            # 주의: yaw는 -180~180 범위이므로 circular range 계산
+            yaw_range = np.ptp(yaw_vals)  # peak-to-peak
+            if yaw_range > 180:
+                # wraparound 보정
+                adjusted = np.where(yaw_vals < 0, yaw_vals + 360, yaw_vals)
+                yaw_range = np.ptp(adjusted)
+
+            # angular_velocity_yaw: 연속 프레임 간 yaw 변화율
+            dt = pose_segment["timestamp"].diff().dt.total_seconds().values[1:]
+            dyaw = np.diff(yaw_vals)
+            # wraparound 보정
+            dyaw = np.where(dyaw > 180, dyaw - 360, dyaw)
+            dyaw = np.where(dyaw < -180, dyaw + 360, dyaw)
+
+            valid = dt > 0
+            if valid.sum() > 0:
+                angular_vel = np.abs(dyaw[valid]) / dt[valid]  # deg/s
+                results.append({
+                    "participant_id": pid,
+                    "condition": cond,
+                    "mission_id": m_id,
+                    "scan_amplitude_deg": round(yaw_range, 1),
+                    "angular_vel_mean_dps": round(np.mean(angular_vel), 1),
+                    "angular_vel_std_dps": round(np.std(angular_vel), 1),
+                    "angular_vel_max_dps": round(np.max(angular_vel), 1),
+                    "n_samples": len(pose_segment),
+                })
+    else:
+        # 미션 정보 없으면 참가자×조건별 전체 분석
+        for (pid, cond), grp in head_pose.groupby(
+            ["participant_id", "condition"] if "condition" in head_pose.columns
+            else ["participant_id"]
+        ):
+            if isinstance(cond, tuple):
+                cond = cond[0] if cond else ""
+            grp = grp.sort_values("timestamp")
+            if len(grp) < 3:
+                continue
+
+            yaw_vals = grp["yaw"].values
+            yaw_range = np.ptp(yaw_vals)
+            if yaw_range > 180:
+                adjusted = np.where(yaw_vals < 0, yaw_vals + 360, yaw_vals)
+                yaw_range = np.ptp(adjusted)
+
+            dt = grp["timestamp"].diff().dt.total_seconds().values[1:]
+            dyaw = np.diff(yaw_vals)
+            dyaw = np.where(dyaw > 180, dyaw - 360, dyaw)
+            dyaw = np.where(dyaw < -180, dyaw + 360, dyaw)
+
+            valid = dt > 0
+            if valid.sum() > 0:
+                angular_vel = np.abs(dyaw[valid]) / dt[valid]
+                results.append({
+                    "participant_id": pid,
+                    "condition": cond,
+                    "mission_id": "all",
+                    "scan_amplitude_deg": round(yaw_range, 1),
+                    "angular_vel_mean_dps": round(np.mean(angular_vel), 1),
+                    "angular_vel_std_dps": round(np.std(angular_vel), 1),
+                    "angular_vel_max_dps": round(np.max(angular_vel), 1),
+                    "n_samples": len(grp),
+                })
+
+    scan_df = pd.DataFrame(results)
+
+    print("\n=== [ISMAR] Head Scanning Amplitude / Angular Velocity 분석 ===")
+    if not scan_df.empty:
+        for cond, label in zip(CONDITIONS, CONDITION_LABELS):
+            subset = scan_df[scan_df["condition"] == cond]
+            if not subset.empty:
+                print(f"  {label}:")
+                print(f"    Scan Amplitude: M={subset['scan_amplitude_deg'].mean():.1f}°, "
+                      f"SD={subset['scan_amplitude_deg'].std():.1f}°")
+                print(f"    Angular Velocity (yaw): M={subset['angular_vel_mean_dps'].mean():.1f}°/s, "
+                      f"SD={subset['angular_vel_mean_dps'].std():.1f}°/s")
+                print(f"    Max Angular Velocity: {subset['angular_vel_max_dps'].mean():.1f}°/s")
+
+        # 2조건 비교
+        if scan_df["condition"].nunique() == 2:
+            pid_scan = scan_df.groupby(["participant_id", "condition"])["scan_amplitude_deg"].mean().reset_index()
+            _run_paired_test(pid_scan, "scan_amplitude_deg", "Head Scanning Amplitude")
+
+            pid_vel = scan_df.groupby(["participant_id", "condition"])["angular_vel_mean_dps"].mean().reset_index()
+            _run_paired_test(pid_vel, "angular_vel_mean_dps", "Angular Velocity (yaw)")
+    else:
+        print("  [경고] head scanning 분석 결과 없음")
+
+    return scan_df
+
+
+# ──────────────────────────────────────────────
+# 5d. 정보 접근량 vs NASA-TLX 관계 분석 — v2.1
 # ──────────────────────────────────────────────
 
 def analyze_information_load_tlx(tlx_df: pd.DataFrame, events_df: pd.DataFrame = None):
@@ -423,9 +612,9 @@ def _run_paired_test(data: pd.DataFrame, dv: str, label: str):
         )
         if not test.empty:
             row = test.iloc[0]
-            print(f"    Paired t-test ({label}): t={row['T']:.2f}, p={row['p-unc']:.4f}, "
+            print(f"    Paired t-test ({label}): t={row['T']:.2f}, p={row.get('p-unc', row.get('p_unc', 0)):.4f}, "
                   f"d={row['hedges']:.2f}")
-    except ImportError:
+    except (ImportError, ValueError):
         glass_vals = data[data["condition"] == "glass_only"][dv].dropna().values
         hybrid_vals = data[data["condition"] == "hybrid"][dv].dropna().values
         min_len = min(len(glass_vals), len(hybrid_vals))
@@ -443,69 +632,69 @@ def _run_paired_test(data: pd.DataFrame, dv: str, label: str):
 # ──────────────────────────────────────────────
 
 def plot_tlx_comparison(tlx_df: pd.DataFrame):
-    """NASA-TLX 하위척도별 조건 비교 그룹 바 차트."""
-    fig, ax = plt.subplots(figsize=(12, 6))
+    """NASA-TLX 하위척도별 조건 비교 — violin + dots + significance."""
+    n_subs = len(TLX_SUBSCALES)
+    fig, axes = plt.subplots(2, 3, figsize=(12, 8))
+    axes = axes.flatten()
 
-    x = np.arange(len(TLX_SUBSCALES))
-    width = 0.35
+    for idx, (sub, label_kr) in enumerate(zip(TLX_SUBSCALES, TLX_LABELS_KR)):
+        ax = axes[idx]
+        data = [tlx_df[tlx_df["condition"] == c][sub].dropna().values for c in CONDITIONS]
+        res = paired_comparison(tlx_df, sub)
+        violin_with_dots(ax, data, [1, 2], COLORS_COND, COND_LABELS,
+                         p_value=res["p"], ylabel="Score (0-21)",
+                         title=label_kr)
+        ax.set_ylim(0, 21)
 
-    for i, (cond, label) in enumerate(zip(CONDITIONS, CONDITION_LABELS)):
-        means = [tlx_df[tlx_df["condition"] == cond][sub].mean() for sub in TLX_SUBSCALES]
-        sds = [tlx_df[tlx_df["condition"] == cond][sub].std() for sub in TLX_SUBSCALES]
-        ax.bar(x + i * width, means, width, yerr=sds, label=label, capsize=3)
-
-    ax.set_xlabel("하위척도")
-    ax.set_ylabel("점수 (0-21)")
-    ax.set_title("NASA-TLX 하위척도별 조건 비교")
-    ax.set_xticks(x + width / 2)
-    ax.set_xticklabels(TLX_LABELS_KR, rotation=15)
-    ax.legend()
-    ax.set_ylim(0, 21)
-    fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "nasa_tlx_comparison.png", dpi=150)
-    print(f"  → {OUTPUT_DIR / 'nasa_tlx_comparison.png'} 저장")
-    plt.close(fig)
+    fig.suptitle("NASA-TLX Subscales by Condition", fontsize=13, fontweight="bold")
+    fig.tight_layout(rect=[0, 0, 1, 0.96])
+    save_fig(fig, OUTPUT_DIR / "nasa_tlx_comparison")
 
 
 def plot_trust_comparison(trust_df: pd.DataFrame):
-    """시스템 신뢰 척도 조건별 비교 boxplot."""
-    fig, ax = plt.subplots(figsize=(7, 5))
-    data = [trust_df[trust_df["condition"] == c]["trust_mean"].values for c in CONDITIONS]
-    ax.boxplot(data, tick_labels=CONDITION_LABELS)
-    ax.set_ylabel("시스템 신뢰 점수 (1-7)")
-    ax.set_title("조건별 시스템 신뢰 비교")
-    ax.set_ylim(1, 7)
+    """시스템 신뢰 척도 조건별 비교 — violin + dots + significance."""
+    fig, ax = plt.subplots(figsize=(5, 5))
+    data = [trust_df[trust_df["condition"] == c]["trust_mean"].dropna().values for c in CONDITIONS]
+    res = paired_comparison(trust_df, "trust_mean")
+    violin_with_dots(ax, data, [1, 2], COLORS_COND, COND_LABELS,
+                     p_value=res["p"], ylabel="System Trust Score (1-7)",
+                     title="System Trust by Condition")
+    ax.set_ylim(1, 7.5)
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "trust_comparison.png", dpi=150)
-    print(f"  → {OUTPUT_DIR / 'trust_comparison.png'} 저장")
-    plt.close(fig)
+    save_fig(fig, OUTPUT_DIR / "trust_comparison")
 
 
-def plot_confidence_trajectory(pivot: pd.DataFrame):
-    """확신도 변화 궤적 라인 차트."""
+def plot_confidence_trajectory(pivot: pd.DataFrame, conf_df: pd.DataFrame = None):
+    """확신도 변화 궤적 — mean line + CI + spaghetti option."""
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    colors = {"glass_only": "#3498db", "hybrid": "#2ecc71"}
+    colors = {"glass_only": COLOR_GLASS, "hybrid": COLOR_HYBRID}
+    group_labels = {"glass_only": "Glass Only", "hybrid": "Hybrid"}
 
-    for cond, label in zip(CONDITIONS, CONDITION_LABELS):
-        subset = pivot[pivot["condition"] == cond].sort_values("waypoint_id")
-        ax.plot(subset["waypoint_id"], subset["confidence_rating"],
-                "o-", label=label, color=colors[cond], linewidth=2, markersize=8)
+    # Spaghetti plot (개인별 궤적) if raw data available
+    if conf_df is not None and not conf_df.empty:
+        spaghetti_plot(ax, conf_df, x_col="waypoint_id", y_col="confidence_rating",
+                       group_col="condition",
+                       group_colors=colors, group_labels=group_labels,
+                       alpha_individual=0.1, mean_line=True, ci_band=True)
+    else:
+        for cond, label in zip(CONDITIONS, CONDITION_LABELS):
+            subset = pivot[pivot["condition"] == cond].sort_values("waypoint_id")
+            ax.plot(subset["waypoint_id"], subset["confidence_rating"],
+                    "o-", label=label, color=colors[cond], linewidth=2, markersize=8)
 
     for tw in TRIGGER_WAYPOINTS:
-        ax.axvline(x=tw, color="gray", linestyle="--", alpha=0.5)
-        ax.text(tw, 6.8, "트리거", ha="center", fontsize=9, color="gray")
+        ax.axvline(x=tw, color=COLOR_TRIGGER, linestyle="--", alpha=0.4)
+        ax.text(tw, 6.8, "Trigger", ha="center", fontsize=8, color=COLOR_TRIGGER)
 
-    ax.set_xlabel("웨이포인트")
-    ax.set_ylabel("평균 확신도 (1-7)")
-    ax.set_title("조건별 확신도 변화 궤적")
+    ax.set_xlabel("Waypoint")
+    ax.set_ylabel("Confidence (1-7)")
+    ax.set_title("Confidence Trajectory by Condition")
     ax.set_ylim(1, 7)
     ax.legend()
     ax.grid(axis="y", alpha=0.3)
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "confidence_trajectory.png", dpi=150)
-    print(f"  → {OUTPUT_DIR / 'confidence_trajectory.png'} 저장")
-    plt.close(fig)
+    save_fig(fig, OUTPUT_DIR / "confidence_trajectory")
 
 
 def plot_confidence_drop(conf_df: pd.DataFrame):
@@ -528,9 +717,7 @@ def plot_confidence_drop(conf_df: pd.DataFrame):
         axes[idx].set_title(f"트리거 {trigger_wp}: {pre_wp} → {trigger_wp} 확신도 변화")
 
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / "confidence_drop.png", dpi=150)
-    print(f"  → {OUTPUT_DIR / 'confidence_drop.png'} 저장")
-    plt.close(fig)
+    save_fig(fig, OUTPUT_DIR / "confidence_drop")
 
 
 # ──────────────────────────────────────────────
@@ -562,7 +749,13 @@ def main():
     pivot = analyze_confidence_trajectory(conf_df)
 
     # 이벤트 데이터 로드 (v2.1 콘텐츠 분석용)
-    csv_files = sorted(RAW_DIR.glob("P*_*.csv"))
+    # [ISMAR] sidecar 파일 제외
+    SIDECAR_SUFFIXES = ("_head_pose.csv", "_nav_trace.csv", "_beam_segments.csv",
+                        "_anchor_reloc.csv", "_system_health.csv")
+    csv_files = sorted(
+        f for f in RAW_DIR.glob("P*_*.csv")
+        if not any(f.name.endswith(s) for s in SIDECAR_SUFFIXES)
+    )
     events_df = None
     if csv_files:
         frames = [pd.read_csv(f, parse_dates=["timestamp"]) for f in csv_files]
@@ -575,11 +768,17 @@ def main():
     # v2.1: 정보 접근량-TLX 분석
     analyze_information_load_tlx(tlx_df, events_df)
 
+    # [ISMAR] head_pose sidecar 로드 및 분석
+    head_pose = load_head_pose()
+    scan_df = pd.DataFrame()
+    if not head_pose.empty:
+        scan_df = analyze_head_scanning(head_pose, events_df)
+
     # 시각화
     print(f"\n=== 시각화 ===")
     plot_tlx_comparison(tlx_df)
     plot_trust_comparison(trust_df)
-    plot_confidence_trajectory(pivot)
+    plot_confidence_trajectory(pivot, conf_df)
     plot_confidence_drop(conf_df)
 
     # 결과 저장
@@ -593,6 +792,11 @@ def main():
     if not cal_df.empty:
         cal_df.to_csv(OUTPUT_DIR / "calibration_summary.csv", index=False)
         print(f"  → {OUTPUT_DIR / 'calibration_summary.csv'} 저장")
+
+    # [ISMAR] head scanning 결과 저장
+    if not scan_df.empty:
+        scan_df.to_csv(OUTPUT_DIR / "head_scanning_analysis.csv", index=False)
+        print(f"  → {OUTPUT_DIR / 'head_scanning_analysis.csv'} 저장")
 
     print("\n분석 완료.")
 

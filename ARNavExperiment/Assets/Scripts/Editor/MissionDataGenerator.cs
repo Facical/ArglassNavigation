@@ -223,7 +223,7 @@ namespace ARNavExperiment.EditorTools
                 mapPosition: new Vector2(36, 63));
             CreatePOI(path, "room_b101", "B101 Prof. Lee's Office", "professor_office", "Prof. Jae-Min Lee's office (Computer Engineering) + Hanwha Systems Maritime Lab + LGU+ Smart Factory Center", 2, new string[0],
                 "B101 이재민 교수 연구실", "이재민 교수 연구실 (컴퓨터공학과) + Hanwha Systems 해양연구소 + LGU+ 스마트팩토리 연구센터", null,
-                mapPosition: new Vector2(36, 69));
+                mapPosition: new Vector2(36, 66));
             CreatePOI(path, "stairs_main_b", "Central Stairs", "stairs", "South central staircase", 0, new string[0],
                 "중앙 계단", "남쪽 중앙 계단", null,
                 mapPosition: new Vector2(0, 0));
