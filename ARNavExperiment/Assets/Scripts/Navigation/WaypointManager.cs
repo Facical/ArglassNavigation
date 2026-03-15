@@ -631,7 +631,7 @@ namespace ARNavExperiment.Navigation
         /// </summary>
         public void ForceAdvancePastWaypoint(string targetWaypointId)
         {
-            if (activeRoute == null) return;
+            if (activeRoute == null || activeRoute.waypoints == null || activeRoute.waypoints.Count == 0) return;
 
             for (int i = CurrentWaypointIndex; i < activeRoute.waypoints.Count; i++)
             {

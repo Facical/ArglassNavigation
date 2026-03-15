@@ -41,11 +41,15 @@ namespace ARNavExperiment.Application
 
             // BeamProCanvasController를 ScreenSpaceOverlay로 강제 전환
             var beamCtrl = FindObjectOfType<BeamProCanvasController>(true);
-            if (beamCtrl != null)
+            if (beamCtrl != null && ConditionController.Instance != null)
             {
                 // 현재 조건 저장 후 Hybrid 모드로 전환하여 ScreenSpaceOverlay 복원
-                savedCondition = ConditionController.Instance?.CurrentCondition ?? ExperimentCondition.Hybrid;
-                ConditionController.Instance?.SetCondition(ExperimentCondition.Hybrid);
+                savedCondition = ConditionController.Instance.CurrentCondition;
+                ConditionController.Instance.SetCondition(ExperimentCondition.Hybrid);
+            }
+            else
+            {
+                savedCondition = ExperimentCondition.Hybrid;
             }
 
             // ComparisonSurveyUI 찾기 및 활성화

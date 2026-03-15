@@ -85,7 +85,7 @@ namespace ARNavExperiment.Logging
         {
             if (writer == null || !segmentActive) return;
 
-            if (isOnMapTab)
+            if (isOnMapTab && mapViewStartTime > 0f)
                 mapViewDuration += Time.time - mapViewStartTime;
 
             string endWp = WaypointManager.Instance?.CurrentWaypoint?.waypointId ?? "";
@@ -119,7 +119,7 @@ namespace ARNavExperiment.Logging
             if (!segmentActive) return;
 
             // 맵 탭 시간 추적
-            if (isOnMapTab)
+            if (isOnMapTab && mapViewStartTime > 0f)
                 mapViewDuration += Time.time - mapViewStartTime;
 
             isOnMapTab = tabName.ToLower().Contains("map");

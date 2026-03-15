@@ -162,7 +162,7 @@ namespace ARNavExperiment.Logging
         private ARArrowRenderer cachedArrow;
         private ARArrowRenderer GetArrowRenderer()
         {
-            if (cachedArrow == null)
+            if (cachedArrow == null || !cachedArrow.isActiveAndEnabled)
                 cachedArrow = FindObjectOfType<ARArrowRenderer>();
             return cachedArrow;
         }

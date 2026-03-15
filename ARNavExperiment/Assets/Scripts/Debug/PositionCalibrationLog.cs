@@ -56,16 +56,12 @@ namespace ARNavExperiment.DebugTools
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
-        }
-
-        private void OnEnable()
-        {
             log = new PositionLog();
             DomainEventBus.Instance?.Subscribe<ArrivalForced>(OnArrivalForced);
             DomainEventBus.Instance?.Subscribe<WaypointReached>(OnWaypointReached);
         }
 
-        private void OnDisable()
+        private void OnDestroy()
         {
             DomainEventBus.Instance?.Unsubscribe<ArrivalForced>(OnArrivalForced);
             DomainEventBus.Instance?.Unsubscribe<WaypointReached>(OnWaypointReached);
@@ -95,15 +91,8 @@ namespace ARNavExperiment.DebugTools
             string waypointId = wpm.CurrentWaypoint?.waypointId ?? "unknown";
             var fallbackPos = wpm.CurrentWaypoint?.fallbackPosition ?? Vector3.zero;
 
-            // calibratedPosition: SLAM→도면 변환이 가능하면 변환된 좌표
+            // calibratedPosition: 현재 heading 보정이 적용된 경우에만 기록
             float[] calibrated = null;
-            if (wpm.HasMapCalibration)
-            {
-                // GetAllCalibratedAnchorPairs로 변환 가능 여부 확인 후 도면 좌표 추정
-                float dist = wpm.GetDistanceToNext();
-                // 간략 추정: fallback - distance 방향으로 보정
-                calibrated = new float[] { slamPos.x, slamPos.y, slamPos.z };
-            }
 
             var sample = new PositionSample
             {

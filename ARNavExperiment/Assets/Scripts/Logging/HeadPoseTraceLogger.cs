@@ -67,7 +67,7 @@ namespace ARNavExperiment.Logging
 
             writer.WriteRow(
                 DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fff"),
-                el?.ParticipantId != null ? $"{el.ParticipantId}_{DateTime.Now:yyyyMMdd_HHmmss}" : "",
+                el?.SessionFilePrefix ?? "",
                 el?.ParticipantId ?? "",
                 el?.CurrentCondition ?? "",
                 missionId,
@@ -85,7 +85,7 @@ namespace ARNavExperiment.Logging
         private ARArrowRenderer cachedArrow;
         private ARArrowRenderer GetArrowRenderer()
         {
-            if (cachedArrow == null)
+            if (cachedArrow == null || !cachedArrow.isActiveAndEnabled)
                 cachedArrow = FindObjectOfType<ARArrowRenderer>();
             return cachedArrow;
         }

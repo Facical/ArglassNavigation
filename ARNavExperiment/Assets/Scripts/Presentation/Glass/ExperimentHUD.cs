@@ -201,6 +201,8 @@ namespace ARNavExperiment.Presentation.Glass
 
         private void OnDestroy()
         {
+            forceArrivalButton?.onClick.RemoveListener(OnForceArrivalClicked);
+
             if (ExperimentManager.Instance != null)
                 ExperimentManager.Instance.OnStateChanged -= UpdateStateDisplay;
 

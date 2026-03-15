@@ -48,6 +48,7 @@ namespace ARNavExperiment.Application
         private int runNumber;
         private string condition;
         private float startTime;
+        private float nasaSectionEndTime;
         private bool isActive;
         private bool buttonsBound;
 
@@ -192,7 +193,8 @@ namespace ARNavExperiment.Application
                 // 섹션 전환 체크 (nasa_tlx → trust)
                 if (currentIndex == 6)
                 {
-                    float nasaDuration = Time.time - startTime;
+                    nasaSectionEndTime = Time.time;
+                    float nasaDuration = nasaSectionEndTime - startTime;
                     DomainEventBus.Instance?.Publish(new SurveyCompleted(
                         "nasa_tlx", runNumber, condition, nasaDuration));
                 }
@@ -203,8 +205,9 @@ namespace ARNavExperiment.Application
             {
                 // 전체 완료
                 float totalDuration = Time.time - startTime;
+                float trustDuration = Time.time - nasaSectionEndTime;
                 DomainEventBus.Instance?.Publish(new SurveyCompleted(
-                    "trust", runNumber, condition, totalDuration - (currentIndex > 6 ? 0 : totalDuration)));
+                    "trust", runNumber, condition, trustDuration));
                 DomainEventBus.Instance?.Publish(new SurveyCompleted(
                     "post_condition", runNumber, condition, totalDuration));
 

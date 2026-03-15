@@ -702,6 +702,13 @@ namespace ARNavExperiment.Presentation.Glass
 
         private void OnDestroy()
         {
+            StopGlassCoroutine();
+            if (deferredSetupCoroutine != null)
+            {
+                StopCoroutine(deferredSetupCoroutine);
+                deferredSetupCoroutine = null;
+            }
+
             if (ExperimentManager.Instance != null)
                 ExperimentManager.Instance.OnStateChanged -= OnStateChanged;
             if (ConditionController.Instance != null)

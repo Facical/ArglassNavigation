@@ -212,7 +212,12 @@ namespace ARNavExperiment.Presentation.BeamPro
             }
 
 #if !UNITY_EDITOR
-            if (!IsWorldSpace && hasCachedSettings) return;
+            if (!IsWorldSpace) return;
+            if (!hasCachedSettings)
+            {
+                Debug.LogWarning("[BeamProCanvasCtrl] No cached settings — skipping restore");
+                return;
+            }
 
             // 캐시된 원본 설정 복원
             RestoreOriginalSettings();

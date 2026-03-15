@@ -446,7 +446,11 @@ namespace ARNavExperiment.Mission
             CurrentMissionIndex++;
 
             // auto-start next mission after short delay
-            if (pendingAdvance != null) StopCoroutine(pendingAdvance);
+            if (pendingAdvance != null)
+            {
+                StopCoroutine(pendingAdvance);
+                pendingAdvance = null;
+            }
             if (CurrentMissionIndex < activeMissions.Count)
             {
                 pendingAdvance = StartCoroutine(DelayedAction(2f, StartNextMission));

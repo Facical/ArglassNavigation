@@ -207,6 +207,10 @@ namespace ARNavExperiment.Presentation.BeamPro
         {
             CollectTextAnswer();
 
+            // 선택형 페이지(0, 1)는 응답 필수
+            if (currentPage <= 1 && string.IsNullOrEmpty(answers[currentPage]))
+                return;
+
             // 현재 페이지 응답 발행
             PublishCurrentAnswer();
 
