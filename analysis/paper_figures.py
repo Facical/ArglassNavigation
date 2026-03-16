@@ -288,7 +288,7 @@ def plot_fig6():
         print("  comprehensive_dv_data.csv required, skipping")
         return
 
-    fig, axes = plt.subplots(1, 3, figsize=(7.0, 2.8))
+    fig, axes = plt.subplots(1, 4, figsize=(7.0, 2.8))
 
     # --- (a) Verification Accuracy by Mission Type ---
     ax = axes[0]
@@ -334,8 +334,22 @@ def plot_fig6():
     _violin(ax, glass_time, hybrid_time,
             ylabel="Time (s)", title="(b) Completion Time", p_value=p_time)
 
-    # --- (c) NASA-TLX Total ---
+    # --- (c) Per-Mission Confidence ---
     ax = axes[2]
+    glass_conf = dv.loc[dv["condition"] == "glass_only", "confidence_mean"].dropna().values
+    hybrid_conf = dv.loc[dv["condition"] == "hybrid", "confidence_mean"].dropna().values
+
+    p_conf = None
+    if table1 is not None:
+        row = table1[table1["dv"] == "confidence_mean"]
+        if len(row) > 0:
+            p_conf = row["p"].values[0]
+
+    _violin(ax, glass_conf, hybrid_conf,
+            ylabel="Confidence (1-7)", title="(c) Confidence", p_value=p_conf)
+
+    # --- (d) NASA-TLX Total ---
+    ax = axes[3]
     glass_tlx = dv.loc[dv["condition"] == "glass_only", "tlx_total"].dropna().values
     hybrid_tlx = dv.loc[dv["condition"] == "hybrid", "tlx_total"].dropna().values
 
@@ -346,7 +360,7 @@ def plot_fig6():
             p_tlx = row["p"].values[0]
 
     _violin(ax, glass_tlx, hybrid_tlx,
-            ylabel="TLX Score (1-7)", title="(c) NASA-TLX Total", p_value=p_tlx)
+            ylabel="TLX Score (1-7)", title="(d) NASA-TLX Total", p_value=p_tlx)
 
     fig.tight_layout(w_pad=1.5)
     _save(fig, "fig6_main_results")
@@ -465,8 +479,9 @@ def plot_fig8():
         _save(fig, "fig8_trust_forestplot")
         return
 
-    # Filter to key DVs and clean
+    # Filter to key DVs and clean; remove structurally-zero variables
     df = df.dropna(subset=["d", "d_ci_lo", "d_ci_hi"]).copy()
+    df = df[~df["dv"].isin(["switching_count", "beam_total_time"])]
     if "label" in df.columns:
         df = df.rename(columns={"label": "dv_label"})
     else:
