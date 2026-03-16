@@ -1,6 +1,7 @@
 """
 Fig 2: Experiment Environment & Route
 도면 위에 Route B 경로를 오버레이하여 논문 Figure 생성.
+도면 이미지의 alpha 채널에서 벽/복도를 자동 감지하여 경로를 복도 중심에 정렬.
 
 실행: python3 analysis/generate_fig2_route.py
 출력: paper/figures/fig2_environment_route.pdf / .png
@@ -25,6 +26,12 @@ FIG_DIR.mkdir(parents=True, exist_ok=True)
 WORLD_MIN = np.array([-39, -23])
 WORLD_MAX = np.array([49, 80])
 
+# ── 복도 감지 상수 ─────────────────────────────
+CORRIDOR_HALF_WIDTH = -1.0     # 복도 중심 오프셋 (시각적 중앙 정렬)
+SCAN_Z_RANGE = (-15.0, 75.0)
+SCAN_Z_STEP = 0.5
+APPROX_CENTER = (0.089, 37.0)  # slope, intercept 초기 추정
+
 
 def world_to_normalized(x, z):
     """월드 좌표(x,z)를 0~1 정규화 좌표로 변환."""
@@ -41,37 +48,110 @@ def world_to_pixel(x, z, img_w, img_h):
     return px, py
 
 
-# ── 웨이포인트 데이터 (WaypointDataGenerator.cs 기준) ──
-WAYPOINTS = [
-    ("WP00", 37.5, 24, 3.0, "B110\n(Calibration)"),
-    ("WP01", 37.5, 18, 3.0, "B111\n(Start)"),
-    ("WP02", 37.5, 33, 3.5, "B107"),
-    ("WP03", 37.5, 45, 3.5, "B105"),
-    ("WP04", 37.5, 57, 3.5, "B103"),
-    ("WP05", 37.5, 66, 3.5, "B101"),
-    ("WP06", 39, 72, 4.0, "NE Corner\n(U-turn)"),
-    ("WP07", 37.5, 48, 3.5, "B104/B105\n(Return)"),
-    ("WP08", 37.5, -7, 3.5, "B121\n(End)"),
+def pixel_to_world_x(px, img_w):
+    """픽셀 x좌표를 월드 x좌표로 변환."""
+    return (px / img_w) * (WORLD_MAX[0] - WORLD_MIN[0]) + WORLD_MIN[0]
+
+
+def detect_corridor_geometry(img, img_w, img_h):
+    """도면 alpha 채널에서 서쪽 벽 내측 경계를 감지하고 복도 중심선을 반환.
+
+    Returns: (slope, intercept, z_min, z_max) — 복도 중심 x = slope*z + intercept
+    """
+    # alpha 채널 추출 (없으면 grayscale fallback)
+    if img.ndim == 3 and img.shape[2] >= 4:
+        alpha = img[:, :, 3]
+    else:
+        gray = np.mean(img[..., :3], axis=2) if img.ndim == 3 else img
+        alpha = np.where(gray > 0.9, 0.0, 1.0)  # 밝은 배경 = 투명 취급
+
+    z_values = np.arange(SCAN_Z_RANGE[0], SCAN_Z_RANGE[1] + SCAN_Z_STEP, SCAN_Z_STEP)
+    west_edges = []
+
+    for z in z_values:
+        approx_x = APPROX_CENTER[0] * z + APPROX_CENTER[1]
+        cx_px, cy_px = world_to_pixel(approx_x, z, img_w, img_h)
+        cy_int = int(round(cy_px))
+        cx_int = int(round(cx_px))
+        if cy_int < 0 or cy_int >= img_h or cx_int < 0:
+            continue
+        # 근사 중심에서 좌측 스캔 → 첫 불투명 픽셀 = 서쪽 벽 내측 경계
+        for px in range(cx_int, max(cx_int - 200, 0), -1):
+            if alpha[cy_int, px] > 0.1:
+                west_edges.append((z, pixel_to_world_x(px, img_w)))
+                break
+
+    edges = np.array(west_edges)
+    z_fit, x_fit = edges[:, 0].copy(), edges[:, 1].copy()
+
+    # Robust linear fit: 3회 반복, 2.5x MAR 아웃라이어 제거
+    for _ in range(3):
+        coeffs = np.polyfit(z_fit, x_fit, 1)
+        residuals = np.abs(x_fit - np.polyval(coeffs, z_fit))
+        mar = np.median(residuals)
+        mask = residuals < 2.5 * max(mar, 0.3)
+        z_fit, x_fit = z_fit[mask], x_fit[mask]
+
+    slope_wall, intercept_wall = coeffs
+    # 복도 중심 = 서쪽 벽 + CORRIDOR_HALF_WIDTH
+    slope = slope_wall
+    intercept = intercept_wall + CORRIDOR_HALF_WIDTH
+    z_min, z_max = float(z_fit.min()), float(z_fit.max())
+
+    print(f"[detect_corridor_geometry]")
+    print(f"  West wall:       x = {slope_wall:.4f}*z + {intercept_wall:.2f}")
+    print(f"  Corridor center: x = {slope:.4f}*z + {intercept:.2f}")
+    print(f"  Valid z range:   [{z_min:.1f}, {z_max:.1f}]")
+    print(f"  Fit points:      {len(z_fit)}")
+    return slope, intercept, z_min, z_max
+
+
+# ── 기준 WP z좌표 및 라벨 (WaypointDataGenerator.cs 기준) ──
+_WP_DEFS = [
+    ("WP00", 24, 3.0, "B110\n(Calibration)"),
+    ("WP01", 18, 3.0, "B111\n(Start)"),
+    ("WP02", 33, 3.5, "B107"),
+    ("WP03", 45, 3.5, "B105"),
+    ("WP04", 57, 3.5, "B103"),
+    ("WP05", 66, 3.5, "B101"),
+    ("WP06", 69, 4.0, "NE Corner\n(U-turn)"),
+    ("WP07", 48, 3.5, "B104/B105\n(Return)"),
+    ("WP08", -7, 3.5, "B121\n(End)"),
 ]
+
+
+def build_waypoints(slope, intercept, z_max):
+    """복도 중심선을 따라 웨이포인트 좌표를 동적 생성."""
+    waypoints = []
+    for wp_id, z, radius, label in _WP_DEFS:
+        z_clamped = min(z, z_max) if wp_id == "WP08" else z
+        x = slope * z_clamped + intercept
+        old_x = 37.5 if wp_id != "WP06" else 39.0
+        print(f"  {wp_id} z={z:4d}: x {old_x:.1f} -> {x:.2f} (Δ{x - old_x:+.2f})")
+        waypoints.append((wp_id, x, z_clamped, radius, label))
+    return waypoints
+
+
+def build_triggers(slope, intercept):
+    """트리거 존 좌표를 복도 중심선에 맞춰 동적 생성."""
+    return {
+        "T2/T1": (slope * 45 + intercept, 45,
+                  "Information Conflict /\nTracking Degradation"),
+        "T3/T4": (slope * 69 + intercept, 69,
+                  "Low Resolution /\nGuidance Absence"),
+    }
+
 
 # 경로 순서 (인덱스)
 ROUTE_ORDER = [0, 1, 2, 3, 4, 5, 6, 7, 8]
 
-# 트리거 존 (미션 세트별)
-# Set1: T2(WP03 근처, B105) + T3(WP06 근처, NE코너)
-# Set2: T1(WP03 근처) + T4(WP06 근처)
-TRIGGERS = {
-    "T2/T1": (37.5, 45, "Information Conflict /\nTracking Degradation"),
-    "T3/T4": (39, 72, "Low Resolution /\nGuidance Absence"),
-}
-
 # ── 스타일 ──────────────────────────────────────
 PAPER_STYLE = {
     "font.family": "sans-serif",
-    "font.size": 12,
-    "axes.titlesize": 14,
+    "font.size": 14,
+    "axes.titlesize": 16,
     "axes.titleweight": "bold",
-    "axes.labelsize": 12,
+    "axes.labelsize": 14,
     "axes.linewidth": 0.8,
     "axes.unicode_minus": False,
     "figure.dpi": 600,
@@ -94,9 +174,14 @@ def generate_fig2():
     img = imread(str(FLOORPLAN))
     img_h, img_w = img.shape[:2]
 
+    # --- 복도 감지 & 동적 좌표 생성 ---
+    slope, intercept, z_min, z_max = detect_corridor_geometry(img, img_w, img_h)
+    waypoints = build_waypoints(slope, intercept, z_max)
+    triggers = build_triggers(slope, intercept)
+
     # --- 픽셀 좌표 계산 ---
     wp_pixels = []
-    for wp_id, x, z, radius, label in WAYPOINTS:
+    for wp_id, x, z, radius, label in waypoints:
         px, py = world_to_pixel(x, z, img_w, img_h)
         wp_pixels.append((wp_id, px, py, radius, label))
 
@@ -206,14 +291,14 @@ def generate_fig2():
             wp_id,
             xy=(px, py),
             xytext=(px + offset_x, py + offset_y),
-            fontsize=9.5, fontweight="bold", color=color,
+            fontsize=11, fontweight="bold", color=color,
             ha=ha, va=va, zorder=7,
             bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
                       edgecolor=color, alpha=0.85, linewidth=0.8),
         )
 
     # --- 트리거 존 표시 ---
-    for trig_label, (tx, tz, desc) in TRIGGERS.items():
+    for trig_label, (tx, tz, desc) in triggers.items():
         tpx, tpy = world_to_pixel(tx, tz, img_w, img_h)
         tpx -= crop_left
         tpy -= crop_top
@@ -231,7 +316,7 @@ def generate_fig2():
             f"⚡ {trig_label}",
             xy=(tpx, tpy),
             xytext=(tpx - 125, tpy),
-            fontsize=8.5, fontweight="bold", color=COLOR_TRIGGER,
+            fontsize=10, fontweight="bold", color=COLOR_TRIGGER,
             ha="right", va="center", zorder=7,
             arrowprops=dict(arrowstyle="-", color=COLOR_TRIGGER,
                             linewidth=1.2, linestyle="--"),
@@ -248,24 +333,9 @@ def generate_fig2():
     ax.plot([], [], "o", color=COLOR_TRIGGER, markersize=11,
             markeredgecolor="white", label="U-turn / Trigger zone")
 
-    legend = ax.legend(loc="lower left", fontsize=9.5, framealpha=0.9,
+    legend = ax.legend(loc="lower left", fontsize=11, framealpha=0.9,
                        edgecolor="#cccccc", fancybox=True,
                        handletextpad=0.5, borderpad=0.4)
-
-    # 스케일바 (10m)
-    scale_10m_px = (10 / (WORLD_MAX[0] - WORLD_MIN[0])) * img_w
-    bar_y = crop_h - 50
-    bar_x_start = 30
-    ax.plot([bar_x_start, bar_x_start + scale_10m_px], [bar_y, bar_y],
-            color="black", linewidth=3, solid_capstyle="butt", zorder=8)
-    ax.plot([bar_x_start, bar_x_start], [bar_y - 8, bar_y + 8],
-            color="black", linewidth=2.5, zorder=8)
-    ax.plot([bar_x_start + scale_10m_px, bar_x_start + scale_10m_px],
-            [bar_y - 8, bar_y + 8], color="black", linewidth=2.5, zorder=8)
-    ax.text(bar_x_start + scale_10m_px / 2, bar_y - 15, "10 m",
-            ha="center", va="bottom", fontsize=9.5, fontweight="bold",
-            bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
-                      alpha=0.8, edgecolor="none"))
 
     # 방위 표시 (N↑)
     ax.annotate("N", xy=(crop_w - 55, 60),
