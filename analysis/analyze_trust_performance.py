@@ -608,14 +608,24 @@ def _run_paired_test(data: pd.DataFrame, dv: str, label: str):
     """2조건 Paired t-test (pingouin) 또는 Wilcoxon signed-rank (fallback)."""
     try:
         import pingouin as pg
+        # 최소 2명 이상 paired 데이터 필요
+        paired_pids = set(data[data["condition"] == "glass_only"]["participant_id"]) & \
+                      set(data[data["condition"] == "hybrid"]["participant_id"])
+        if len(paired_pids) < 2:
+            print(f"    [경고] {label}: paired 참가자 {len(paired_pids)}명, 검정 불가 (최소 2명 필요)")
+            return
         test = pg.pairwise_tests(
             data=data, dv=dv, within="condition", subject="participant_id",
             parametric=True
         )
-        if not test.empty:
+        if not test.empty and "T" in test.columns:
             row = test.iloc[0]
-            print(f"    Paired t-test ({label}): t={row['T']:.2f}, p={row.get('p-unc', row.get('p_unc', 0)):.4f}, "
-                  f"d={row['hedges']:.2f}")
+            p_val = row.get("p-unc", row.get("p_unc", 0))
+            hedges = row.get("hedges", float("nan"))
+            print(f"    Paired t-test ({label}): t={row['T']:.2f}, p={p_val:.4f}, "
+                  f"d={hedges:.2f}")
+        elif not test.empty:
+            print(f"    [경고] {label}: 검정 결과 불완전 (dof={test.iloc[0].get('dof', '?')})")
     except (ImportError, ValueError):
         glass_vals = data[data["condition"] == "glass_only"][dv].dropna().values
         hybrid_vals = data[data["condition"] == "hybrid"][dv].dropna().values

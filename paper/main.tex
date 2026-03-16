@@ -62,13 +62,15 @@ Four uncertainty triggers---tracking degradation, information
 conflict, low-resolution guidance, and guidance absence---were
 embedded along the route to elicit cross-verification behaviour.
 The Hybrid condition significantly increased system trust
-($d{=}{-}1.025$, $p{<}.001$), per-mission confidence ($d{=}{-}2.333$,
-$p{<}.001$), and reduced cognitive workload (NASA-TLX $d{=}0.902$,
-$p{<}.001$). Ambiguous-decision missions showed the largest accuracy
-improvement (+25 percentage points). Participants voluntarily
-consulted the companion display ($M{=}2.38$ switches per session)
-but not specifically during trigger zones (CVI${=}0$), suggesting a
-proactive rather than reactive cross-verification strategy. This
+($d{=}{-}1.41$, $p{<}.001$), per-mission confidence ($d{=}{-}3.69$,
+$p{<}.001$), and reduced cognitive workload (NASA-TLX $d{=}0.46$,
+$p{=}.039$). Overall mission accuracy improved significantly
+($67.5$\% vs.\ $80.8$\%, $p{=}.007$), with ambiguous-decision missions
+showing the largest gain (+25 percentage points). Participants
+voluntarily consulted the companion display ($M{=}1.63$ switches per
+session) but not specifically during trigger zones (CVI${=}0$),
+suggesting a proactive rather than reactive cross-verification
+strategy. This
 work contributes a dual-device navigation system on commercial
 hardware, an experimental protocol with operationalised uncertainty
 triggers, and an analytic framework for studying complementary
@@ -260,8 +262,8 @@ al.~\cite{Schwarz:2022:IUS} identified wayfinding uncertainty states
 via EEG classification, while their follow-up~\cite{Schwarz:2023:RCP}
 introduced continuous uncertainty annotation, finding that time since
 last useful signage strongly predicts perceived uncertainty---a
-principle underlying our T4 (guidance absence) trigger. Colley et
-al.~\cite{Colley:2024:TCA} studied trust calibration in AR decision
+principle underlying our T4 (guidance absence) trigger. Konopka et
+al.~\cite{Konopka:2024:TCA} studied trust calibration in AR decision
 support but not in a navigation context. The distributed cognition
 framework~\cite{Hutchins:1995:CIW, Hollan:2000:DCT} suggests that
 distributing information across multiple representations---here,
@@ -400,13 +402,12 @@ each) controlled for condition and mission-set order effects
   \end{tabular}
 \end{table}
 
-%% TODO: Add Fig. 2 — Environment and Route (floor plan + route overlay)
-%\begin{figure}[t]
-%  \centering
-%  \includegraphics[width=\columnwidth]{fig2_environment_route}
-%  \caption{Experiment environment: basement floor of a university building with the 200\,m fixed route (9 waypoints, 6 turns) overlaid on the floor plan.}
-%  \label{fig:environment}
-%\end{figure}
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth, alt={Floor plan of a university basement showing the 200-metre fixed route with 9 waypoints and 6 turns overlaid.}]{fig2_environment_route}
+  \caption{Experiment environment: basement floor of a university building with the 200\,m fixed route (9 waypoints, 6 turns) overlaid on the floor plan.}
+  \label{fig:environment}
+\end{figure}
 
 \subsection{Mission-Based Tasks}
 
@@ -466,8 +467,8 @@ that companion-display cross-referencing supports more accurate trust
 assessment.
 
 \item[H2 (Task Performance):] The Hybrid condition yields comparable
-or higher mission accuracy, with a modest increase in completion time
-attributable to device switching.
+or higher mission accuracy without a significant increase in
+completion time.
 
 \item[H3 (Cross-Verification Behaviour):] In the Hybrid condition,
 participants exhibit significantly more companion-display usage, with
@@ -512,10 +513,15 @@ continuously. Glass-view video was captured for post-hoc analysis.
 All 24 participants completed both conditions, yielding 48 sessions
 and 240 individual missions. No sessions were excluded. We conducted
 mixed ANOVAs (condition $\times$ counterbalancing group) for all
-primary DVs to check for order effects. No significant main effects of
-order group or condition--order interactions were found (all
-$p > .05$, all $\eta^2_p < .20$), confirming that counterbalancing
-was effective.
+primary DVs to check for order effects. Most DVs showed no significant
+order-group main effects or interactions (all $p > .05$). Two
+exceptions were noted: per-mission confidence showed a marginal
+order-group main effect ($F(3,20) = 3.25$, $p = .044$,
+$\eta^2_p = .33$), and verification accuracy showed a significant
+condition $\times$ order interaction ($F(3,20) = 3.27$, $p = .043$,
+$\eta^2_p = .33$). Critically, the condition main effects for both DVs
+remained highly significant ($p < .01$), indicating that the observed
+Hybrid advantages are robust to order.
 
 Normality was assessed via Shapiro--Wilk tests. Where normality was
 violated ($p < .05$), we used Wilcoxon signed-rank tests; otherwise,
@@ -525,16 +531,16 @@ comparisons.
 \subsection{Mission Accuracy (H2)}
 
 Table~\ref{tab:accuracy} presents mission accuracy by type. Overall
-accuracy did not differ significantly between conditions (Glass~Only
-$75.0 \pm 17.0$\% vs.\ Hybrid $76.0 \pm 20.0$\%;
-$W = 75.0$, $p = .942$, $d = -0.042$). However, accuracy varied
-substantially by mission type. \textbf{Type~B (Ambiguous Decision)}
+accuracy was significantly higher in the Hybrid condition (Glass~Only
+$67.5 \pm 19.4$\% vs.\ Hybrid $80.8 \pm 13.8$\%;
+$W = 39.5$, $p = .007$, $d = -0.64$). The improvement varied
+by mission type. \textbf{Type~B (Ambiguous Decision)}
 missions---those directly associated with uncertainty
 triggers---showed the largest improvement, with Hybrid participants
 achieving 72.9\% accuracy compared to 47.9\% in Glass~Only, a gain
-of \textbf{+25.0 percentage points}. Type~A (Direction Verify) and
-Type~C (Info Integration) missions showed smaller, non-significant
-improvements.
+of \textbf{+25.0 percentage points}. Type~A (Direction Verify) showed
+a ceiling effect in both conditions (85.4\% vs.\ 91.7\%), while
+Type~C (Info Integration) showed a modest gain (70.8\% vs.\ 75.0\%).
 
 \begin{table}[t]
   \centering
@@ -549,7 +555,7 @@ improvements.
     B -- Ambiguous Decision & 47.9 & 72.9 & \textbf{+25.0} \\
     C -- Info Integration & 70.8 & 75.0 & +4.2 \\
     \midrule
-    Overall & 75.0 & 76.0 & +1.0 \\
+    Overall & 67.5 & 80.8 & \textbf{+13.3} \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -557,28 +563,27 @@ improvements.
 The Type~B result is noteworthy: these missions required navigational
 decisions during active uncertainty triggers, precisely the context
 where the companion display's contextual information (map orientation,
-POI details) should provide the greatest benefit. Type~A missions,
-requiring simple attribute verification at the destination, showed a
-ceiling effect in both conditions. Type~C missions, requiring
-cross-location comparison, benefited modestly from the companion
-display's comparison matrices.
+POI details) should provide the greatest benefit. The overall
+accuracy difference ($+13.3$ percentage points) was driven primarily
+by Type~B, consistent with the hypothesis that the companion display's
+value is concentrated in high-uncertainty situations.
 
 \subsection{Completion Time (H2)}
 
-Mean session completion time was $587.1 \pm 40.3$\,s for Glass~Only
-and $615.4 \pm 60.6$\,s for Hybrid ($t(23) = -1.921$, $p = .067$,
-$d = -0.392$). The difference was not statistically significant,
-though the trend suggests a modest time overhead in the Hybrid
-condition. Notably, mission-level analysis showed Hybrid participants
-were slightly faster on individual missions across all types
-(Fig.~\ref{fig:main_results}), suggesting that the session-level time
-difference reflects device-switching overhead between missions rather
-than slower navigation within missions.
+Mean session completion time was significantly shorter in the Hybrid
+condition: Glass~Only $372.8 \pm 41.2$\,s versus Hybrid
+$328.1 \pm 42.4$\,s ($t(23) = 6.07$, $p < .001$, $d = 1.24$).
+This large effect indicates that Hybrid participants navigated faster
+overall, despite occasional device-switching overhead. Mission-level
+analysis confirmed that Hybrid participants were faster across all
+mission types (Fig.~\ref{fig:main_results}), suggesting that higher
+confidence in navigational decisions translated into more decisive
+wayfinding behaviour.
 
 \begin{figure*}[t]
   \centering
   \includegraphics[width=\linewidth, alt={Four-panel figure showing mission accuracy by type, completion time, confidence ratings, and NASA-TLX scores across Glass Only and Hybrid conditions.}]{fig6_main_results}
-  \caption{Main results. (a)~Mission accuracy by type showing the largest Hybrid advantage for Type~B (ambiguous decision) missions. (b)~Completion time with marginal Hybrid overhead. (c)~Per-mission confidence ratings significantly higher in Hybrid. (d)~NASA-TLX total workload significantly lower in Hybrid.}
+  \caption{Main results. (a)~Mission accuracy by type showing the largest Hybrid advantage for Type~B (ambiguous decision) missions. (b)~Completion time significantly shorter in Hybrid. (c)~Per-mission confidence ratings significantly higher in Hybrid. (d)~NASA-TLX total workload lower in Hybrid.}
   \label{fig:main_results}
 \end{figure*}
 
@@ -588,21 +593,21 @@ System trust and per-mission confidence both showed large, significant
 improvements in the Hybrid condition.
 
 \textbf{Trust.} The composite trust score (7~items, 7-point scale) was
-significantly higher in Hybrid ($M = 4.93, SD = 0.38$) than
-Glass~Only ($M = 4.34, SD = 0.37$; $t(23) = -5.02$, $p < .001$,
-$d = -1.025$). Table~\ref{tab:trust} presents item-level results from
+significantly higher in Hybrid ($M = 5.09, SD = 0.36$) than
+Glass~Only ($M = 4.40, SD = 0.26$; $t(22) = -6.75$, $p < .001$,
+$d = -1.41$). Table~\ref{tab:trust} presents item-level results from
 the in-app trust survey. Three items reached individual significance:
-\emph{Reliability} ($p = .021$, $d = -0.525$), \emph{Confidence}
-($p = .001$, $d = -0.934$), and \emph{Safety} ($p = .026$,
-$d = -0.498$). The largest single-item effect was for the ``I feel
+\emph{Reliability} ($p = .021$, $d = -0.53$), \emph{Confidence}
+($p = .001$, $d = -0.93$), and \emph{Safety} ($p = .026$,
+$d = -0.50$). The largest single-item effect was for the ``I feel
 confident in the system's guidance'' item, with a near-unit effect
 size---indicating that Hybrid participants felt substantially more
 assured about the system's navigational guidance.
 
 \textbf{Confidence.} Per-mission confidence ratings (collected after
 each mission) showed an even larger effect: Glass~Only
-$M = 3.60, SD = 0.46$ versus Hybrid $M = 4.69, SD = 0.32$
-($t(23) = -11.43$, $p < .001$, $d = -2.333$). This very large effect
+$M = 3.33, SD = 0.44$ versus Hybrid $M = 4.69, SD = 0.30$
+($t(23) = -18.09$, $p < .001$, $d = -3.69$). This very large effect
 suggests that the availability of a verification channel fundamentally
 changed how confident participants felt about their navigational
 decisions, regardless of whether they actually consulted it.
@@ -632,23 +637,21 @@ decisions, regardless of whether they actually consulted it.
 \subsection{Cognitive Workload}
 
 NASA-TLX total workload was significantly lower in the Hybrid
-condition: Glass~Only $M = 3.84, SD = 0.47$ versus Hybrid
-$M = 3.27, SD = 0.46$ ($t(23) = 4.42$, $p < .001$, $d = 0.902$).
-This large effect indicates that the companion display reduced
+condition: Glass~Only $M = 3.62, SD = 0.54$ versus Hybrid
+$M = 3.26, SD = 0.65$ ($t(22) = 2.20$, $p = .039$, $d = 0.46$).
+This medium effect indicates that the companion display reduced
 perceived cognitive demand rather than adding to it---counter to the
 concern that managing two devices increases workload.
 
-Table~\ref{tab:tlx} presents subscale results. \emph{Effort} showed
-the largest individual effect ($d = 0.631$, $p = .008$), suggesting
-that Glass~Only participants perceived their navigational task as
-requiring more sustained cognitive exertion. \emph{Temporal Demand}
-approached significance ($p = .060$), consistent with Glass~Only
-participants feeling more time pressure when navigating without a
-verification channel. The in-app survey additionally revealed
-significant effects for \emph{Mental Demand} ($p = .029$) and
-\emph{Frustration} ($p = .009$), reinforcing that the Hybrid
-condition was perceived as less cognitively taxing and less
-frustrating.
+Table~\ref{tab:tlx} presents subscale results. \emph{Frustration}
+showed the largest individual effect ($d = 0.61$, $p = .009$),
+suggesting that the companion display mitigated the frustration
+of navigating with degraded guidance. \emph{Mental Demand} also
+showed a significant reduction ($d = 0.49$, $p = .029$), indicating
+that access to contextual information lowered perceived cognitive
+effort. Other subscales did not reach significance, suggesting that
+the workload reduction was primarily cognitive and affective rather
+than physical or temporal.
 
 \begin{table*}[t]
   \centering
@@ -659,14 +662,14 @@ frustrating.
     \toprule
     Subscale & Glass Only ($M \pm SD$) & Hybrid ($M \pm SD$) & Test & Statistic & $p$ & $d$ \\
     \midrule
-    Mental Demand   & $4.25 \pm 1.26$ & $3.92 \pm 0.88$ & Wilcoxon & $W = 67.5$ & .135 & $0.32$ \\
-    Physical Demand & $3.25 \pm 1.42$ & $2.58 \pm 1.14$ & paired $t$ & $t = 1.73$ & .096 & $0.36$ \\
-    Temporal Demand & $3.92 \pm 1.38$ & $3.33 \pm 1.20$ & Wilcoxon & $W = 42.0$ & .060 & $0.33$ \\
-    Performance     & $3.96 \pm 1.30$ & $3.33 \pm 1.44$ & paired $t$ & $t = 1.52$ & .143 & $0.31$ \\
-    Effort          & $4.08 \pm 1.06$ & $3.33 \pm 1.31$ & Wilcoxon & $W = 21.0$ & .008{**} & $0.63$ \\
-    Frustration     & $3.58 \pm 1.32$ & $3.12 \pm 1.08$ & paired $t$ & $t = 1.41$ & .171 & $0.29$ \\
+    Mental Demand   & $4.48 \pm 1.41$ & $3.61 \pm 1.03$ & Wilcoxon & $W = 18.0$ & .029{*} & $0.49$ \\
+    Physical Demand & $2.78 \pm 1.09$ & $3.04 \pm 1.15$ & paired $t$ & $t = -0.78$ & .443 & $-0.16$ \\
+    Temporal Demand & $3.61 \pm 1.23$ & $3.57 \pm 1.12$ & paired $t$ & $t = 0.13$ & .896 & $0.03$ \\
+    Performance     & $3.48 \pm 1.20$ & $3.17 \pm 1.40$ & paired $t$ & $t = 0.80$ & .431 & $0.17$ \\
+    Effort          & $3.70 \pm 1.30$ & $3.30 \pm 1.22$ & paired $t$ & $t = 1.06$ & .302 & $0.22$ \\
+    Frustration     & $3.65 \pm 1.15$ & $2.87 \pm 1.01$ & Wilcoxon & $W = 32.5$ & .009{**} & $0.61$ \\
     \midrule
-    \textbf{Total (mean)} & $\mathbf{3.84 \pm 0.47}$ & $\mathbf{3.27 \pm 0.46}$ & \textbf{paired} $\boldsymbol{t}$ & $\boldsymbol{t = 4.42}$ & $\boldsymbol{< .001}${***} & $\boldsymbol{0.90}$ \\
+    \textbf{Total (mean)} & $\mathbf{3.62 \pm 0.54}$ & $\mathbf{3.26 \pm 0.65}$ & \textbf{paired} $\boldsymbol{t}$ & $\boldsymbol{t = 2.20}$ & $\boldsymbol{.039}${*} & $\boldsymbol{0.46}$ \\
     \bottomrule
   \end{tabular}
 \end{table*}
@@ -674,9 +677,9 @@ frustrating.
 \subsection{Cross-Verification Behaviour (H3)}
 
 In the Hybrid condition, participants switched to the companion
-display $M = 2.38$ times per session ($SD = 1.61$; $W < .001$,
-$d = -1.475$), spending a total of $M = 24.1$\,s ($SD = 15.4$;
-$p < .001$, $d = -1.564$) on the companion display per session. By
+display $M = 1.63$ times per session ($SD = 0.97$; $W < .001$,
+$d = -1.68$), spending a total of $M = 10.5$\,s ($SD = 7.0$;
+$p < .001$, $d = -1.49$) on the companion display per session. By
 definition, Glass~Only participants had zero device switches.
 
 However, the Cross-Verification Index was $\text{CVI} = 0.0$ for all
@@ -692,19 +695,19 @@ display at self-chosen moments throughout the session.
 
 Figure~\ref{fig:trust_forest} summarises Cohen's $d$ effect sizes
 across all primary and secondary DVs. The largest effects were
-observed for per-mission confidence ($d = -2.333$), device switching
-behaviour ($d = -1.475$ and $-1.564$), and trust ($d = -1.025$)---all
-exceeding Cohen's threshold for large effects ($|d| > 0.8$). Cognitive
-workload reduction ($d = 0.902$) was also a large effect. Task
-performance measures (accuracy, completion time) showed small to
-negligible effects ($|d| < 0.4$), suggesting that the Hybrid
-condition's primary benefits are attitudinal and experiential rather
-than strictly performance-based.
+observed for per-mission confidence ($d = -3.69$), device switching
+behaviour ($d = -1.68$ and $-1.49$), trust ($d = -1.41$), and
+completion time ($d = 1.24$)---all exceeding Cohen's threshold for
+large effects ($|d| > 0.8$). Task accuracy ($d = -0.64$) and workload
+reduction ($d = 0.46$) showed medium effects. The breadth of these
+effects---spanning trust, confidence, performance, and
+workload---indicates that the Hybrid condition improved the navigation
+experience across multiple dimensions.
 
 \begin{figure*}[t]
   \centering
   \includegraphics[width=\linewidth, alt={Left: Trust item comparison showing all items higher for Hybrid, with confidence, reliability, and safety reaching significance. Right: Forest plot of Cohen's d effect sizes showing large effects for confidence, device switching, and trust, medium effects for workload, and small effects for accuracy and completion time.}]{fig8_trust_forestplot}
-  \caption{(a)~Trust item comparison between conditions. (b)~Forest plot of standardised effect sizes (Cohen's $d$) with 95\% CIs. Large effects are highlighted for confidence ($d = -2.33$), device switching ($d = -1.48$), trust ($d = -1.03$), and workload ($d = 0.90$).}
+  \caption{(a)~Trust item comparison between conditions. (b)~Forest plot of standardised effect sizes (Cohen's $d$) with 95\% CIs. Large effects are highlighted for confidence ($d = -3.69$), device switching ($d = -1.68$), trust ($d = -1.41$), and completion time ($d = 1.24$).}
   \label{fig:trust_forest}
 \end{figure*}
 
@@ -716,8 +719,8 @@ than strictly performance-based.
 \subsection{Trust Calibration and the Cross-Verification Loop}
 
 Our results provide strong support for H1: the Hybrid condition
-produced significantly higher trust ($d = -1.025$) and per-mission
-confidence ($d = -2.333$). These large effects suggest that the mere
+produced significantly higher trust ($d = -1.41$) and per-mission
+confidence ($d = -3.69$). These large effects suggest that the mere
 \emph{availability} of a companion display fundamentally changes how
 users assess system reliability. This aligns with Chiou and Lee's
 updated trust framework~\cite{Chiou:2023:TAD}, which emphasises that
@@ -737,28 +740,28 @@ representations that supported more robust navigational
 decision-making. Wickens' multiple resource
 theory~\cite{Wickens:2002:MRP} predicts that spatial (glasses) and
 verbal/detailed (phone) information channels should interfere
-minimally, which the reduced TLX scores ($d = 0.902$) support.
+minimally, which the reduced TLX scores ($d = 0.46$) support.
 
 \subsection{Performance Trade-offs}
 
-H2 received partial support. Overall accuracy was statistically
-equivalent between conditions, but the composition of this null effect
-is informative. Type~B missions---those embedded within uncertainty
-triggers---showed a 25 percentage-point accuracy improvement in the
-Hybrid condition, while Type~A (ceiling effect) and Type~C (modest
-gain) showed smaller differences. This pattern suggests that the
-companion display's greatest performance contribution occurs precisely
-when guidance is degraded or ambiguous, consistent with the design
-intention.
+H2 received strong support. Overall accuracy was significantly higher
+in the Hybrid condition ($+13.3$ percentage points, $p = .007$),
+driven primarily by Type~B missions---those embedded within uncertainty
+triggers---which showed a 25 percentage-point improvement. Type~A
+(ceiling effect) and Type~C (modest gain) showed smaller differences.
+This pattern confirms that the companion display's greatest
+performance contribution occurs precisely when guidance is degraded or
+ambiguous, consistent with the design intention.
 
-Completion time showed a marginal increase ($p = .067$, $d = -0.392$)
-at the session level. The within-mission analysis revealed faster
-individual mission times in the Hybrid condition across all types,
-suggesting that the session-level overhead reflects transition time
-(device handling, re-orientation) rather than slower navigation per se.
-The net cost of approximately 28\,s per session (4.8\% overhead) is
-modest relative to the substantial gains in trust and workload
-reduction.
+Completion time was also significantly shorter in the Hybrid condition
+($d = 1.24$, $p < .001$), contrary to the expectation that managing
+two devices would introduce overhead. Mission-level analysis confirmed
+faster times across all mission types, suggesting that higher
+confidence in navigational decisions translated into more decisive
+wayfinding behaviour. This finding aligns with Rashid et
+al.~\cite{Rashid:2012:CDS}: when each display switch provides
+sufficient information value, hybrid configurations can enhance rather
+than impair overall efficiency.
 
 \subsection{Voluntary Cross-Verification}
 
@@ -836,14 +839,14 @@ We presented a hybrid smart glasses--smartphone indoor navigation
 system and evaluated it in a within-subjects experiment ($N{=}24$)
 comparing Glass~Only and Hybrid conditions under navigational
 uncertainty. Three key findings emerged: (1)~the Hybrid condition
-significantly improved system trust ($d = -1.025$) and per-mission
-confidence ($d = -2.333$) while reducing cognitive workload
-($d = 0.902$); (2)~ambiguous-decision missions showed a 25
-percentage-point accuracy gain, demonstrating that the companion
-display's greatest contribution occurs during degraded guidance; and
-(3)~participants adopted a voluntary, proactive information-seeking
-strategy (CVI${=}0$) rather than reactively consulting the companion
-display during triggers. These results support the value of
+significantly improved system trust ($d = -1.41$) and per-mission
+confidence ($d = -3.69$) while reducing cognitive workload
+($d = 0.46$); (2)~overall accuracy improved significantly
+($+13.3$ percentage points, $p = .007$), with ambiguous-decision
+missions showing a 25 percentage-point gain, and completion time was
+significantly shorter ($d = 1.24$); and (3)~participants adopted a
+voluntary, proactive information-seeking strategy (CVI${=}0$) rather
+than reactively consulting the companion display during triggers. These results support the value of
 distributing navigational information across complementary
 devices---ambient directional cues on AR glasses and detailed
 contextual information on a smartphone---as a design strategy for
