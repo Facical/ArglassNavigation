@@ -273,17 +273,21 @@ namespace ARNavExperiment.Mission
         /// GlassOnly 모드에서 Navigation 중 ExperimentCanvas raycaster를 꺼서
         /// 뒤의 BeamProCanvas 허브에 핸드트래킹 ray가 도달하게 합니다.
         /// Briefing/Verification/Rating 상태에서는 다시 켭니다.
+        /// Hybrid 모드에서는 raycaster를 건드리지 않음 — ConditionController가 진입 시 OFF 처리.
         /// </summary>
         private void UpdateCanvasRaycasters(MissionState state)
         {
+            // Hybrid: raycaster는 ConditionController에서 이미 OFF → 여기서 건드리지 않음
+            if (IsHybridMode) return;
+
             var glassCanvas = GlassCanvasController.Instance;
             if (glassCanvas == null) return;
 
             bool needsExperimentRaycaster = state != MissionState.Navigation;
             glassCanvas.SetRaycasterEnabled(needsExperimentRaycaster);
 
-            // GlassOnly에서만 BeamPro 가시성 제어 (Hybrid에서는 HybridMissionOverlay가 허브 표시/숨김 담당)
-            if (!IsHybridMode && beamProCanvasCtrl != null)
+            // GlassOnly에서만 BeamPro 가시성 제어
+            if (beamProCanvasCtrl != null)
             {
                 bool showBeamPro = state == MissionState.Navigation || state == MissionState.Idle;
                 beamProCanvasCtrl.SetGlassVisibility(showBeamPro);

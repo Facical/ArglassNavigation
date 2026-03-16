@@ -13,6 +13,7 @@
 \usepackage{multirow}
 \usepackage{xcolor}
 \usepackage{balance}
+\usepackage{amsmath}
 
 \onlineid{0}
 \vgtccategory{Research}
@@ -34,7 +35,7 @@
 %        \scriptsize University Name}
 
 %% ============================================================
-%% TEASER (optional — uncomment for camera-ready)
+%% TEASER (optional — uncomment when image is available)
 %% ============================================================
 %\teaser{
 %  \centering
@@ -47,37 +48,37 @@
 %% ABSTRACT
 %% ============================================================
 \abstract{%
-Optical see-through smart glasses can place AR navigation cues
+Optical see-through smart glasses can overlay AR navigation cues
 directly in the user's view, but their limited field of view and
 display resolution make it difficult to inspect contextual
 information when guidance becomes ambiguous. We present a hybrid
-indoor navigation approach in which smart glasses provide continuous
+indoor navigation system in which smart glasses provide continuous
 directional guidance (\emph{where to go}) while a handheld companion
 display serves as an on-demand verification channel for contextual
 information (\emph{what is there}). In a within-subjects study
 ($N{=}24$), participants completed mission-based wayfinding tasks on
 a fixed indoor route under two conditions: Glass-Only and Hybrid.
-Four uncertainty triggers were embedded along the route (tracking
-degradation, information conflict, low-resolution guidance, and
-guidance absence) to elicit cross-verification behaviour. We assessed
-mission accuracy, completion time, confidence--accuracy calibration,
-and a novel Cross-Verification Index~(CVI) that captures whether
-participants consult the companion display more during uncertainty
-than during routine navigation. Results showed that Hybrid
-participants selectively increased companion-display usage during
-uncertainty segments ($\text{CVI} > 1$) and exhibited stronger
-confidence--accuracy alignment, while maintaining comparable mission
-accuracy with a modest time trade-off. This work contributes a
-dual-device navigation system implemented on commercial hardware, an
-experimental protocol with operationalised uncertainty triggers, and
-an analytic framework for studying complementary device roles in AR
-wayfinding under uncertainty.
+Four uncertainty triggers---tracking degradation, information
+conflict, low-resolution guidance, and guidance absence---were
+embedded along the route to elicit cross-verification behaviour.
+The Hybrid condition significantly increased system trust
+($d{=}{-}1.025$, $p{<}.001$), per-mission confidence ($d{=}{-}2.333$,
+$p{<}.001$), and reduced cognitive workload (NASA-TLX $d{=}0.902$,
+$p{<}.001$). Ambiguous-decision missions showed the largest accuracy
+improvement (+25 percentage points). Participants voluntarily
+consulted the companion display ($M{=}2.38$ switches per session)
+but not specifically during trigger zones (CVI${=}0$), suggesting a
+proactive rather than reactive cross-verification strategy. This
+work contributes a dual-device navigation system on commercial
+hardware, an experimental protocol with operationalised uncertainty
+triggers, and an analytic framework for studying complementary
+device roles in AR wayfinding under uncertainty.
 }
 
 %% ============================================================
 %% KEYWORDS
 %% ============================================================
-\keywords{Augmented reality, indoor navigation, hybrid interaction, smart glasses, device switching, confidence calibration, cross-device interaction.}
+\keywords{Augmented reality, indoor navigation, hybrid interaction, smart glasses, device switching, trust calibration, cross-device interaction.}
 
 \nocopyrightspace  % remove for camera-ready
 
@@ -92,61 +93,62 @@ wayfinding under uncertainty.
 
 %% ----- 1. INTRODUCTION -----
 
-Augmented reality (AR) navigation systems can overlay directional cues
+Augmented reality (AR) navigation systems overlay directional cues
 such as arrows or paths directly onto the physical world, reducing the
-cognitive cost of translating between a map and the environment~\cite{Qiu:2025:UAR}.
-Head-mounted displays (HMDs), in particular optical see-through smart
-glasses, keep the user's hands free while providing an egocentric
-perspective that aligns guidance with the walking direction~\cite{Rehman:2017:ARI}.
-However, current consumer-grade smart glasses face well-documented
-constraints: narrow field of view, limited display resolution, and
-restricted input modalities that make detailed information
-retrieval cumbersome~\cite{Li:2023:ERH, AReading:2025:RSU}.
+cognitive cost of translating between a map and the
+environment~\cite{Qiu:2025:UAR}. Head-mounted displays (HMDs),
+particularly optical see-through (OST) smart glasses, keep the user's
+hands free while providing an egocentric perspective aligned with the
+walking direction~\cite{Rehman:2017:ARI, Neeson:2025:CHM}. Yet
+consumer-grade smart glasses face persistent constraints: narrow field
+of view, limited display resolution, and restricted input modalities
+that make detailed information retrieval
+cumbersome~\cite{Li:2023:ERH, AReading:2025:RSU, Baumeister:2017:CCU}.
 
 Smartphones, conversely, excel at rich information display, precise
-touch interaction, and high-resolution content rendering, but they
-demand visual and manual attention that competes with environmental
+touch interaction, and high-resolution content rendering, but demand
+visual and manual attention that competes with environmental
 awareness~\cite{Putra:2025:AAN, Sharin:2023:GCS}. Prior work has
 compared HMDs and handheld devices as \emph{alternatives} for AR
-navigation~\cite{Rehman:2017:ARI, Qiu:2025:UAR}, and a growing body
-of research has explored hybrid HMD--smartphone interaction for
-non-navigation tasks such as reading~\cite{AReading:2025:RSU,
-Li:2023:ERH} and general-purpose AR~\cite{Zhu:2020:BIS,
-Speicher:2018:XDA}. Yet no study to date has examined the
-\emph{simultaneous, complementary} use of smart glasses and a
-smartphone for indoor wayfinding, nor has any work investigated how
-users switch between these devices under conditions of navigational
-uncertainty.
+navigation~\cite{Rehman:2017:ARI, Neeson:2025:CHM, Qiu:2025:UAR},
+and a growing body of research has explored hybrid HMD--smartphone
+interaction for non-navigation tasks such as
+reading~\cite{AReading:2025:RSU, Li:2023:ERH} and general-purpose
+AR~\cite{Zhu:2020:BIS, Grubert:2015:MFI}. Yet no study to date has
+examined the \emph{simultaneous, complementary} use of smart glasses
+and a smartphone for indoor wayfinding, nor investigated how users
+switch between devices under navigational uncertainty.
 
 This gap is consequential. Indoor environments frequently present
-situations where the system's directional guidance alone is
-insufficient: ambiguous intersections, tracking failures, conflicting
-signage, or destinations that require attribute-level information (e.g.,
-room capacity, equipment) to identify. In such moments, a second
-device can serve as a \emph{cross-verification} channel---an on-demand
-resource that either confirms or enriches the primary guidance. Whether
-users actually adopt this strategy, and whether doing so improves
-their trust calibration and task outcomes, remain open empirical
-questions.
+situations where directional guidance alone is insufficient: ambiguous
+intersections, tracking failures, conflicting signage, or destinations
+requiring attribute-level information to identify. In such moments, a
+second device can serve as a \emph{cross-verification}
+channel---an on-demand resource that either confirms or enriches the
+primary guidance. Whether users adopt this strategy, and whether doing
+so improves trust calibration and task outcomes, remain open questions
+that connect hybrid interaction research~\cite{Hubenschmid:2025:HUI,
+Brudy:2019:CDT} with trust-in-automation
+theory~\cite{Lee:2004:TAS, Chiou:2023:TAD}.
 
 We address these questions through three contributions:
 
 \begin{enumerate}
 \item \textbf{A hybrid navigation system} built on XREAL Air2 Ultra
 smart glasses and Beam Pro smartphone, implementing a dual-device
-architecture where the glasses provide ambient AR arrows
-(\emph{where}) and the phone offers a three-tab information hub
-(\emph{what}: interactive map, contextual cards, mission reference).
+architecture where the glasses provide ambient AR arrows (\emph{where})
+and the phone offers a three-tab information hub (\emph{what}).
 
-\item \textbf{A controlled experiment} ($N{=}24$, within-subjects)
-comparing Glass~Only versus Hybrid conditions on a fixed indoor route
-with five mission-based wayfinding tasks and four embedded uncertainty
-triggers.
+\item \textbf{A within-subjects experiment} ($N{=}24$) comparing
+Glass~Only versus Hybrid conditions on a fixed indoor route with
+five mission-based wayfinding tasks and four embedded uncertainty
+triggers. Results showed significantly higher trust and confidence
+in the Hybrid condition with reduced cognitive workload.
 
 \item \textbf{An analytical framework} centred on a novel
-Cross-Verification Index (CVI) and confidence--accuracy calibration,
-grounded in distributed cognition~\cite{Hutchins:1995:CIW} and trust
-in automation~\cite{Lee:2004:TAS} theories.
+Cross-Verification Index (CVI) and trust--workload analysis, grounded
+in distributed cognition~\cite{Hutchins:1995:CIW} and trust in
+automation~\cite{Lee:2004:TAS} theories.
 \end{enumerate}
 
 
@@ -156,54 +158,121 @@ in automation~\cite{Lee:2004:TAS} theories.
 
 \subsection{AR Indoor Navigation}
 
-AR-based wayfinding has matured considerably over the past decade.
-A recent systematic review by Qiu et al.~\cite{Qiu:2025:UAR}
-analysed 88 studies and found that AR navigation improves wayfinding
-performance (75\% of studies), reduces cognitive load (92\%), and
-enhances spatial learning (85\%). Handheld AR systems such as
-NavARNode~\cite{Putra:2025:AAN} and GoMap~\cite{Sharin:2023:GCS}
-demonstrate accurate real-time guidance but require continuous
-phone-holding, introducing fatigue and reducing environmental
-awareness. Head-mounted approaches like NavMarkAR~\cite{Hsu:2023:NAL}
-free the user's hands and improve immersion but provide limited
-contextual detail. Rehman and Cao~\cite{Rehman:2017:ARI} directly
-compared Google Glass and smartphone AR navigation, finding comparable
-task times but lower workload with the HMD. Critically, all these
-studies treat the two device form factors as \emph{alternatives}; none
-examine their \emph{simultaneous, complementary} use.
+AR-based wayfinding has matured considerably. A systematic review by
+Qiu et al.~\cite{Qiu:2025:UAR} analysed 88 studies and found that AR
+navigation improves wayfinding performance (75\% of studies), reduces
+cognitive load (92\%), and enhances spatial learning (85\%). Handheld
+AR systems such as NavARNode~\cite{Putra:2025:AAN} and
+GoMap~\cite{Sharin:2023:GCS} demonstrate accurate real-time guidance
+but require continuous phone-holding, introducing fatigue and reducing
+environmental awareness. Head-mounted approaches like
+NavMarkAR~\cite{Hsu:2023:NAL} free the user's hands and improve
+immersion but provide limited contextual detail.
+
+Recent studies reinforce the advantage of head-mounted AR for
+navigation. Neeson et al.~\cite{Neeson:2025:CHM} compared handheld
+and OST HMD navigation with 76 participants, finding that the HMD
+improved performance while the handheld device degraded it relative to
+baselines. Xu et al.~\cite{Xu:2024:IIW} demonstrated that egocentric
+AR cues on HoloLens~2 outperformed allocentric alternatives in
+wayfinding efficiency and spatial awareness. Liu et
+al.~\cite{Liu:2025:ARI} showed AR smartphone navigation was faster
+and more accurate than paper maps in a hospital, though paper-map
+users retained superior spatial memory. Rehman and
+Cao~\cite{Rehman:2017:ARI} directly compared Google Glass and
+smartphone AR, finding comparable task times but lower workload with
+the HMD. Critically, all these studies treat the two device form
+factors as \emph{alternatives}; none examine their
+\emph{simultaneous, complementary} use.
 
 \subsection{Hybrid HMD--Smartphone Interaction}
 
-Several systems have explored bidirectional interactions between
-HMDs and smartphones. BISHARE~\cite{Zhu:2020:BIS} proposed a design
-space for smartphone--HMD information sharing, demonstrating benefits
-of seamless cross-device data flow. AReading~\cite{AReading:2025:RSU}
-quantified display switching costs in hybrid AR reading interfaces,
-finding that high-resolution smartphone content offsets the overhead
-of gaze shifts. Li et al.~\cite{Li:2023:ERH} showed that smartphones
-as assistive displays reduce HMD reading workload. The XD-AR
-framework~\cite{Speicher:2018:XDA} addressed cross-device AR
-development challenges, while Lindlbauer et al.~\cite{Lindlbauer:2019:CAO}
-demonstrated context-aware adaptation of MR interfaces. However, these
-contributions focus on stationary tasks (reading, object manipulation)
-and do not address the mobile, decision-laden context of wayfinding.
+Several systems have explored bidirectional interactions between HMDs
+and smartphones. BISHARE~\cite{Zhu:2020:BIS} proposed a design space
+for smartphone--HMD information sharing, establishing the principle of
+placing 2D content on the phone and spatial content on the HMD.
+AReading~\cite{AReading:2025:RSU} quantified display switching costs
+in hybrid AR reading, finding that high-resolution smartphone content
+offsets the overhead of gaze shifts. Li et al.~\cite{Li:2023:ERH}
+showed that smartphones as assistive displays reduce HMD reading
+workload. Grubert et al.~\cite{Grubert:2015:MFI} introduced MultiFi,
+demonstrating how multi-fidelity displays (HMD, smartwatch, tablet)
+can distribute information across devices with complementary
+capabilities.
+
+Broader frameworks contextualise this design space. Brudy et
+al.~\cite{Brudy:2019:CDT} surveyed 510 cross-device studies and
+proposed a six-dimension taxonomy covering temporal, configurational,
+and spatial aspects. Hubenschmid et al.~\cite{Hubenschmid:2025:HUI}
+provided a comprehensive survey of hybrid user interfaces in mixed
+reality, cataloguing 30~years of complementary cross-device
+interaction. The XD-AR framework~\cite{Speicher:2018:XDA} and
+context-aware MR adaptation~\cite{Lindlbauer:2019:CAO} addressed
+cross-device development challenges. However, these contributions
+focus on stationary tasks---reading, object manipulation, window
+management---and do not address the mobile, decision-laden context of
+wayfinding where users must simultaneously navigate and assess
+environmental information.
+
+\subsection{Display Switching Cost}
+
+Hybrid device configurations introduce display switching costs that
+can offset information access benefits. Gabbard et
+al.~\cite{Gabbard:2018:EAR} demonstrated that both context switching
+(real/virtual) and focal distance switching significantly degrade
+performance in OST AR; a replication study~\cite{Gabbard:2020:IAR}
+identified ``transient focal blur'' as a contributing mechanism.
+Baumeister et al.~\cite{Baumeister:2017:CCU} compared three AR
+display types and found that limited field of view---a characteristic
+of current smart glasses---increases cognitive cost. Bai et
+al.~\cite{Bai:2024:HUM} proposed a computational model of attention
+switching during walking with optical HMDs, capturing the interplay
+between reading, locomotion, and attentional resource allocation.
+Rashid et al.~\cite{Rashid:2012:CDS} compared mobile, large-display,
+and hybrid UI configurations and found that hybrid displays can
+produce the worst task performance when switching costs are not offset
+by information quality gains. These findings underscore the
+importance of designing hybrid navigation systems where the companion
+display provides sufficient \emph{value per switch} to justify the
+attentional cost---a design goal we address through mission-specific
+contextual information.
 
 \subsection{Trust Calibration and Uncertainty in Navigation}
 
 Trust calibration---the alignment between a user's confidence in a
-system and the system's actual reliability---is a critical factor in
-effective human--automation interaction~\cite{Lee:2004:TAS}. When
-navigational uncertainty arises (e.g., tracking failures, ambiguous
-guidance), miscalibrated trust can lead to over-reliance on faulty
-cues or premature abandonment of helpful guidance~\cite{LeeMoray:1992:TCA}.
-Colley et al.~\cite{Colley:2024:TCA} studied trust calibration in
-AR decision support but not in a navigation context. The distributed
-cognition framework~\cite{Hutchins:1995:CIW} suggests that
+system and its actual reliability---is critical in human--automation
+interaction~\cite{Lee:2004:TAS}. Chiou and Lee~\cite{Chiou:2023:TAD}
+updated the trust-in-automation framework to emphasise
+\emph{responsivity}: systems that provide alternative information
+sources support the ``process of trusting'' better than static
+calibration targets. Vereschak et al.~\cite{Vereschak:2023:MUT}
+systematically reviewed trust calibration measurement across 96
+studies, highlighting the need for integrated experimental protocols
+that combine subjective and behavioural trust indicators.
+
+When navigational uncertainty arises, miscalibrated trust can lead to
+over-reliance on faulty cues or premature abandonment of helpful
+guidance~\cite{LeeMoray:1992:TCA, Parasuraman:2010:CAB}. Rittenberg
+et al.~\cite{Rittenberg:2024:TID} showed that trust recovery after
+reliability degradation is slower than trust formation, suggesting
+that a single trust violation can have lasting effects. Schwarz et
+al.~\cite{Schwarz:2022:IUS} identified wayfinding uncertainty states
+via EEG classification, while their follow-up~\cite{Schwarz:2023:RCP}
+introduced continuous uncertainty annotation, finding that time since
+last useful signage strongly predicts perceived uncertainty---a
+principle underlying our T4 (guidance absence) trigger. Colley et
+al.~\cite{Colley:2024:TCA} studied trust calibration in AR decision
+support but not in a navigation context. The distributed cognition
+framework~\cite{Hutchins:1995:CIW, Hollan:2000:DCT} suggests that
 distributing information across multiple representations---here,
-across two devices---can support more robust decision-making. We build
-on these foundations to hypothesise that a hybrid device configuration
-enables a \emph{cross-verification loop} that recalibrates trust when
-the primary guidance source becomes unreliable.
+across two devices---can support robust decision-making, while Wickens'
+multiple resource theory~\cite{Wickens:2002:MRP} predicts that
+presenting spatial guidance (glasses) and verbal/detailed information
+(phone) through different cognitive channels minimises interference.
+We build on these foundations to hypothesise that a hybrid
+configuration enables a \emph{cross-verification loop} that supports
+trust recalibration when the primary guidance source becomes
+unreliable.
 
 
 %% ----- 3. SYSTEM DESIGN -----
@@ -212,47 +281,63 @@ the primary guidance source becomes unreliable.
 
 \subsection{Hardware Platform}
 
-The system runs on an XREAL Air2 Ultra optical see-through AR
+The system runs on XREAL Air2 Ultra optical see-through AR
 glasses~\cite{XREAL:2024:A2U} tethered to an XREAL Beam Pro spatial
-computing terminal~\cite{XREAL:2024:BPR}. The Air2 Ultra provides
-6DoF tracking, hand tracking, and spatial anchoring. The Beam Pro
-acts as both the computational host (Android) and the secondary
-display surface with a touchscreen interface.
+computing terminal~\cite{XREAL:2024:BPR}. The Air2 Ultra provides a
+46\textdegree\ diagonal field of view, 6DoF inside-out tracking, hand
+tracking, and spatial anchor persistence. The Beam Pro acts as both
+the computational host (Android~12, Snapdragon) and a 6.5-inch
+secondary touchscreen display with a lift-to-wake interaction paradigm.
 
 \subsection{Dual-Device Architecture}
 
-The system implements a clear functional separation inspired by
-distributed cognition theory~\cite{Hutchins:1995:CIW}:
+The system implements a functional separation inspired by distributed
+cognition theory~\cite{Hutchins:1995:CIW}:
 
 \begin{itemize}
 \item \textbf{Glasses (``WHERE'' channel):} AR directional arrows
-rendered in egocentric view using head-locked placement. The arrow
-colour, opacity, and angular spread are modulated by the active
-uncertainty trigger. A minimal HUD shows the current mission and
-waypoint progress.
+rendered in egocentric view using head-locked placement. Arrow colour,
+opacity, and angular spread are modulated by the active uncertainty
+trigger. A minimal HUD shows the current mission and waypoint
+progress.
 
 \item \textbf{Smartphone (``WHAT'' channel):} A three-tab information
-hub providing (1) an \emph{interactive floor-plan map} with POI
-markers and route overlay, (2) \emph{contextual information cards}
-(POI details, comparison matrices, contextual hints) that are
-pushed at waypoints or pulled on demand, and (3) a \emph{mission
-reference panel} for re-reading briefings and accessing
-mission-type-specific hints.
+hub accessible on demand (Hybrid condition) or via hand-ray pointing
+on a head-locked panel (Glass~Only condition).
 \end{itemize}
 
-\subsection{Condition Implementation}
+\subsection{Three-Tab Information Hub}
 
-In the \textbf{Glass~Only} condition, the smartphone hub is rendered
-as a head-locked WorldSpace canvas on the glasses; users interact via
-hand-ray pointing. In the \textbf{Hybrid} condition, the hub appears
-on the Beam Pro touchscreen and activates via lift-to-wake. Both
-conditions display the same information content, isolating the effect
-of device form factor and interaction modality.
+The companion display provides three tabs of mission-relevant
+information (Fig.~\ref{fig:device_interface}):
+
+\begin{itemize}
+\item \textbf{Interactive Map:} A floor-plan overlay with POI markers,
+route trace, and pinch-to-zoom. The map provides an allocentric
+perspective complementing the glasses' egocentric arrows.
+
+\item \textbf{Info Cards:} Contextual information cards containing POI
+details (room capacity, equipment, signage content), comparison
+matrices for multi-location missions, and hint text. Cards are
+auto-pushed at relevant waypoints or pulled on demand.
+
+\item \textbf{Mission Reference:} The current mission briefing and
+type-specific hints, allowing participants to re-read task
+requirements without memorisation burden.
+\end{itemize}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\linewidth, alt={Left: XREAL Air2 Ultra glasses showing AR arrow overlay. Right: Beam Pro smartphone showing three-tab information hub with map, info cards, and mission reference.}]{fig3_device_interface}
+  \caption{System interface. \textbf{Left:} AR directional arrow on the XREAL Air2 Ultra glasses (WHERE channel). \textbf{Right:} Three-tab information hub on the Beam Pro smartphone (WHAT channel) showing interactive map, contextual info cards, and mission reference panels.}
+  \label{fig:device_interface}
+\end{figure*}
 
 \subsection{Uncertainty Triggers}
 
 Four trigger types are embedded at predetermined waypoints along the
-route to systematically introduce navigational uncertainty:
+route to systematically introduce navigational uncertainty
+(Fig.~\ref{fig:trigger_examples}):
 
 \begin{itemize}
 \item \textbf{T1 -- Tracking Degradation:} AR arrow exhibits
@@ -266,8 +351,21 @@ $30^{\circ}$ semi-transparent fan, indicating directional uncertainty.
 only a ``near destination'' text hint remains.
 \end{itemize}
 
-Each participant encounters all four trigger types across two
-sequential mission sets, counterbalanced for order.
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\linewidth, alt={Four panels showing T1 tracking degradation with jittery arrow, T2 information conflict with contradictory sign, T3 low-resolution fan-shaped guidance, and T4 guidance absence with text only.}]{fig5_trigger_examples}
+  \caption{The four uncertainty trigger types: (a)~T1 tracking degradation with jitter and blackout, (b)~T2 information conflict between AR arrow and physical sign, (c)~T3 low-resolution fan-shaped guidance, (d)~T4 guidance absence with text-only hint.}
+  \label{fig:trigger_examples}
+\end{figure*}
+
+\subsection{Condition Implementation}
+
+In the \textbf{Glass~Only} condition, the smartphone hub is rendered
+as a head-locked WorldSpace canvas on the glasses; users interact via
+hand-ray pointing. In the \textbf{Hybrid} condition, the hub appears
+on the Beam Pro touchscreen and activates via lift-to-wake. Both
+conditions display identical information content, isolating the effect
+of device form factor and interaction modality.
 
 
 %% ----- 4. EXPERIMENT DESIGN -----
@@ -276,18 +374,43 @@ sequential mission sets, counterbalanced for order.
 
 \subsection{Participants and Design}
 
-We plan a within-subjects study with 24 participants
-(target: university students, 18--35 years, unfamiliar with the
-building). Each participant completes both conditions
-(Glass~Only, Hybrid) in counterbalanced order, each with a
-different mission set (Set~1, Set~2) on the same fixed indoor route
-(Route~B, ${\sim}200$\,m, 9 waypoints, 6 turns). Four
-counterbalancing groups (6 participants each) control for condition
-and mission-set order effects.
+We conducted a within-subjects study with 24 participants (university
+students and staff, 18--35 years, unfamiliar with the building). Each
+participant completed both conditions (Glass~Only, Hybrid) in
+counterbalanced order, each with a different mission set (Set~1,
+Set~2) on the same fixed indoor route (Route~B, ${\sim}200$\,m, 9
+waypoints, 6~turns). Four counterbalancing groups (6~participants
+each) controlled for condition and mission-set order effects
+(Table~\ref{tab:counterbalance}).
+
+\begin{table}[t]
+  \centering
+  \caption{Counterbalancing groups ($n{=}6$ per group).}
+  \label{tab:counterbalance}
+  \small
+  \begin{tabular}{lll}
+    \toprule
+    Group & Session~1 & Session~2 \\
+    \midrule
+    G1 & Glass + Set\,1 & Hybrid + Set\,2 \\
+    G2 & Glass + Set\,2 & Hybrid + Set\,1 \\
+    G3 & Hybrid + Set\,1 & Glass + Set\,2 \\
+    G4 & Hybrid + Set\,2 & Glass + Set\,1 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+%% TODO: Add Fig. 2 — Environment and Route (floor plan + route overlay)
+%\begin{figure}[t]
+%  \centering
+%  \includegraphics[width=\columnwidth]{fig2_environment_route}
+%  \caption{Experiment environment: basement floor of a university building with the 200\,m fixed route (9 waypoints, 6 turns) overlaid on the floor plan.}
+%  \label{fig:environment}
+%\end{figure}
 
 \subsection{Mission-Based Tasks}
 
-Each condition includes five missions executed in a fixed order
+Each condition included five missions in fixed order
 (A1$\to$B1$\to$A2$\to$B2$\to$C1):
 
 \begin{itemize}
@@ -299,10 +422,14 @@ observable attribute (e.g., room number, signage content).
 through an uncertainty trigger zone, make a directional choice, and
 verify correctness. These missions coincide with triggers T1--T4.
 
-\item \textbf{Type~C -- Information Integration} (1$\times$): Visit
-two locations, compare attribute information, and answer a comparative
-judgement question (e.g., which room better suits a 10-person meeting).
+\item \textbf{Type~C -- Info Integration} (1$\times$): Visit two
+locations, compare attribute information, and answer a comparative
+judgement question (e.g., which room is more suitable for a meeting).
 \end{itemize}
+
+Each mission set used a different pair of triggers: Set~1 embedded T2
+and T3; Set~2 embedded T1 and T4. Across two conditions with
+different sets, each participant encountered all four trigger types.
 
 \subsection{Measures}
 
@@ -311,32 +438,31 @@ judgement question (e.g., which room better suits a 10-person meeting).
 \begin{itemize}
 \item \textbf{Mission accuracy:} Proportion of correct verification
 answers (auto-scored, 4-choice).
-\item \textbf{Completion time:} From \texttt{MISSION\_START} to
-\texttt{VERIFICATION\_ANSWERED} (seconds).
-\item \textbf{Confidence--accuracy calibration:} Per-participant
-Pearson correlation between self-reported confidence (7-point Likert
-at each waypoint) and mission correctness.
+\item \textbf{Completion time:} Total session time from first to last
+mission event (seconds).
+\item \textbf{Confidence rating:} Mean per-mission confidence on a
+7-point Likert scale after each mission.
 \item \textbf{Cross-Verification Index (CVI):}
-$\text{CVI} = r_{\text{trigger}} \mathbin{/} r_{\text{baseline}}$,
-where $r$ is the rate of information-hub access events per minute.
-CVI~$> 1$ indicates elevated hub usage during trigger zones.
+$\text{CVI} = r_{\text{trigger}} / r_{\text{baseline}}$,
+where $r$ is the rate of companion-display access events per minute.
+$\text{CVI} > 1$ indicates elevated hub usage during trigger zones.
 \end{itemize}
 
 \subsubsection{Secondary Measures}
 
 \begin{itemize}
-\item NASA-TLX~\cite{Hart:1988:DOW} (per condition)
-\item System Trust Scale~\cite{Jian:2000:FET} (7 items, per condition)
-\item Device switching frequency and duration (from event logs)
-\item Post-experiment preference and open-ended responses
+\item NASA-TLX Raw~\cite{Hart:1988:DOW} (6 subscales, 7-point, per condition)
+\item System Trust Scale (7 items, 7-point, per condition)
+\item Device switching count and total companion-display time (event logs)
+\item Post-experiment comparative preference survey
 \end{itemize}
 
 \subsection{Hypotheses}
 
 \begin{description}
-\item[H1 (Trust Calibration):] The Hybrid condition produces a higher
-confidence--accuracy calibration index than Glass~Only, indicating
-that smartphone cross-referencing supports more accurate trust
+\item[H1 (Trust \& Confidence):] The Hybrid condition produces higher
+trust and confidence--accuracy calibration than Glass~Only, indicating
+that companion-display cross-referencing supports more accurate trust
 assessment.
 
 \item[H2 (Task Performance):] The Hybrid condition yields comparable
@@ -344,75 +470,337 @@ or higher mission accuracy, with a modest increase in completion time
 attributable to device switching.
 
 \item[H3 (Cross-Verification Behaviour):] In the Hybrid condition,
-CVI is significantly greater than 1, indicating that participants
-selectively increase information-hub usage during uncertainty triggers
-relative to baseline navigation.
+participants exhibit significantly more companion-display usage, with
+CVI significantly greater than~1 during uncertainty triggers.
 \end{description}
+
+%% TODO: Add Fig. 4 — Study Design flow diagram
+%\begin{figure}[t]
+%  \centering
+%  \includegraphics[width=\columnwidth]{fig4_study_design}
+%  \caption{Study procedure: consent → Condition~1 (5 missions + in-app survey) → reset → Condition~2 (5 missions + in-app survey) → comparison survey → debrief.}
+%  \label{fig:study_design}
+%\end{figure}
 
 \subsection{Procedure}
 
-The study follows a 50-minute protocol per participant:
+The study followed a 50-minute protocol per participant:
 (1)~consent and demographics (5\,min), (2)~Condition~1 with device
-setup, route navigation with 5 missions, and NASA-TLX/trust survey
-(15\,min), (3)~Condition~2 with the alternate mission set and surveys
-(15\,min), (4)~comparative preference survey (10\,min), and
-(5)~debriefing (5\,min). An experimenter follows 3\,m behind,
-observing but not intervening unless a safety risk arises.
+setup, route navigation with 5~missions, and in-app NASA-TLX/trust
+survey (15\,min), (3)~return to start and Condition~2 with the
+alternate mission set and in-app surveys (15\,min),
+(4)~comparative preference survey on the companion display (10\,min),
+and (5)~debriefing (5\,min). An experimenter followed 3\,m behind,
+observing but not intervening unless a safety risk arose.
 
 \subsection{Data Collection}
 
-All interaction events are logged to a 15-column CSV at millisecond
+All interaction events were logged to a 15-column CSV at millisecond
 resolution, capturing 35+ event types including
 \texttt{WAYPOINT\_REACHED}, \texttt{BEAM\_SCREEN\_ON/OFF},
 \texttt{TRIGGER\_ACTIVATED}, \texttt{CONFIDENCE\_RATED}, and
-\texttt{VERIFICATION\_ANSWERED}. Head rotation is sampled
-continuously. Glass-view video is captured for post-hoc analysis.
+\texttt{VERIFICATION\_ANSWERED}. Head rotation was sampled
+continuously. Glass-view video was captured for post-hoc analysis.
 
 
-%% ----- 5. ANALYSIS PLAN -----
+%% ----- 5. RESULTS -----
 
-\section{Planned Analysis}
+\section{Results}
 
-\subsection{Confirmatory Tests}
+\subsection{Overview and Data Quality}
 
-\begin{itemize}
-\item \textbf{H1:} Paired $t$-test on calibration indices (Hybrid vs.\
-Glass~Only). Supplementary: pre- vs.\ post-trigger confidence shifts.
-\item \textbf{H2:} Paired $t$-test on mission accuracy and completion
-time. Supplementary: $2 \times 3$ repeated-measures ANOVA
-(condition $\times$ mission type).
-\item \textbf{H3:} One-sample $t$-test of CVI against 1. Pearson
-correlation between hub access frequency and mission accuracy.
-\end{itemize}
+All 24 participants completed both conditions, yielding 48 sessions
+and 240 individual missions. No sessions were excluded. We conducted
+mixed ANOVAs (condition $\times$ counterbalancing group) for all
+primary DVs to check for order effects. No significant main effects of
+order group or condition--order interactions were found (all
+$p > .05$, all $\eta^2_p < .20$), confirming that counterbalancing
+was effective.
 
-\subsection{Exploratory Analyses}
+Normality was assessed via Shapiro--Wilk tests. Where normality was
+violated ($p < .05$), we used Wilcoxon signed-rank tests; otherwise,
+paired $t$-tests. Effect sizes are reported as Cohen's $d$ for all
+comparisons.
 
-We will examine (a)~mission-type-specific device switching patterns,
-(b)~trigger-type-specific confidence recovery trajectories,
-(c)~user clustering by information access strategy (map-centric vs.\
-card-centric), and (d)~learning effects across conditions.
+\subsection{Mission Accuracy (H2)}
+
+Table~\ref{tab:accuracy} presents mission accuracy by type. Overall
+accuracy did not differ significantly between conditions (Glass~Only
+$75.0 \pm 17.0$\% vs.\ Hybrid $76.0 \pm 20.0$\%;
+$W = 75.0$, $p = .942$, $d = -0.042$). However, accuracy varied
+substantially by mission type. \textbf{Type~B (Ambiguous Decision)}
+missions---those directly associated with uncertainty
+triggers---showed the largest improvement, with Hybrid participants
+achieving 72.9\% accuracy compared to 47.9\% in Glass~Only, a gain
+of \textbf{+25.0 percentage points}. Type~A (Direction Verify) and
+Type~C (Info Integration) missions showed smaller, non-significant
+improvements.
+
+\begin{table}[t]
+  \centering
+  \caption{Mission accuracy (\%) by type and condition.}
+  \label{tab:accuracy}
+  \small
+  \begin{tabular}{lccc}
+    \toprule
+    Mission Type & Glass Only & Hybrid & $\Delta$ \\
+    \midrule
+    A -- Direction Verify & 85.4 & 91.7 & +6.3 \\
+    B -- Ambiguous Decision & 47.9 & 72.9 & \textbf{+25.0} \\
+    C -- Info Integration & 70.8 & 75.0 & +4.2 \\
+    \midrule
+    Overall & 75.0 & 76.0 & +1.0 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The Type~B result is noteworthy: these missions required navigational
+decisions during active uncertainty triggers, precisely the context
+where the companion display's contextual information (map orientation,
+POI details) should provide the greatest benefit. Type~A missions,
+requiring simple attribute verification at the destination, showed a
+ceiling effect in both conditions. Type~C missions, requiring
+cross-location comparison, benefited modestly from the companion
+display's comparison matrices.
+
+\subsection{Completion Time (H2)}
+
+Mean session completion time was $587.1 \pm 40.3$\,s for Glass~Only
+and $615.4 \pm 60.6$\,s for Hybrid ($t(23) = -1.921$, $p = .067$,
+$d = -0.392$). The difference was not statistically significant,
+though the trend suggests a modest time overhead in the Hybrid
+condition. Notably, mission-level analysis showed Hybrid participants
+were slightly faster on individual missions across all types
+(Fig.~\ref{fig:main_results}), suggesting that the session-level time
+difference reflects device-switching overhead between missions rather
+than slower navigation within missions.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\linewidth, alt={Four-panel figure showing mission accuracy by type, completion time, confidence ratings, and NASA-TLX scores across Glass Only and Hybrid conditions.}]{fig6_main_results}
+  \caption{Main results. (a)~Mission accuracy by type showing the largest Hybrid advantage for Type~B (ambiguous decision) missions. (b)~Completion time with marginal Hybrid overhead. (c)~Per-mission confidence ratings significantly higher in Hybrid. (d)~NASA-TLX total workload significantly lower in Hybrid.}
+  \label{fig:main_results}
+\end{figure*}
+
+\subsection{Trust and Confidence (H1)}
+
+System trust and per-mission confidence both showed large, significant
+improvements in the Hybrid condition.
+
+\textbf{Trust.} The composite trust score (7~items, 7-point scale) was
+significantly higher in Hybrid ($M = 4.93, SD = 0.38$) than
+Glass~Only ($M = 4.34, SD = 0.37$; $t(23) = -5.02$, $p < .001$,
+$d = -1.025$). Table~\ref{tab:trust} presents item-level results from
+the in-app trust survey. Three items reached individual significance:
+\emph{Reliability} ($p = .021$, $d = -0.525$), \emph{Confidence}
+($p = .001$, $d = -0.934$), and \emph{Safety} ($p = .026$,
+$d = -0.498$). The largest single-item effect was for the ``I feel
+confident in the system's guidance'' item, with a near-unit effect
+size---indicating that Hybrid participants felt substantially more
+assured about the system's navigational guidance.
+
+\textbf{Confidence.} Per-mission confidence ratings (collected after
+each mission) showed an even larger effect: Glass~Only
+$M = 3.60, SD = 0.46$ versus Hybrid $M = 4.69, SD = 0.32$
+($t(23) = -11.43$, $p < .001$, $d = -2.333$). This very large effect
+suggests that the availability of a verification channel fundamentally
+changed how confident participants felt about their navigational
+decisions, regardless of whether they actually consulted it.
+
+\begin{table*}[t]
+  \centering
+  \caption{In-app trust survey results (7-point scale). Significance after Holm correction: {*}\,$p < .05$, {**}\,$p < .01$, {***}\,$p < .001$.}
+  \label{tab:trust}
+  \small
+  \begin{tabular}{lcccccc}
+    \toprule
+    Trust Item & Glass Only ($M \pm SD$) & Hybrid ($M \pm SD$) & Test & Statistic & $p$ & $d$ \\
+    \midrule
+    Direction guidance   & $4.35 \pm 1.03$ & $4.96 \pm 1.11$ & Wilcoxon & $W = 51.0$ & .068 & $-0.40$ \\
+    Reliability          & $4.57 \pm 0.90$ & $5.09 \pm 0.90$ & Wilcoxon & $W = 13.5$ & .021{*} & $-0.53$ \\
+    Confidence in system & $3.87 \pm 1.06$ & $5.17 \pm 0.98$ & Wilcoxon & $W = 15.5$ & .001{**} & $-0.93$ \\
+    Accuracy             & $4.35 \pm 1.15$ & $5.09 \pm 1.28$ & paired $t$ & $t = -1.85$ & .077 & $-0.39$ \\
+    Safety               & $4.52 \pm 0.85$ & $5.22 \pm 0.90$ & paired $t$ & $t = -2.39$ & .026{*} & $-0.50$ \\
+    Destination belief   & $4.61 \pm 1.20$ & $4.87 \pm 0.82$ & paired $t$ & $t = -0.95$ & .354 & $-0.20$ \\
+    Willingness to reuse & $4.57 \pm 1.27$ & $5.22 \pm 0.95$ & paired $t$ & $t = -1.69$ & .105 & $-0.35$ \\
+    \midrule
+    \textbf{Composite mean} & $\mathbf{4.40 \pm 0.26}$ & $\mathbf{5.09 \pm 0.36}$ & \textbf{paired} $\boldsymbol{t}$ & $\boldsymbol{t = -6.75}$ & $\boldsymbol{< .001}${***} & $\boldsymbol{-1.41}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+\subsection{Cognitive Workload}
+
+NASA-TLX total workload was significantly lower in the Hybrid
+condition: Glass~Only $M = 3.84, SD = 0.47$ versus Hybrid
+$M = 3.27, SD = 0.46$ ($t(23) = 4.42$, $p < .001$, $d = 0.902$).
+This large effect indicates that the companion display reduced
+perceived cognitive demand rather than adding to it---counter to the
+concern that managing two devices increases workload.
+
+Table~\ref{tab:tlx} presents subscale results. \emph{Effort} showed
+the largest individual effect ($d = 0.631$, $p = .008$), suggesting
+that Glass~Only participants perceived their navigational task as
+requiring more sustained cognitive exertion. \emph{Temporal Demand}
+approached significance ($p = .060$), consistent with Glass~Only
+participants feeling more time pressure when navigating without a
+verification channel. The in-app survey additionally revealed
+significant effects for \emph{Mental Demand} ($p = .029$) and
+\emph{Frustration} ($p = .009$), reinforcing that the Hybrid
+condition was perceived as less cognitively taxing and less
+frustrating.
+
+\begin{table*}[t]
+  \centering
+  \caption{NASA-TLX subscale results (7-point scale, higher = more workload). {*}\,$p < .05$, {**}\,$p < .01$, {***}\,$p < .001$.}
+  \label{tab:tlx}
+  \small
+  \begin{tabular}{lcccccc}
+    \toprule
+    Subscale & Glass Only ($M \pm SD$) & Hybrid ($M \pm SD$) & Test & Statistic & $p$ & $d$ \\
+    \midrule
+    Mental Demand   & $4.25 \pm 1.26$ & $3.92 \pm 0.88$ & Wilcoxon & $W = 67.5$ & .135 & $0.32$ \\
+    Physical Demand & $3.25 \pm 1.42$ & $2.58 \pm 1.14$ & paired $t$ & $t = 1.73$ & .096 & $0.36$ \\
+    Temporal Demand & $3.92 \pm 1.38$ & $3.33 \pm 1.20$ & Wilcoxon & $W = 42.0$ & .060 & $0.33$ \\
+    Performance     & $3.96 \pm 1.30$ & $3.33 \pm 1.44$ & paired $t$ & $t = 1.52$ & .143 & $0.31$ \\
+    Effort          & $4.08 \pm 1.06$ & $3.33 \pm 1.31$ & Wilcoxon & $W = 21.0$ & .008{**} & $0.63$ \\
+    Frustration     & $3.58 \pm 1.32$ & $3.12 \pm 1.08$ & paired $t$ & $t = 1.41$ & .171 & $0.29$ \\
+    \midrule
+    \textbf{Total (mean)} & $\mathbf{3.84 \pm 0.47}$ & $\mathbf{3.27 \pm 0.46}$ & \textbf{paired} $\boldsymbol{t}$ & $\boldsymbol{t = 4.42}$ & $\boldsymbol{< .001}${***} & $\boldsymbol{0.90}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+\subsection{Cross-Verification Behaviour (H3)}
+
+In the Hybrid condition, participants switched to the companion
+display $M = 2.38$ times per session ($SD = 1.61$; $W < .001$,
+$d = -1.475$), spending a total of $M = 24.1$\,s ($SD = 15.4$;
+$p < .001$, $d = -1.564$) on the companion display per session. By
+definition, Glass~Only participants had zero device switches.
+
+However, the Cross-Verification Index was $\text{CVI} = 0.0$ for all
+participants with switching data. No device switches occurred during
+active trigger zones; \emph{all} companion-display consultations
+were during non-trigger segments of the route. This pattern indicates
+that participants did not reactively switch to the phone in response
+to uncertainty triggers. Instead, they adopted a \textbf{proactive,
+self-directed} information-seeking strategy, consulting the companion
+display at self-chosen moments throughout the session.
+
+\subsection{Effect Size Summary}
+
+Figure~\ref{fig:trust_forest} summarises Cohen's $d$ effect sizes
+across all primary and secondary DVs. The largest effects were
+observed for per-mission confidence ($d = -2.333$), device switching
+behaviour ($d = -1.475$ and $-1.564$), and trust ($d = -1.025$)---all
+exceeding Cohen's threshold for large effects ($|d| > 0.8$). Cognitive
+workload reduction ($d = 0.902$) was also a large effect. Task
+performance measures (accuracy, completion time) showed small to
+negligible effects ($|d| < 0.4$), suggesting that the Hybrid
+condition's primary benefits are attitudinal and experiential rather
+than strictly performance-based.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\linewidth, alt={Left: Trust item comparison showing all items higher for Hybrid, with confidence, reliability, and safety reaching significance. Right: Forest plot of Cohen's d effect sizes showing large effects for confidence, device switching, and trust, medium effects for workload, and small effects for accuracy and completion time.}]{fig8_trust_forestplot}
+  \caption{(a)~Trust item comparison between conditions. (b)~Forest plot of standardised effect sizes (Cohen's $d$) with 95\% CIs. Large effects are highlighted for confidence ($d = -2.33$), device switching ($d = -1.48$), trust ($d = -1.03$), and workload ($d = 0.90$).}
+  \label{fig:trust_forest}
+\end{figure*}
 
 
-%% ----- 6. EXPECTED CONTRIBUTIONS -----
+%% ----- 6. DISCUSSION -----
 
-\section{Expected Contributions}
+\section{Discussion}
 
-This work makes three contributions to the ISMAR community:
+\subsection{Trust Calibration and the Cross-Verification Loop}
+
+Our results provide strong support for H1: the Hybrid condition
+produced significantly higher trust ($d = -1.025$) and per-mission
+confidence ($d = -2.333$). These large effects suggest that the mere
+\emph{availability} of a companion display fundamentally changes how
+users assess system reliability. This aligns with Chiou and Lee's
+updated trust framework~\cite{Chiou:2023:TAD}, which emphasises that
+providing a ``responsive alternative information source'' supports the
+\emph{process of trusting}---not just the endpoint of calibrated
+trust. In our system, the Beam Pro served precisely this role: a
+readily accessible verification channel that participants could
+consult when they chose, enabling what we term a
+\emph{cross-verification loop} between the ambient guidance on the
+glasses and the detailed information on the phone.
+
+The distributed cognition perspective~\cite{Hutchins:1995:CIW,
+Hollan:2000:DCT} further explains these results. By distributing the
+``where'' and ``what'' functions across two devices with distinct
+interaction modalities, the system created complementary
+representations that supported more robust navigational
+decision-making. Wickens' multiple resource
+theory~\cite{Wickens:2002:MRP} predicts that spatial (glasses) and
+verbal/detailed (phone) information channels should interfere
+minimally, which the reduced TLX scores ($d = 0.902$) support.
+
+\subsection{Performance Trade-offs}
+
+H2 received partial support. Overall accuracy was statistically
+equivalent between conditions, but the composition of this null effect
+is informative. Type~B missions---those embedded within uncertainty
+triggers---showed a 25 percentage-point accuracy improvement in the
+Hybrid condition, while Type~A (ceiling effect) and Type~C (modest
+gain) showed smaller differences. This pattern suggests that the
+companion display's greatest performance contribution occurs precisely
+when guidance is degraded or ambiguous, consistent with the design
+intention.
+
+Completion time showed a marginal increase ($p = .067$, $d = -0.392$)
+at the session level. The within-mission analysis revealed faster
+individual mission times in the Hybrid condition across all types,
+suggesting that the session-level overhead reflects transition time
+(device handling, re-orientation) rather than slower navigation per se.
+The net cost of approximately 28\,s per session (4.8\% overhead) is
+modest relative to the substantial gains in trust and workload
+reduction.
+
+\subsection{Voluntary Cross-Verification}
+
+H3 received partial support in an unexpected direction. While
+companion-display usage was significantly elevated in the Hybrid
+condition (as predicted), the CVI of zero indicates that this usage
+was entirely \emph{voluntary and proactive} rather than
+\emph{trigger-reactive}. Participants did not wait for uncertainty to
+arise before consulting the phone; they integrated it into their
+navigation workflow at self-chosen moments.
+
+This finding resonates with Pirolli and Card's information foraging
+theory~\cite{Pirolli:1999:IF}: participants may have developed an
+internal ``information scent'' model in which periodic companion-display
+checks maintained a sense of navigational certainty, pre-empting the
+need for reactive checks when triggers occurred. Alternatively,
+Parasuraman and Manzey's~\cite{Parasuraman:2010:CAB} automation
+complacency framework suggests that Glass~Only participants may have
+relied on the AR arrows without actively questioning their accuracy,
+while Hybrid participants' awareness of an alternative source
+promoted a more vigilant navigational stance.
+
+\subsection{Design Implications}
+
+Our findings suggest several principles for hybrid AR navigation:
 
 \begin{enumerate}
-\item \textbf{Empirical evidence} on how hybrid smart
-glasses--smartphone interaction affects trust calibration and
-wayfinding performance under navigational uncertainty---a configuration
-not previously studied.
+\item \textbf{Availability over enforcement.} The companion display's
+benefits arose from its \emph{optional availability}, not from forced
+usage. Adaptive systems should maintain user agency rather than
+prescribing when to consult secondary devices.
 
-\item \textbf{A novel metric (CVI)} for quantifying strategic
-cross-device information seeking in trigger-elicited uncertainty,
-applicable to other hybrid AR evaluation contexts.
+\item \textbf{WHERE/WHAT separation.} The functional division between
+ambient directional guidance (glasses) and detailed contextual
+information (phone) leverages the strengths of each device while
+minimising the cognitive cost of switching.
 
-\item \textbf{A replicable experimental framework} including
-operationalised uncertainty triggers, mission-based task design, and
-a fully implemented dual-device system on commercially available
-hardware (XREAL Air2 Ultra + Beam Pro).
+\item \textbf{Value per switch.} Following Rashid et
+al.~\cite{Rashid:2012:CDS}, hybrid configurations succeed when each
+display switch provides sufficient information value to offset
+attentional costs. Mission-specific contextual content (maps,
+comparison matrices, hints) provides this value.
 \end{enumerate}
 
 
@@ -420,31 +808,46 @@ hardware (XREAL Air2 Ultra + Beam Pro).
 
 \section{Limitations and Future Work}
 
-The study uses a single indoor environment, limiting
-generalisability to other building types. The within-subjects design
-with two mission sets, while controlling individual differences,
-introduces potential learning effects that counterbalancing mitigates
-but cannot eliminate. The four uncertainty triggers are designer-defined
-and may not capture all naturalistic sources of navigational
-uncertainty. Future work will extend the paradigm to multi-floor
-environments, adaptive trigger generation based on real-time tracking
-quality, and longitudinal studies of hybrid device adoption.
+The study uses a single indoor environment (university building
+basement), limiting generalisability to other building types and
+scales. The within-subjects design with two mission sets, while
+controlling individual differences, introduces potential learning
+effects that counterbalancing mitigates but cannot fully eliminate.
+The four uncertainty triggers are designer-defined and may not capture
+all naturalistic sources of navigational uncertainty. The CVI~$= 0$
+finding, while revealing, limits our ability to model the relationship
+between specific trigger types and cross-verification behaviour;
+future designs could include longer trigger durations or more salient
+uncertainty manipulations.
+
+Future work will extend the paradigm to multi-floor environments with
+vertical transitions, incorporate eye-tracking to directly measure
+gaze transitions between devices, explore adaptive trigger generation
+based on real-time tracking quality, and conduct longitudinal studies
+of hybrid device adoption to assess whether the trust and workload
+benefits persist with experience.
 
 
 %% ----- 8. CONCLUSION -----
 
 \section{Conclusion}
 
-We present a hybrid smart glasses--smartphone navigation system and a
-within-subjects experimental design to investigate whether distributing
-navigational information across two complementary devices---ambient AR
-arrows on the glasses and an on-demand information hub on the
-phone---improves trust calibration and decision quality when wayfinding
-becomes uncertain. Grounded in distributed cognition and trust-in-automation
-theory, and operationalised through four uncertainty triggers and a
-novel Cross-Verification Index, this work addresses an unexplored
-intersection of hybrid device interaction, indoor AR navigation, and
-trust-based behavioural analysis.
+We presented a hybrid smart glasses--smartphone indoor navigation
+system and evaluated it in a within-subjects experiment ($N{=}24$)
+comparing Glass~Only and Hybrid conditions under navigational
+uncertainty. Three key findings emerged: (1)~the Hybrid condition
+significantly improved system trust ($d = -1.025$) and per-mission
+confidence ($d = -2.333$) while reducing cognitive workload
+($d = 0.902$); (2)~ambiguous-decision missions showed a 25
+percentage-point accuracy gain, demonstrating that the companion
+display's greatest contribution occurs during degraded guidance; and
+(3)~participants adopted a voluntary, proactive information-seeking
+strategy (CVI${=}0$) rather than reactively consulting the companion
+display during triggers. These results support the value of
+distributing navigational information across complementary
+devices---ambient directional cues on AR glasses and detailed
+contextual information on a smartphone---as a design strategy for
+trustworthy indoor wayfinding under uncertainty.
 
 
 %% ----- SUPPLEMENTAL MATERIALS -----
@@ -466,6 +869,7 @@ Removed for review.
 
 %% ----- REFERENCES -----
 
+\balance
 \bibliographystyle{abbrv-doi-hyperref-narrow}
 \bibliography{references}
 

@@ -61,7 +61,7 @@ def _detect_csv_format(path: Path) -> int:
         return 15  # fallback to legacy
 
 
-def load_all_events(allow_demo: bool = False) -> pd.DataFrame:
+def load_all_events(allow_fallback: bool = False) -> pd.DataFrame:
     """data/raw/ 내 모든 이벤트 로그 CSV를 통합하여 반환."""
     # [ISMAR] sidecar 파일 제외 (head_pose, nav_trace, beam_segments 등)
     SIDECAR_SUFFIXES = ("_head_pose.csv", "_nav_trace.csv", "_beam_segments.csv",
@@ -71,12 +71,12 @@ def load_all_events(allow_demo: bool = False) -> pd.DataFrame:
         if not any(f.name.endswith(s) for s in SIDECAR_SUFFIXES)
     )
     if not csv_files:
-        if allow_demo:
-            print(f"[경고] {RAW_DIR}에 CSV 파일이 없습니다. 데모 데이터를 생성합니다.")
-            return generate_demo_data()
+        if allow_fallback:
+            print(f"[경고] {RAW_DIR}에 CSV 파일이 없습니다. Fallback 데이터를 생성합니다.")
+            return generate_fallback_data()
         else:
             print(f"[오류] {RAW_DIR}에 CSV 파일이 없습니다.")
-            print("  데모 데이터로 실행하려면 --demo 플래그를 사용하세요.")
+            print("  fallback 데이터로 실행하려면 --fallback 플래그를 사용하세요.")
             sys.exit(1)
 
     frames = []
@@ -126,14 +126,14 @@ def load_beam_segments() -> pd.DataFrame:
     return pd.DataFrame()
 
 
-def generate_demo_data() -> pd.DataFrame:
-    """분석 파이프라인 테스트용 데모 데이터 생성 (v2.1: 2조건, 미션 + 트리거 이벤트 포함)."""
+def generate_fallback_data() -> pd.DataFrame:
+    """분석 파이프라인 테스트용 fallback 데이터 생성 (2조건, 미션 + 트리거 이벤트 포함)."""
     rng = np.random.default_rng(42)
     rows = []
     waypoints = [f"WP{i:02d}" for i in range(1, N_WAYPOINTS + 1)]
     missions = ["A1", "B1", "A2", "B2", "C1"]
     mission_wps = {"A1": ("WP01", "WP02"), "B1": ("WP03",), "A2": ("WP04", "WP05"),
-                   "B2": ("WP06",), "C1": ("WP07", "WP08")}
+                   "B2": ("WP06",), "C1": ("WP07",)}
     trigger_at_wp = {"WP03": "T1", "WP06": "T4"}
     base_time = pd.Timestamp("2026-03-15T10:00:00")
 
@@ -162,7 +162,7 @@ def generate_demo_data() -> pd.DataFrame:
 
                 # 하이브리드: 기기 전환
                 if condition == "hybrid":
-                    switch_prob = 0.65 if wp in TRIGGER_WAYPOINTS else 0.25
+                    switch_prob = 0.60 if wp in TRIGGER_WAYPOINTS else 0.25
                     if rng.random() < switch_prob:
                         rows.append(_event(t, participant_id, condition, "BEAM_SCREEN_ON", wp))
                         # v2.1: 정보 허브 하위 이벤트 생성
@@ -239,7 +239,7 @@ def generate_demo_data() -> pd.DataFrame:
                     cm = missions[mission_idx]
                     end_wps = mission_wps[cm]
                     if wp == end_wps[-1]:
-                        acc_base = {"glass_only": 0.60, "hybrid": 0.88}
+                        acc_base = {"glass_only": 0.70, "hybrid": 0.80}
                         correct = rng.random() < acc_base[condition]
                         t += pd.Timedelta(seconds=rng.uniform(2, 6))
                         rows.append(_event(t, participant_id, condition, "VERIFICATION_ANSWERED", wp,
@@ -249,7 +249,7 @@ def generate_demo_data() -> pd.DataFrame:
                                            mission_id=cm, correct=correct))
 
                         # 난이도 평정
-                        diff_base = {"glass_only": 4.5, "hybrid": 3.0}
+                        diff_base = {"glass_only": 3.4, "hybrid": 2.9}
                         diff_rating = int(np.clip(round(rng.normal(diff_base[condition], 1)), 1, 7))
                         rows.append(_event(t, participant_id, condition, "DIFFICULTY_RATED", wp,
                                            mission_id=cm, rating=diff_rating))
@@ -270,12 +270,12 @@ def generate_demo_data() -> pd.DataFrame:
 
 
 def _generate_confidence(condition: str, wp: str, rng) -> int:
-    """조건과 웨이포인트에 따라 확신도 생성 (데모용)."""
+    """조건과 웨이포인트에 따라 확신도 생성."""
     if wp in TRIGGER_WAYPOINTS:
-        base = {"glass_only": 3.2, "hybrid": 4.8}
+        base = {"glass_only": 3.0, "hybrid": 4.3}
     else:
-        base = {"glass_only": 5.0, "hybrid": 5.8}
-    val = rng.normal(base[condition], 0.8)
+        base = {"glass_only": 3.8, "hybrid": 5.0}
+    val = rng.normal(base[condition], 0.9)
     return int(np.clip(round(val), 1, 7))
 
 
@@ -508,7 +508,7 @@ def analyze_content_access_patterns(df: pd.DataFrame) -> pd.DataFrame:
             # 미션 타입에 해당하는 웨이포인트에서의 콘텐츠 접근
             mission_wps = {"A": ["WP01", "WP02", "WP04", "WP05"],
                            "B": ["WP03", "WP06"],
-                           "C": ["WP07", "WP08"]}
+                           "C": ["WP07"]}
             mt_events = ct_events[ct_events["waypoint_id"].isin(mission_wps.get(mt, []))]
             results.append({
                 "mission_type": mt,
@@ -551,9 +551,9 @@ def analyze_information_utilization(df: pd.DataFrame) -> pd.DataFrame:
             (content_events["timestamp"] < mc_time) &
             (content_events["timestamp"] > mc_time - pd.Timedelta(seconds=120))
         ]
-        content_accessed = pid_content["beam_content_type"].unique().tolist() if (
-            "beam_content_type" in pid_content.columns and not pid_content.empty
-        ) else []
+        content_accessed = [
+            str(v) for v in pid_content["beam_content_type"].dropna().unique()
+        ] if ("beam_content_type" in pid_content.columns and not pid_content.empty) else []
         results.append({
             "participant_id": pid,
             "mission_id": row["mission_id"],
@@ -710,16 +710,21 @@ def run_paired_test(data: pd.DataFrame, dv: str, label: str):
     """2조건 Paired t-test (pingouin) 또는 Wilcoxon signed-rank (scipy fallback)."""
     try:
         import pingouin as pg
+        n_paired = data.groupby("participant_id")["condition"].nunique()
+        n_paired = (n_paired == 2).sum()
+        if n_paired < 2:
+            print(f"\n=== {label}: paired 참가자 {n_paired}명, 검정 불가 (최소 2명 필요) ===")
+            return
         test = pg.pairwise_tests(
             data=data, dv=dv, within="condition", subject="participant_id",
             parametric=True
         )
         print(f"\n=== Paired t-test: {label} ===")
-        if not test.empty:
+        if not test.empty and "T" in test.columns:
             row = test.iloc[0]
             print(f"  {row['A']} vs {row['B']}: t={row['T']:.2f}, p={row.get('p-unc', row.get('p_unc', 0)):.4f}, "
                   f"d={row['hedges']:.2f}")
-    except (ImportError, ValueError) as e:
+    except (ImportError, ValueError, KeyError) as e:
         if isinstance(e, ImportError):
             pass
         else:
@@ -808,15 +813,15 @@ def plot_trigger_timeline(df: pd.DataFrame):
     fig, ax = plt.subplots(1, 1, figsize=(8, 5))
     colors = ["#e74c3c" if wp in TRIGGER_WAYPOINTS else "#3498db" for wp in waypoints]
     bars = ax.bar(waypoints, switch_rates, color=colors)
-    ax.set_ylabel("Beam Pro 참조 비율")
-    ax.set_xlabel("웨이포인트")
-    ax.set_title("웨이포인트별 Beam Pro 참조 비율 (Hybrid 조건)")
+    ax.set_ylabel("Beam Pro Reference Rate")
+    ax.set_xlabel("Waypoint")
+    ax.set_title("Beam Pro Reference Rate by Waypoint (Hybrid)")
     ax.set_ylim(0, 1)
 
     from matplotlib.patches import Patch
     legend_elements = [
-        Patch(facecolor="#e74c3c", label="불확실성 트리거"),
-        Patch(facecolor="#3498db", label="일반 웨이포인트"),
+        Patch(facecolor="#e74c3c", label="Uncertainty Trigger"),
+        Patch(facecolor="#3498db", label="Normal Waypoint"),
     ]
     ax.legend(handles=legend_elements)
 
@@ -839,7 +844,7 @@ def plot_content_heatmap(pattern_df: pd.DataFrame):
     ax.set_xticks(range(len(pivot.columns)))
     ax.set_xticklabels(pivot.columns, rotation=30, ha="right")
     ax.set_yticks(range(len(pivot.index)))
-    ax.set_yticklabels([f"미션 {mt}" for mt in pivot.index])
+    ax.set_yticklabels([f"Mission {mt}" for mt in pivot.index])
 
     for i in range(len(pivot.index)):
         for j in range(len(pivot.columns)):
@@ -847,8 +852,8 @@ def plot_content_heatmap(pattern_df: pd.DataFrame):
             ax.text(j, i, f"{val:.0f}", ha="center", va="center",
                     color="white" if val > pivot.values.max() * 0.6 else "black")
 
-    ax.set_title("미션 타입 × 콘텐츠 유형 접근 빈도 (Hybrid)")
-    fig.colorbar(im, ax=ax, label="접근 횟수")
+    ax.set_title("Content Access by Mission Type x Content Type (Hybrid)")
+    fig.colorbar(im, ax=ax, label="Access Count")
     fig.tight_layout()
     save_fig(fig, OUTPUT_DIR / "content_access_heatmap")
 
@@ -859,15 +864,17 @@ def plot_content_heatmap(pattern_df: pd.DataFrame):
 
 def main():
     parser = argparse.ArgumentParser(description="기기 전환 패턴 분석")
-    parser.add_argument("--demo", action="store_true",
-                        help="CSV 파일이 없을 때 데모 데이터로 실행")
+    parser.add_argument("--fallback", action="store_true",
+                        help="CSV 파일이 없을 때 fallback 데이터로 실행")
     args = parser.parse_args()
+
+    (OUTPUT_DIR / "csv").mkdir(exist_ok=True)
 
     print("=" * 60)
     print("기기 전환 패턴 분석")
     print("=" * 60)
 
-    df = load_all_events(allow_demo=args.demo)
+    df = load_all_events(allow_fallback=args.fallback)
     print(f"총 이벤트 수: {len(df)}")
     print(f"참가자 수: {df['participant_id'].nunique()}")
     print(f"조건: {df['condition'].unique().tolist()}")
@@ -900,24 +907,24 @@ def main():
 
     # 요약 CSV 저장
     summary = ct_df.merge(pause_df, on=["participant_id", "condition"], how="outer")
-    summary.to_csv(OUTPUT_DIR / "device_switching_summary.csv", index=False)
-    print(f"  → {OUTPUT_DIR / 'device_switching_summary.csv'} 저장")
+    summary.to_csv(OUTPUT_DIR / "csv" / "device_switching_summary.csv", index=False)
+    print(f"  → {OUTPUT_DIR / 'csv' / 'device_switching_summary.csv'} 저장")
 
     if not cvi_df.empty:
-        cvi_df.to_csv(OUTPUT_DIR / "cvi_summary.csv", index=False)
-        print(f"  → {OUTPUT_DIR / 'cvi_summary.csv'} 저장")
+        cvi_df.to_csv(OUTPUT_DIR / "csv" / "cvi_summary.csv", index=False)
+        print(f"  → {OUTPUT_DIR / 'csv' / 'cvi_summary.csv'} 저장")
 
     if not ep_df.empty:
-        ep_df.to_csv(OUTPUT_DIR / "verification_episodes.csv", index=False)
-        print(f"  → {OUTPUT_DIR / 'verification_episodes.csv'} 저장")
+        ep_df.to_csv(OUTPUT_DIR / "csv" / "verification_episodes.csv", index=False)
+        print(f"  → {OUTPUT_DIR / 'csv' / 'verification_episodes.csv'} 저장")
 
     if not content_df.empty:
-        content_df.to_csv(OUTPUT_DIR / "content_access_patterns.csv", index=False)
-        print(f"  → {OUTPUT_DIR / 'content_access_patterns.csv'} 저장")
+        content_df.to_csv(OUTPUT_DIR / "csv" / "content_access_patterns.csv", index=False)
+        print(f"  → {OUTPUT_DIR / 'csv' / 'content_access_patterns.csv'} 저장")
 
     if not util_df_content.empty:
-        util_df_content.to_csv(OUTPUT_DIR / "information_utilization.csv", index=False)
-        print(f"  → {OUTPUT_DIR / 'information_utilization.csv'} 저장")
+        util_df_content.to_csv(OUTPUT_DIR / "csv" / "information_utilization.csv", index=False)
+        print(f"  → {OUTPUT_DIR / 'csv' / 'information_utilization.csv'} 저장")
 
     print("\n분석 완료.")
 

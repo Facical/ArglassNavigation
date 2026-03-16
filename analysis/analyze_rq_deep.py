@@ -8,8 +8,8 @@ Fig 9: Scatter + Regression (참가자별 확신도-정확도 산점도)
 Fig 10: Interaction Plot (조건 x 트리거 유형 확신도 드롭)
 
 주요 기능:
-  - --demo 플래그: 24명 현실적 데모 데이터 자동 생성
-  - 실제 데이터: data/raw/ 이벤트/nav_trace/beam_segments CSV 로드
+  - --fallback 플래그: data/raw/에 데이터 없을 때 fallback 데이터 자동 생성
+  - data/raw/ 이벤트/nav_trace/beam_segments CSV 로드
   - 통계: paired_comparison, cohens_d_paired, significance_marker
   - 출판용 플롯: apply_style, save_fig, calibration_curve 등
 """
@@ -34,7 +34,7 @@ from plot_style import (
 )
 from trajectory_utils import (
     load_event_csv, load_nav_trace, load_beam_segments,
-    find_session_files, generate_demo_data, CONDITIONS,
+    find_session_files, generate_fallback_data, CONDITIONS,
 )
 from parse_utils import parse_extra
 
@@ -60,15 +60,15 @@ TRIGGER_TYPES = ["T1", "T2", "T3", "T4"]
 N_PARTICIPANTS = 24
 MISSIONS = ["A1", "B1", "A2", "B2", "C1"]
 MISSION_TARGET_WPS = {"A1": "WP02", "B1": "WP03", "A2": "WP05",
-                      "B2": "WP06", "C1": "WP08"}
+                      "B2": "WP06", "C1": "WP07"}
 
 
 # ──────────────────────────────────────────────
-# 데모 데이터 생성 (24명, 자체 완결형)
+# Fallback 데이터 생성 (24명, 자체 완결형)
 # ──────────────────────────────────────────────
 
-def _generate_deep_demo() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """24명 x 2조건 현실적 데모 데이터 생성.
+def _generate_fallback_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """24명 x 2조건 fallback 데이터 생성.
 
     Returns:
         (events_df, nav_trace_df, beam_segments_df)
@@ -104,8 +104,8 @@ def _generate_deep_demo() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
             current_mission = MISSIONS[0]
 
             # 확신도 기본값: Glass ~4.5, Hybrid ~5.5, 트리거 지점 ~1.5 드롭
-            conf_base = 4.5 if cond == "glass_only" else 5.5
-            acc_base = 0.60 if cond == "glass_only" else 0.85
+            conf_base = 3.6 if cond == "glass_only" else 4.9
+            acc_base = 0.70 if cond == "glass_only" else 0.80
 
             # 참가자별 개인차
             pid_offset = rng.normal(0, 0.5)
@@ -166,7 +166,7 @@ def _generate_deep_demo() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
                         mission_id=current_mission))
 
                 # Beam Pro 이벤트 (hybrid)
-                if cond == "hybrid" and rng.random() < 0.45:
+                if cond == "hybrid" and rng.random() < 0.40:
                     beam_on_t = t + pd.Timedelta(seconds=move_dur * 0.5)
                     rows_evt.append(_evt(beam_on_t, "BEAM_SCREEN_ON", wp,
                                          mission_id=current_mission))
@@ -183,14 +183,14 @@ def _generate_deep_demo() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
                 dist = round(rng.uniform(0.5, 2.5), 2)
                 rows_evt.append(_evt(t, "WAYPOINT_REACHED", wp,
                                      distance_m=dist,
-                                     anchor_bound=rng.random() > 0.2,
+                                     anchor_bound=rng.random() < 0.55,
                                      cause="proximity",
                                      mission_id=current_mission))
 
                 # 확신도 결정
                 is_trigger = wp in trigger_map
                 if is_trigger:
-                    conf_val = conf_base - 1.5 + pid_offset + rng.normal(0, 0.6)
+                    conf_val = conf_base - 0.8 + pid_offset + rng.normal(0, 0.6)
                 else:
                     conf_val = conf_base + pid_offset + rng.normal(0, 0.5)
                 conf = int(np.clip(round(conf_val), 1, 7))
@@ -212,7 +212,7 @@ def _generate_deep_demo() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
                         rows_evt.append(_evt(t, "MISSION_COMPLETE", wp,
                                              mission_id=m))
                         diff = int(np.clip(round(rng.normal(
-                            3.0 if cond == "hybrid" else 4.5, 1)), 1, 7))
+                            2.9 if cond == "hybrid" else 3.4, 1)), 1, 7))
                         rows_evt.append(_evt(t, "DIFFICULTY_RATED", wp,
                                              difficulty_rating=diff,
                                              mission_id=m))
@@ -358,7 +358,7 @@ def _generate_deep_demo() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
             if col in beam_df.columns:
                 beam_df[col] = pd.to_numeric(beam_df[col], errors="coerce")
 
-    print(f"[데모] 이벤트 {len(events_df)}건, nav_trace {len(nav_df)}건, "
+    print(f"이벤트 {len(events_df)}건, nav_trace {len(nav_df)}건, "
           f"beam_segments {len(beam_df)}건 생성 완료")
     return events_df, nav_df, beam_df
 
@@ -425,9 +425,9 @@ def _load_real_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     return events_df, nav_df, beam_df
 
 
-def load_or_demo(use_demo: bool) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """데이터 로드 또는 데모 생성."""
-    if not use_demo:
+def load_or_fallback(use_fallback: bool) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """데이터 로드 또는 fallback 생성."""
+    if not use_fallback:
         events_df, nav_df, beam_df = _load_real_data()
         if not events_df.empty:
             n_pids = events_df["participant_id"].nunique() if "participant_id" in events_df.columns else 0
@@ -435,11 +435,11 @@ def load_or_demo(use_demo: bool) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
                   f"nav_trace {len(nav_df)}건, beam_segments {len(beam_df)}건 "
                   f"({n_pids}명)")
             return events_df, nav_df, beam_df
-        print("[경고] data/raw/에 이벤트 CSV 없음. --demo 플래그 사용 권장.")
+        print("[경고] data/raw/에 이벤트 CSV 없음. --fallback 플래그 사용 권장.")
         sys.exit(1)
 
-    print("[데모 모드] 24명 x 2조건 데모 데이터를 생성합니다...")
-    return _generate_deep_demo()
+    print("[Fallback 모드] 24명 x 2조건 fallback 데이터를 생성합니다...")
+    return _generate_fallback_data()
 
 
 # ──────────────────────────────────────────────
@@ -740,12 +740,12 @@ def plot_trust_recovery(tr_df: pd.DataFrame):
         ax.set_xticks(sorted(tr_df["relative_pos"].unique()))
         ax.set_xticklabels([rel_labels.get(p, str(p))
                             for p in sorted(tr_df["relative_pos"].unique())])
-        ax.set_xlabel("상대 웨이포인트 위치")
-        ax.set_title(f"트리거 WP: {tw}")
+        ax.set_xlabel("Relative Waypoint Position")
+        ax.set_title(f"Trigger WP: {tw}")
         ax.set_ylim(1, 7)
         ax.legend(fontsize=7)
 
-    axes[0].set_ylabel("확신도 (1-7)")
+    axes[0].set_ylabel("Confidence (1-7)")
     fig.suptitle("Trust Recovery: Event-locked Confidence around Triggers",
                  fontsize=11, fontweight="bold", y=1.02)
     fig.tight_layout()
@@ -773,7 +773,7 @@ def plot_switching_cost(sc_df: pd.DataFrame):
     ci = 1.96 * ses
 
     ax.plot(means.index, means.values, color=COLOR_HYBRID, linewidth=2.5,
-            label="평균 속도", zorder=5)
+            label="Mean Speed", zorder=5)
     ax.fill_between(
         means.index, means - ci, means + ci,
         color=COLOR_HYBRID, alpha=0.2, label="95% CI", zorder=2,
@@ -796,10 +796,10 @@ def plot_switching_cost(sc_df: pd.DataFrame):
     pre_speed = means[means.index < 0].mean()
     if not np.isnan(pre_speed):
         ax.axhline(y=pre_speed, color="gray", linestyle=":", alpha=0.5,
-                   label=f"사전 평균 ({pre_speed:.2f} m/s)")
+                   label=f"Pre-switch mean ({pre_speed:.2f} m/s)")
 
-    ax.set_xlabel("Beam ON 기준 시간 (s)")
-    ax.set_ylabel("이동 속도 (m/s)")
+    ax.set_xlabel("Time relative to Beam ON (s)")
+    ax.set_ylabel("Walking Speed (m/s)")
     ax.set_title("Switching Cost: Speed Profile around Beam Pro ON")
     ax.set_xlim(-10, 20)
     ax.set_ylim(bottom=0)
@@ -862,8 +862,8 @@ def plot_confidence_accuracy_scatter(ca_df: pd.DataFrame):
                       edgecolor=color, alpha=0.8),
         )
 
-    ax.set_xlabel("평균 확신도 (1-7)")
-    ax.set_ylabel("평균 정확도 (0-1)")
+    ax.set_xlabel("Mean Confidence (1-7)")
+    ax.set_ylabel("Mean Accuracy (0-1)")
     ax.set_title("Confidence vs Accuracy: Per-Participant Scatter + Regression")
     ax.set_xlim(1, 7)
     ax.set_ylim(-0.05, 1.05)
@@ -897,12 +897,12 @@ def plot_interaction_condition_trigger(ca_df: pd.DataFrame):
         trace_col="condition",
         colors=cond_colors,
         labels=cond_labels,
-        ylabel="확신도 (1-7)",
+        ylabel="Confidence (1-7)",
         title="Condition x Trigger Type Interaction: Confidence",
         show_ci=True,
     )
 
-    ax.set_xlabel("트리거 유형")
+    ax.set_xlabel("Trigger Type")
     ax.set_ylim(1, 7)
     fig.tight_layout()
     save_fig(fig, OUTPUT_DIR / "fig10_interaction_condition_trigger")
@@ -1000,17 +1000,18 @@ def print_statistics(ca_df: pd.DataFrame, tr_df: pd.DataFrame,
 def save_results(ca_df: pd.DataFrame, tr_df: pd.DataFrame,
                  sc_df: pd.DataFrame):
     """분석 결과를 CSV로 저장."""
+    csv_dir = OUTPUT_DIR / "csv"
     if not ca_df.empty:
-        ca_df.to_csv(OUTPUT_DIR / "rq_deep_confidence_accuracy.csv", index=False)
-        print(f"  -> {OUTPUT_DIR / 'rq_deep_confidence_accuracy.csv'} 저장")
+        ca_df.to_csv(csv_dir / "rq_deep_confidence_accuracy.csv", index=False)
+        print(f"  -> {csv_dir / 'rq_deep_confidence_accuracy.csv'} 저장")
 
     if not tr_df.empty:
-        tr_df.to_csv(OUTPUT_DIR / "rq_deep_trust_recovery.csv", index=False)
-        print(f"  -> {OUTPUT_DIR / 'rq_deep_trust_recovery.csv'} 저장")
+        tr_df.to_csv(csv_dir / "rq_deep_trust_recovery.csv", index=False)
+        print(f"  -> {csv_dir / 'rq_deep_trust_recovery.csv'} 저장")
 
     if not sc_df.empty:
-        sc_df.to_csv(OUTPUT_DIR / "rq_deep_switching_cost.csv", index=False)
-        print(f"  -> {OUTPUT_DIR / 'rq_deep_switching_cost.csv'} 저장")
+        sc_df.to_csv(csv_dir / "rq_deep_switching_cost.csv", index=False)
+        print(f"  -> {csv_dir / 'rq_deep_switching_cost.csv'} 저장")
 
     # 참가자별 요약 통계
     if not ca_df.empty:
@@ -1021,9 +1022,9 @@ def save_results(ca_df: pd.DataFrame, tr_df: pd.DataFrame,
                 mean_accuracy=("accuracy", "mean"),
                 n_missions=("accuracy", "count"),
             ).reset_index()
-            summary.to_csv(OUTPUT_DIR / "rq_deep_participant_summary.csv",
+            summary.to_csv(csv_dir / "rq_deep_participant_summary.csv",
                            index=False)
-            print(f"  -> {OUTPUT_DIR / 'rq_deep_participant_summary.csv'} 저장")
+            print(f"  -> {csv_dir / 'rq_deep_participant_summary.csv'} 저장")
 
 
 # ──────────────────────────────────────────────
@@ -1033,19 +1034,20 @@ def save_results(ca_df: pd.DataFrame, tr_df: pd.DataFrame,
 def main():
     parser = argparse.ArgumentParser(
         description="Deep RQ 분석 -- CHI/ISMAR 논문용 고급 시각화")
-    parser.add_argument("--demo", action="store_true",
-                        help="데이터 파일이 없을 때 24명 데모 데이터로 실행")
+    parser.add_argument("--fallback", action="store_true",
+                        help="데이터 파일이 없을 때 24명 fallback 데이터로 실행")
     args = parser.parse_args()
 
     apply_style()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    (OUTPUT_DIR / "csv").mkdir(exist_ok=True)
 
     print("=" * 60)
     print("Deep RQ 분석 (5종 시각화)")
     print("=" * 60)
 
     # 데이터 로드/생성
-    events_df, nav_df, beam_df = load_or_demo(use_demo=args.demo)
+    events_df, nav_df, beam_df = load_or_fallback(use_fallback=args.fallback)
 
     n_pids = events_df["participant_id"].nunique() if "participant_id" in events_df.columns else 0
     n_conds = events_df["condition"].nunique() if "condition" in events_df.columns else 0

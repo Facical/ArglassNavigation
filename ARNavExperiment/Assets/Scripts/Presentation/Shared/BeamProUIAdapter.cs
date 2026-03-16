@@ -33,17 +33,88 @@ namespace ARNavExperiment.Presentation.Shared
         private float checkTimer;
         private const float CheckInterval = 0.3f;
 
-        // StatusArea의 VerticalLayoutGroup 캐시 (Portrait용, 런타임 생성)
-        private VerticalLayoutGroup statusVLayout;
+        // (VLG 제거됨 — HLG만 유지하여 레이아웃 충돌 방지)
 
         private void Start()
         {
+            // SerializedField null 참조 자동 복구 (와이어링 누락 대비)
+            AutoResolveReferences();
+
             // 초기 방향 판정 및 레이아웃 적용
             isPortrait = DetectPortrait();
             var rt = transform as RectTransform;
             Debug.Log($"[BeamProUIAdapter] Start — Screen={Screen.width}×{Screen.height}, " +
-                      $"Canvas={rt?.rect.width:F0}×{rt?.rect.height:F0}, isPortrait={isPortrait}");
+                      $"Canvas={rt?.rect.width:F0}×{rt?.rect.height:F0}, isPortrait={isPortrait}, " +
+                      $"refs: scaler={targetScaler != null}, hud={hudPanel != null}, " +
+                      $"status={statusArea != null}, statusHLG={statusHLayout != null}, " +
+                      $"btnArea={buttonArea != null}, flow={flowPanelArea != null}");
             ApplyLayout();
+        }
+
+        /// <summary>
+        /// 와이어링 누락 시 이름 기반으로 참조를 자동 검색합니다.
+        /// </summary>
+        private void AutoResolveReferences()
+        {
+            if (targetScaler == null)
+                targetScaler = GetComponent<CanvasScaler>();
+
+            if (gameObject.name == "ExperimenterCanvas")
+            {
+                if (hudPanel == null)
+                {
+                    var hud = FindChildRecursive(transform, "ExperimenterHUD");
+                    if (hud != null)
+                    {
+                        hudPanel = hud.GetComponent<RectTransform>();
+                        Debug.Log("[BeamProUIAdapter] Auto-resolved hudPanel");
+                    }
+                }
+
+                if (hudPanel != null && statusArea == null)
+                {
+                    var sa = hudPanel.Find("StatusArea");
+                    if (sa != null)
+                    {
+                        statusArea = sa.GetComponent<RectTransform>();
+                        statusHLayout = sa.GetComponent<HorizontalLayoutGroup>();
+                        Debug.Log("[BeamProUIAdapter] Auto-resolved statusArea + HLayout");
+                    }
+                }
+
+                if (hudPanel != null && buttonArea == null)
+                {
+                    var ba = hudPanel.Find("ButtonArea");
+                    if (ba != null)
+                    {
+                        buttonArea = ba.GetComponent<RectTransform>();
+                        buttonHLayout = ba.GetComponent<HorizontalLayoutGroup>();
+                        Debug.Log("[BeamProUIAdapter] Auto-resolved buttonArea + HLayout");
+                    }
+                }
+
+                if (flowPanelArea == null)
+                {
+                    var fp = transform.Find("FlowPanelArea");
+                    if (fp != null)
+                    {
+                        flowPanelArea = fp.GetComponent<RectTransform>();
+                        Debug.Log("[BeamProUIAdapter] Auto-resolved flowPanelArea");
+                    }
+                }
+            }
+        }
+
+        private static Transform FindChildRecursive(Transform parent, string name)
+        {
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                var child = parent.GetChild(i);
+                if (child.name == name) return child;
+                var result = FindChildRecursive(child, name);
+                if (result != null) return result;
+            }
+            return null;
         }
 
         private void Update()
@@ -113,21 +184,26 @@ namespace ARNavExperiment.Presentation.Shared
                 hudPanel.anchorMin = new Vector2(0, 0);
                 hudPanel.anchorMax = new Vector2(1, 0.20f);
 
-                // StatusArea: 상단 60%에 수직 배치
+                // StatusArea: 전체 너비, 상단 55%에 수평 배치 유지 (HLG만 사용)
                 if (statusArea != null)
                 {
-                    statusArea.anchorMin = new Vector2(0, 0.40f);
+                    statusArea.anchorMin = new Vector2(0, 0.45f);
                     statusArea.anchorMax = new Vector2(1, 1);
                     statusArea.offsetMin = new Vector2(10, 0);
                     statusArea.offsetMax = new Vector2(-10, -5);
 
-                    // HorizontalLayout 비활성 → VerticalLayout 활성
-                    if (statusHLayout != null)
-                        statusHLayout.enabled = false;
+                    // HLG 유지 (VLG 생성하지 않음 — 레이아웃 충돌 방지)
+                    var hlg = statusHLayout != null ? statusHLayout
+                        : statusArea.GetComponent<HorizontalLayoutGroup>();
+                    if (hlg != null)
+                    {
+                        hlg.enabled = true;
+                        hlg.spacing = 8;
+                    }
 
-                    EnsureStatusVLayout();
-                    if (statusVLayout != null)
-                        statusVLayout.enabled = true;
+                    // 혹시 이전에 생성된 VLG가 있으면 제거
+                    var vlg = statusArea.GetComponent<VerticalLayoutGroup>();
+                    if (vlg != null) Destroy(vlg);
                 }
 
                 // ButtonArea: 하단 40%에 수평 유지
@@ -161,14 +237,17 @@ namespace ARNavExperiment.Presentation.Shared
                     statusArea.offsetMin = new Vector2(10, 5);
                     statusArea.offsetMax = new Vector2(0, -5);
 
-                    if (statusHLayout != null)
+                    var hlg = statusHLayout != null ? statusHLayout
+                        : statusArea.GetComponent<HorizontalLayoutGroup>();
+                    if (hlg != null)
                     {
-                        statusHLayout.enabled = true;
-                        statusHLayout.spacing = 12;
+                        hlg.enabled = true;
+                        hlg.spacing = 12;
                     }
 
-                    if (statusVLayout != null)
-                        statusVLayout.enabled = false;
+                    // 혹시 이전에 생성된 VLG가 있으면 제거
+                    var vlg = statusArea.GetComponent<VerticalLayoutGroup>();
+                    if (vlg != null) Destroy(vlg);
                 }
 
                 // ButtonArea: 오른쪽 40%
@@ -190,23 +269,7 @@ namespace ARNavExperiment.Presentation.Shared
             }
         }
 
-        private void EnsureStatusVLayout()
-        {
-            if (statusVLayout != null) return;
-            if (statusArea == null) return;
-
-            statusVLayout = statusArea.GetComponent<VerticalLayoutGroup>();
-            if (statusVLayout == null)
-            {
-                statusVLayout = statusArea.gameObject.AddComponent<VerticalLayoutGroup>();
-                statusVLayout.spacing = 4;
-                statusVLayout.childForceExpandWidth = true;
-                statusVLayout.childForceExpandHeight = true;
-                statusVLayout.childControlWidth = true;
-                statusVLayout.childControlHeight = true;
-                statusVLayout.padding = new RectOffset(8, 8, 4, 4);
-            }
-        }
+        // EnsureStatusVLayout 제거됨 — HLG만 사용하여 HLG/VLG 충돌 방지
 
         private void ApplyFlowPanelArea()
         {
@@ -227,21 +290,51 @@ namespace ARNavExperiment.Presentation.Shared
             tabBar.sizeDelta = new Vector2(0, tabHeight);
 
             if (contentArea != null)
+            {
                 contentArea.offsetMax = new Vector2(0, -tabHeight);
+
+                // ExperimenterHUD(sortOrder=10)와의 겹침 방지
+                // Portrait: HUD 20%(240px) + HeadingArea 34px + margin = 280px
+                // Landscape: HUD 12%(65px) + HeadingArea 34px + margin = 110px
+                float bottomInset = isPortrait ? 280f : 110f;
+                contentArea.offsetMin = new Vector2(0, bottomInset);
+            }
         }
 
         private void ApplySafeArea()
         {
-            if (hudPanel == null) return;
-
             Rect safe = Screen.safeArea;
             if (safe.width <= 0 || safe.height <= 0) return;
 
-            float bottomInset = safe.y / Screen.height;
-            if (bottomInset > 0.001f)
+            float refHeight = targetScaler != null ? targetScaler.referenceResolution.y : 1200f;
+
+            // ExperimenterCanvas: 하단 SafeArea
+            if (hudPanel != null)
             {
-                hudPanel.offsetMin = new Vector2(hudPanel.offsetMin.x,
-                    bottomInset * (targetScaler != null ? targetScaler.referenceResolution.y : 1200f));
+                float bottomInset = safe.y / Screen.height;
+                if (bottomInset > 0.001f)
+                {
+                    hudPanel.offsetMin = new Vector2(hudPanel.offsetMin.x,
+                        bottomInset * refHeight);
+                }
+            }
+
+            // BeamProCanvas: 상단 SafeArea — 카메라 노치 회피
+            if (tabBar != null)
+            {
+                float topInsetNorm = 1f - (safe.y + safe.height) / Screen.height;
+                if (topInsetNorm > 0.001f)
+                {
+                    float topInsetPx = topInsetNorm * refHeight;
+                    tabBar.anchoredPosition = new Vector2(
+                        tabBar.anchoredPosition.x, -topInsetPx);
+
+                    if (contentArea != null)
+                    {
+                        float tabHeight = isPortrait ? 70f : 60f;
+                        contentArea.offsetMax = new Vector2(0, -(tabHeight + topInsetPx));
+                    }
+                }
             }
         }
 

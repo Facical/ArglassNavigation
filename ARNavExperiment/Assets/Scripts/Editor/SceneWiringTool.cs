@@ -138,6 +138,7 @@ namespace ARNavExperiment.EditorTools
             {
                 if (t.gameObject.name == "MissionIdText") SetObjectRef(so, "missionIdText", t);
                 if (t.gameObject.name == "BriefingText") SetObjectRef(so, "briefingText", t);
+                if (t.gameObject.name == "AutoAdvanceText") SetObjectRef(so, "autoAdvanceText", t);
             }
 
             var btns = panel.GetComponentsInChildren<Button>(true);
@@ -390,6 +391,18 @@ namespace ARNavExperiment.EditorTools
 
             SetObjectRef(so, "closeButton", FindComponent<Button>("CloseButton"));
             SetObjectRef(so, "comparisonCard", FindComponent<Presentation.BeamPro.ComparisonCardUI>());
+
+            var cardListContainerT = FindChildRecursive(panel.transform, "CardListContainer");
+            if (cardListContainerT != null)
+                SetObjectRef(so, "cardListContainer", cardListContainerT.gameObject);
+
+            var cardItemTemplateT = FindChildRecursive(panel.transform, "CardItemTemplate");
+            if (cardItemTemplateT != null)
+                SetObjectRef(so, "cardItemTemplate", cardItemTemplateT.gameObject);
+
+            var emptyTextT = FindChildRecursive(panel.transform, "CardListEmptyText");
+            if (emptyTextT != null)
+                SetObjectRef(so, "cardListEmptyText", emptyTextT.GetComponent<TMP_Text>());
 
             so.ApplyModifiedProperties();
         }
@@ -1055,6 +1068,7 @@ namespace ARNavExperiment.EditorTools
                     case "OvRatingTitleText": SetObjectRef(so, "ratingTitleText", t); break;
                     case "OvRatingPromptText": SetObjectRef(so, "ratingPromptText", t); break;
                     case "OvCurrentRatingText": SetObjectRef(so, "currentRatingText", t); break;
+                    case "OvAutoAdvanceText": SetObjectRef(so, "autoAdvanceText", t); break;
                 }
             }
 

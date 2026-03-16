@@ -3,6 +3,7 @@ using TMPro;
 using ARNavExperiment.Domain.Events;
 using ARNavExperiment.Application;
 using ARNavExperiment.Logging;
+using ARNavExperiment.Presentation.Glass;
 
 namespace ARNavExperiment.Core
 {
@@ -54,6 +55,7 @@ namespace ARNavExperiment.Core
                     else Debug.LogError("[ConditionCtrl] experimenterCanvas is NULL — Wire Scene References 재실행 필요!");
                     DeviceStateTracker.Instance?.SetLocked(true);
                     HandTrackingManager.Instance?.ActivateHandRays();  // GlassOnly: 핸드트래킹으로 UI 조작
+                    GlassCanvasController.Instance?.SetRaycasterEnabled(true); // GlassOnly: 핸드트래킹 raycaster 활성화
                     break;
 
                 case ExperimentCondition.Hybrid:
@@ -62,6 +64,7 @@ namespace ARNavExperiment.Core
                     if (experimenterCanvas) experimenterCanvas.SetActive(true);
                     DeviceStateTracker.Instance?.SetLocked(false);
                     HandTrackingManager.Instance?.DeactivateHandRays(); // Hybrid: 터치로 UI 조작
+                    GlassCanvasController.Instance?.SetRaycasterEnabled(false); // Hybrid: TrackedDeviceGraphicRaycaster가 터치 입력 차단 방지
                     break;
             }
 

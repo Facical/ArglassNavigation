@@ -1,6 +1,5 @@
 using UnityEngine;
 using ARNavExperiment.Core;
-using ARNavExperiment.Logging;
 using ARNavExperiment.Domain.Events;
 using ARNavExperiment.Application;
 
@@ -27,7 +26,7 @@ namespace ARNavExperiment.Presentation.BeamPro
         public MissionRefPanel MissionRef => missionRefPanel;
 
         private int activeTabIndex;
-        private bool conditionActivated;
+        private bool isSubscribed;
 
         private void Awake()
         {
@@ -35,30 +34,30 @@ namespace ARNavExperiment.Presentation.BeamPro
             Instance = this;
         }
 
+        private void TrySubscribe()
+        {
+            if (isSubscribed) return;
+            if (ConditionController.Instance == null) return;
+            ConditionController.Instance.OnConditionChanged += OnConditionChanged;
+            isSubscribed = true;
+        }
+
         private void OnEnable()
         {
-            if (ConditionController.Instance != null)
-                ConditionController.Instance.OnConditionChanged += OnConditionChanged;
-            if (DeviceStateTracker.Instance != null)
-            {
-                DeviceStateTracker.Instance.OnBeamProScreenOn += OnScreenOn;
-                DeviceStateTracker.Instance.OnBeamProScreenOff += OnScreenOff;
-            }
+            TrySubscribe();
         }
 
         private void OnDisable()
         {
             if (ConditionController.Instance != null)
                 ConditionController.Instance.OnConditionChanged -= OnConditionChanged;
-            if (DeviceStateTracker.Instance != null)
-            {
-                DeviceStateTracker.Instance.OnBeamProScreenOn -= OnScreenOn;
-                DeviceStateTracker.Instance.OnBeamProScreenOff -= OnScreenOff;
-            }
+            isSubscribed = false;
         }
 
         private void Start()
         {
+            TrySubscribe();
+
             for (int i = 0; i < tabButtons.Length; i++)
             {
                 int idx = i;
@@ -68,8 +67,6 @@ namespace ARNavExperiment.Presentation.BeamPro
 
         private void OnConditionChanged(ExperimentCondition condition)
         {
-            conditionActivated = true;
-
             if (condition == ExperimentCondition.GlassOnly)
             {
                 // GlassOnly: 허브 활성 + TabBar 숨김 + 모든 탭 기본 숨김
@@ -106,21 +103,6 @@ namespace ARNavExperiment.Presentation.BeamPro
             SwitchTab(0);
 
             Debug.Log($"[BeamProHub] Hybrid — hub active, tab=0");
-        }
-
-        private void OnScreenOn()
-        {
-            if (!conditionActivated) return;
-            // WorldSpace 모드에서는 폰 화면 상태와 무관하게 항상 표시
-            if (hubRoot) hubRoot.SetActive(true);
-        }
-
-        private void OnScreenOff(float duration)
-        {
-            // WorldSpace(GlassOnly) 모드에서는 숨기지 않음
-            var canvasCtrl = GetComponent<BeamProCanvasController>();
-            if (canvasCtrl != null && canvasCtrl.IsWorldSpace) return;
-            if (hubRoot) hubRoot.SetActive(false);
         }
 
         /// <summary>맵 탭을 토글합니다 (GlassOnly 모드에서 사용).</summary>

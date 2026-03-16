@@ -55,7 +55,7 @@ N_PARTICIPANTS = 24
 N_WAYPOINTS = 8
 MISSIONS = ["A1", "B1", "A2", "B2", "C1"]
 MISSION_TARGET_WPS = {"A1": "WP02", "B1": "WP03", "A2": "WP05",
-                      "B2": "WP06", "C1": "WP08"}
+                      "B2": "WP06", "C1": "WP07"}
 TRIGGER_WAYPOINTS = ["WP03", "WP06"]
 
 BEAM_CONTENT_EVENTS = [
@@ -72,14 +72,14 @@ FEATURE_COLS = [
 ]
 
 FEATURE_LABELS_KR = {
-    "switch_count": "전환 횟수",
-    "total_beam_time_s": "총 Beam 시간(s)",
-    "avg_beam_duration_s": "평균 전환 시간(s)",
-    "map_ratio": "맵 탭 비율",
-    "info_ratio": "정보 탭 비율",
-    "poi_ratio": "POI 탭 비율",
-    "accuracy": "정확도",
-    "completion_time_s": "완료 시간(s)",
+    "switch_count": "Switch Count",
+    "total_beam_time_s": "Total Beam Time(s)",
+    "avg_beam_duration_s": "Avg Switch Duration(s)",
+    "map_ratio": "Map Tab Ratio",
+    "info_ratio": "Info Tab Ratio",
+    "poi_ratio": "POI Tab Ratio",
+    "accuracy": "Accuracy",
+    "completion_time_s": "Completion Time(s)",
 }
 
 CLUSTER_NAMES = {
@@ -91,26 +91,26 @@ CLUSTER_NAMES = {
 # 레이더 차트 지표
 RADAR_METRICS = ["accuracy", "completion_time_s", "switch_count",
                  "total_beam_time_s", "avg_beam_duration_s"]
-RADAR_LABELS = ["정확도", "속도\n(역수)", "전환 횟수", "Beam 시간", "평균 전환"]
+RADAR_LABELS = ["Accuracy", "Speed\n(inverse)", "Switch\nCount", "Beam\nTime", "Avg\nSwitch"]
 
 
 # ──────────────────────────────────────────────
 # 1. 데이터 로드
 # ──────────────────────────────────────────────
 
-def load_all_events(allow_demo: bool = False) -> pd.DataFrame:
+def load_all_events(allow_fallback: bool = False) -> pd.DataFrame:
     """data/raw/ 내 이벤트 CSV 통합 로드."""
     csv_files = sorted(
         f for f in RAW_DIR.glob("P*_*.csv")
         if not any(f.name.endswith(s) for s in SIDECAR_SUFFIXES)
     )
     if not csv_files:
-        if allow_demo:
-            print(f"[경고] {RAW_DIR}에 CSV 파일이 없습니다. 데모 데이터를 생성합니다.")
-            return generate_demo_data()
+        if allow_fallback:
+            print(f"[경고] {RAW_DIR}에 CSV 파일이 없습니다. fallback 데이터를 생성합니다.")
+            return generate_fallback_data()
         else:
             print(f"[오류] {RAW_DIR}에 CSV 파일이 없습니다.")
-            print("  데모 데이터로 실행하려면 --demo 플래그를 사용하세요.")
+            print("  fallback 데이터로 실행하려면 --fallback 플래그를 사용하세요.")
             sys.exit(1)
 
     frames = []
@@ -452,9 +452,9 @@ def plot_pca_scatter(feat_df: pd.DataFrame, n_clusters: int,
                 fontsize=6, alpha=0.7
             )
 
-    ax.set_xlabel(f"PC1 ({explained_var[0]:.1%} 설명 분산)")
-    ax.set_ylabel(f"PC2 ({explained_var[1]:.1%} 설명 분산)")
-    ax.set_title("참가자 전략 클러스터링 (PCA 2D)")
+    ax.set_xlabel(f"PC1 ({explained_var[0]:.1%} explained var.)")
+    ax.set_ylabel(f"PC2 ({explained_var[1]:.1%} explained var.)")
+    ax.set_title("Participant Strategy Clustering (PCA 2D)")
     ax.legend(loc="best", framealpha=0.9)
     ax.axhline(y=0, color="gray", linewidth=0.5, linestyle="--", alpha=0.3)
     ax.axvline(x=0, color="gray", linewidth=0.5, linestyle="--", alpha=0.3)
@@ -469,16 +469,16 @@ def plot_inverted_u(result: Dict):
 
     # ── 좌측: 3분위 막대 그래프 ──
     tertiles = ["Low", "Mid", "High"]
-    tertile_labels = ["낮음\n(하위 1/3)", "중간\n(중위 1/3)", "높음\n(상위 1/3)"]
+    tertile_labels = ["Low\n(bottom 1/3)", "Mid\n(middle 1/3)", "High\n(top 1/3)"]
     means = [result["tertile_means"].get(t, 0) for t in tertiles]
     sds = [result.get("tertile_sds", {}).get(t, 0) for t in tertiles]
     colors = [PALETTE[0], PALETTE[2], PALETTE[1]]
 
     bars = ax1.bar(tertile_labels, means, yerr=sds, capsize=5,
                    color=colors, alpha=0.8, edgecolor="white", linewidth=0.5)
-    ax1.set_ylabel("정확도")
-    ax1.set_xlabel("Beam Pro 접근량 (3분위)")
-    ax1.set_title("접근량별 정확도 (역U자 가설)")
+    ax1.set_ylabel("Accuracy")
+    ax1.set_xlabel("Beam Pro Access (Tertile)")
+    ax1.set_title("Accuracy by Access Level (Inverted-U Hypothesis)")
     ax1.set_ylim(0, 1.05)
 
     # 유의성 정보 표시
@@ -497,17 +497,17 @@ def plot_inverted_u(result: Dict):
     coeffs = result["coeffs"]
 
     ax2.scatter(x, y, c=PALETTE[0], s=40, alpha=0.6,
-                edgecolors="white", linewidth=0.5, label="참가자")
+                edgecolors="white", linewidth=0.5, label="Participant")
 
     # 회귀 곡선
     x_smooth = np.linspace(x.min(), x.max(), 100)
     y_smooth = np.polyval(coeffs, x_smooth)
     ax2.plot(x_smooth, y_smooth, color=PALETTE[1], linewidth=2,
-             label=f"이차 회귀 (R²={r2:.3f})")
+             label=f"Quadratic Regression (R²={r2:.3f})")
 
-    ax2.set_xlabel("총 Beam Pro 사용 시간 (s)")
-    ax2.set_ylabel("정확도")
-    ax2.set_title("Beam Pro 사용량 vs 정확도")
+    ax2.set_xlabel("Total Beam Pro Usage Time (s)")
+    ax2.set_ylabel("Accuracy")
+    ax2.set_title("Beam Pro Usage vs Accuracy")
     ax2.set_ylim(0, 1.05)
     ax2.legend(loc="best", fontsize=8)
 
@@ -573,7 +573,7 @@ def plot_radar_chart(feat_df: pd.DataFrame, n_clusters: int):
     ax.set_ylim(0, 1)
     ax.set_yticks([0.2, 0.4, 0.6, 0.8, 1.0])
     ax.set_yticklabels(["0.2", "0.4", "0.6", "0.8", "1.0"], fontsize=7)
-    ax.set_title("클러스터별 성과 프로파일 (정규화)", pad=20)
+    ax.set_title("Cluster Performance Profile (Normalized)", pad=20)
     ax.legend(loc="upper right", bbox_to_anchor=(1.3, 1.1), fontsize=8)
 
     fig.tight_layout()
@@ -622,7 +622,7 @@ def plot_usage_heatmap(feat_df: pd.DataFrame):
             ax.text(j, i, f"{val:.1f}", ha="center", va="center",
                     fontsize=6, color=color)
 
-    ax.set_title("참가자별 사용 패턴 (z-scored)")
+    ax.set_title("Usage Pattern per Participant (z-scored)")
     cbar = fig.colorbar(im, ax=ax, label="z-score", shrink=0.8)
     cbar.ax.tick_params(labelsize=7)
 
@@ -631,11 +631,11 @@ def plot_usage_heatmap(feat_df: pd.DataFrame):
 
 
 # ──────────────────────────────────────────────
-# 6. 데모 데이터 생성
+# 6. Fallback 데이터 생성
 # ──────────────────────────────────────────────
 
-def generate_demo_data() -> pd.DataFrame:
-    """전략 클러스터링 분석용 데모 데이터 생성 (24명 × 2조건).
+def generate_fallback_data() -> pd.DataFrame:
+    """전략 클러스터링 분석용 fallback 데이터 생성 (24명 × 2조건).
 
     3가지 전략 패턴:
     - Cautious (8명): 높은 전환 횟수, 긴 Beam 시간, 높은 정확도, 느림
@@ -850,11 +850,12 @@ def _event(t, pid, cond, etype, wp, **extra) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description="참가자 전략 클러스터링 분석")
-    parser.add_argument("--demo", action="store_true",
-                        help="CSV 파일이 없을 때 데모 데이터로 실행")
+    parser.add_argument("--fallback", action="store_true",
+                        help="CSV 파일이 없을 때 fallback 데이터로 실행")
     args = parser.parse_args()
 
     apply_style()
+    (OUTPUT_DIR / "csv").mkdir(exist_ok=True)
 
     print("=" * 60)
     print("참가자 전략 클러스터링 분석")
@@ -866,7 +867,7 @@ def main():
         print("  sklearn 없이도 특성 추출 및 기본 분석은 수행됩니다.\n")
 
     # 데이터 로드
-    df = load_all_events(allow_demo=args.demo)
+    df = load_all_events(allow_fallback=args.fallback)
     print(f"총 이벤트 수: {len(df)}")
     print(f"참가자 수: {df['participant_id'].nunique()}")
     print(f"조건: {df['condition'].unique().tolist()}")
@@ -887,8 +888,8 @@ def main():
 
     if len(feat_df) < 4:
         print("\n[오류] 클러스터링에 필요한 최소 참가자 수(4)에 미달합니다.")
-        feat_df.to_csv(OUTPUT_DIR / "strategy_features.csv", index=False)
-        print(f"  → {OUTPUT_DIR / 'strategy_features.csv'} 저장")
+        feat_df.to_csv(OUTPUT_DIR / "csv" / "strategy_features.csv", index=False)
+        print(f"  → {OUTPUT_DIR / 'csv' / 'strategy_features.csv'} 저장")
         return
 
     # ── 클러스터링 ──
@@ -912,8 +913,8 @@ def main():
     plot_usage_heatmap(feat_df)
 
     # ── 결과 CSV 저장 ──
-    feat_df.to_csv(OUTPUT_DIR / "strategy_features.csv", index=False)
-    print(f"  → {OUTPUT_DIR / 'strategy_features.csv'} 저장")
+    feat_df.to_csv(OUTPUT_DIR / "csv" / "strategy_features.csv", index=False)
+    print(f"  → {OUTPUT_DIR / 'csv' / 'strategy_features.csv'} 저장")
 
     # 클러스터 요약 CSV
     cluster_summary = []
@@ -926,9 +927,9 @@ def main():
             row[f"{col}_sd"] = round(cluster_data[col].std(), 3)
         cluster_summary.append(row)
     cluster_summary_df = pd.DataFrame(cluster_summary)
-    cluster_summary_df.to_csv(OUTPUT_DIR / "strategy_cluster_summary.csv",
+    cluster_summary_df.to_csv(OUTPUT_DIR / "csv" / "strategy_cluster_summary.csv",
                               index=False)
-    print(f"  → {OUTPUT_DIR / 'strategy_cluster_summary.csv'} 저장")
+    print(f"  → {OUTPUT_DIR / 'csv' / 'strategy_cluster_summary.csv'} 저장")
 
     print(f"\n분석 완료. 최적 K={best_k}, 실루엣={best_sil:.3f}")
 

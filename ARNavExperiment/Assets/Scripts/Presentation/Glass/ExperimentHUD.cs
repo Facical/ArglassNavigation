@@ -26,6 +26,7 @@ namespace ARNavExperiment.Presentation.Glass
 
         private CanvasGroup _canvasGroup;
         private bool isGlassOnly;
+        private bool isRunning;
 
         private void Awake()
         {
@@ -132,6 +133,10 @@ namespace ARNavExperiment.Presentation.Glass
             // 도착선언 버튼 표시 상태 매 프레임 갱신
             UpdateForceArrivalVisibility();
 
+            // Running 상태에서는 디버그 텍스트 숨김 (참가자 행동 영향 방지)
+            SetDebugTextsVisible(!isRunning);
+            if (isRunning) return;
+
             if (missionText != null && MissionManager.Instance != null)
             {
                 var m = MissionManager.Instance.CurrentMission;
@@ -148,21 +153,16 @@ namespace ARNavExperiment.Presentation.Glass
                     ? string.Format(LocalizationManager.Get("hud.waypoint"), wp.waypointId,
                         dist >= 0 ? $"{dist:F1}" : "?")
                     : LocalizationManager.Get("hud.no_waypoint");
-
-                // 진단: 글래스 캔버스 내 활성 패널 수 표시
-                int activeCount = 0;
-                var canvas = GetComponentInParent<Canvas>();
-                if (canvas != null)
-                {
-                    foreach (Transform child in canvas.transform)
-                    {
-                        if (child.gameObject.activeSelf && child.gameObject != gameObject)
-                            activeCount++;
-                    }
-                }
-                waypointText.text += $"\n[Panels: {activeCount}]";
             }
 
+        }
+
+        private void SetDebugTextsVisible(bool visible)
+        {
+            if (stateText) stateText.gameObject.SetActive(visible);
+            if (conditionText) conditionText.gameObject.SetActive(visible);
+            if (missionText) missionText.gameObject.SetActive(visible);
+            if (waypointText) waypointText.gameObject.SetActive(visible);
         }
 
         private void UpdateStateDisplay(ExperimentState state)
@@ -172,6 +172,9 @@ namespace ARNavExperiment.Presentation.Glass
                 && state != ExperimentState.ComparisonSurvey;
             if (gameObject.activeSelf != shouldShow)
                 gameObject.SetActive(shouldShow);
+
+            isRunning = state == ExperimentState.Running;
+            SetDebugTextsVisible(!isRunning);
 
             if (stateText) stateText.text = string.Format(LocalizationManager.Get("hud.state"), state);
             if (conditionText)

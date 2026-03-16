@@ -18,7 +18,7 @@ namespace ARNavExperiment.Presentation.BeamPro
 
         [Header("Zoom")]
         [SerializeField] private float minZoom = 0.5f;
-        [SerializeField] private float maxZoom = 3f;
+        [SerializeField] private float maxZoom = 2f;
         [SerializeField] private float zoomSpeed = 0.5f;
 
         [Header("POI Detail")]
@@ -31,6 +31,8 @@ namespace ARNavExperiment.Presentation.BeamPro
         private const float POI_LABEL_FONT_SIZE = 11f;
 
         private float currentZoom = 1f;
+        public float CurrentZoom => currentZoom;
+
         private bool isTrackingPosition;
         private readonly List<GameObject> poiMarkerInstances = new();
 
@@ -40,9 +42,25 @@ namespace ARNavExperiment.Presentation.BeamPro
         private Vector2 calibOffset = Vector2.zero;
         private int lastCalibAnchorCount;
 
+        // ScrollRect 기반 팬/줌
+        private ScrollRect scrollRect;
+        private Vector2 baseContentSize;
+        private bool baseContentSizeReady;
+
         public void SetFloorPlan(Sprite floorPlan)
         {
             if (floorPlanImage) floorPlanImage.sprite = floorPlan;
+            // 도면 설정 시 줌을 1.0(전체 보기)으로 리셋
+            ZoomTo(1f);
+        }
+
+        private void Awake()
+        {
+            scrollRect = GetComponent<ScrollRect>();
+
+            // 도면 비율 유지 — AdjustForPreserveAspect()가 마커 좌표 보정 처리
+            if (floorPlanImage != null)
+                floorPlanImage.preserveAspect = true;
         }
 
         private void OnEnable()
@@ -61,8 +79,14 @@ namespace ARNavExperiment.Presentation.BeamPro
 
         private void OnAnchorLateRecovered(string waypointId, Transform anchorTransform)
         {
-            isCalibrated = false;
+            InvalidateCalibration();
             Debug.Log($"[InteractiveMap] Calibration invalidated — new anchor: {waypointId}");
+        }
+
+        /// <summary>보정을 무효화하여 다음 UpdateCurrentPosition 시 재계산을 트리거합니다.</summary>
+        public void InvalidateCalibration()
+        {
+            isCalibrated = false;
         }
 
         /// <summary>보정 전에는 빨간 점(현재 위치)을 숨긴다.</summary>
@@ -134,7 +158,7 @@ namespace ARNavExperiment.Presentation.BeamPro
                 $"offset={calibOffset}, anchors={pairs.Count}");
         }
 
-        /// <summary>N개 앵커 쌍으로 최적 2D rigid transform (회전+평행이동)을 최소자승법으로 계산.</summary>
+        /// <summary>N개 앵커 쌍으로 최적 2D similarity transform (회전+스케일+평행이동)을 최소자승법으로 계산.</summary>
         private void ComputeLeastSquaresTransform(List<(Vector2 slamXZ, Vector2 fallbackXZ)> pairs)
         {
             int n = pairs.Count;
@@ -149,21 +173,31 @@ namespace ARNavExperiment.Presentation.BeamPro
             centroidS /= n;
             centroidF /= n;
 
-            // 최적 회전각: atan2(Σ cross, Σ dot)
-            float sumCross = 0f, sumDot = 0f;
+            float sumCross = 0f, sumDot = 0f, sumSS = 0f;
             for (int i = 0; i < n; i++)
             {
                 var ds = pairs[i].slamXZ - centroidS;
                 var df = pairs[i].fallbackXZ - centroidF;
                 sumCross += ds.x * df.y - ds.y * df.x;
                 sumDot += ds.x * df.x + ds.y * df.y;
+                sumSS += ds.x * ds.x + ds.y * ds.y;
             }
 
-            float theta = Mathf.Atan2(sumCross, sumDot);
-            calibCos = Mathf.Cos(theta);
-            calibSin = Mathf.Sin(theta);
+            if (sumSS < 0.01f)
+            {
+                // 쌍들이 너무 가깝다 → rigid fallback
+                float theta = Mathf.Atan2(sumCross, sumDot);
+                calibCos = Mathf.Cos(theta);
+                calibSin = Mathf.Sin(theta);
+            }
+            else
+            {
+                // Similarity transform: a = sumDot/sumSS, b = sumCross/sumSS
+                calibCos = sumDot / sumSS;
+                calibSin = sumCross / sumSS;
+            }
 
-            // 평행이동: centroidF - Rotate(centroidS)
+            // 평행이동: centroidF - Transform(centroidS)
             var rotatedCentroidS = new Vector2(
                 centroidS.x * calibCos - centroidS.y * calibSin,
                 centroidS.x * calibSin + centroidS.y * calibCos);
@@ -290,24 +324,99 @@ namespace ARNavExperiment.Presentation.BeamPro
         public void ZoomTo(float level)
         {
             currentZoom = Mathf.Clamp(level, minZoom, maxZoom);
-            if (markerContainer)
-                markerContainer.localScale = Vector3.one * currentZoom;
-
+            ApplyZoomSize();
             DomainEventBus.Instance?.Publish(new BeamMapZoomed(currentZoom));
+        }
+
+        /// <summary>줌 레벨에 맞게 MapContainer sizeDelta를 조정. ScrollRect가 팬 범위를 자동 관리.</summary>
+        private void ApplyZoomSize()
+        {
+            if (!markerContainer || !baseContentSizeReady) return;
+
+            Vector2 savedNormPos = (scrollRect != null)
+                ? scrollRect.normalizedPosition
+                : new Vector2(0.5f, 0.5f);
+
+            markerContainer.sizeDelta = baseContentSize * currentZoom;
+
+            Canvas.ForceUpdateCanvases();
+
+            if (scrollRect != null)
+                scrollRect.normalizedPosition = savedNormPos;
+        }
+
+        /// <summary>플레이어와 목적지를 모두 포함하는 줌 레벨을 자동 계산하여 적용.</summary>
+        public void AutoZoomToFit(Vector2 playerFloorPlanXZ, Vector2 destFloorPlanXZ)
+        {
+            float span = Mathf.Max(
+                Mathf.Abs(destFloorPlanXZ.x - playerFloorPlanXZ.x),
+                Mathf.Abs(destFloorPlanXZ.y - playerFloorPlanXZ.y));
+
+            float maxWorldSpan = Mathf.Max(worldMax.x - worldMin.x, worldMax.y - worldMin.y);
+            float viewportFraction = span / Mathf.Max(maxWorldSpan, 1f);
+
+            // GlassOnly(WorldSpace)에서는 글래스 화면이 작으므로 maxZoom 1.5 제한
+            var canvasCtrl = GetComponentInParent<BeamProCanvasController>();
+            bool isGlass = canvasCtrl != null && canvasCtrl.IsWorldSpace;
+            float effectiveMax = isGlass ? Mathf.Min(maxZoom, 1.5f) : maxZoom;
+
+            float targetZoom = Mathf.Clamp(0.6f / Mathf.Max(viewportFraction, 0.01f), minZoom, effectiveMax);
+            ZoomTo(targetZoom);
+
+            // 줌 후 목적지 중심으로 스크롤 위치 이동
+            ScrollToFloorPlanPosition(destFloorPlanXZ);
+
+            Debug.Log($"[InteractiveMap] AutoZoom span={span:F1}m → zoom={targetZoom:F2} (glass={isGlass})");
+        }
+
+        /// <summary>도면 좌표를 중심으로 스크롤 위치를 이동합니다.</summary>
+        private void ScrollToFloorPlanPosition(Vector2 floorPlanXZ)
+        {
+            if (scrollRect == null) return;
+            var normalized = WorldToNormalized(floorPlanXZ);
+            // normalizedPosition은 (0,0)=좌하단, (1,1)=우상단
+            // 보정: 뷰포트 중앙에 타겟이 오도록
+            scrollRect.normalizedPosition = new Vector2(
+                Mathf.Clamp01(normalized.x),
+                Mathf.Clamp01(normalized.y));
         }
 
         private void Update()
         {
+            // 뷰포트 크기 캐싱 (레이아웃 완료 후 또는 화면 회전 시 갱신)
+            if (scrollRect != null && scrollRect.viewport != null)
+            {
+                var vpSize = scrollRect.viewport.rect.size;
+                if (vpSize.x > 0 && vpSize.y > 0)
+                {
+                    if (!baseContentSizeReady)
+                    {
+                        baseContentSize = vpSize;
+                        baseContentSizeReady = true;
+                        ApplyZoomSize();
+                    }
+                    else if (Mathf.Abs(vpSize.x - baseContentSize.x) > 1f ||
+                             Mathf.Abs(vpSize.y - baseContentSize.y) > 1f)
+                    {
+                        baseContentSize = vpSize;
+                        ApplyZoomSize();
+                    }
+                }
+            }
+
             if (isTrackingPosition)
                 UpdateCurrentPosition();
 
-            // WorldSpace(GlassOnly) 모드에서는 터치 줌 비활성화 (MapZoomButtons가 대체)
+            // WorldSpace(GlassOnly) 모드에서는 터치 줌/팬 비활성화 (MapZoomButtons가 대체)
             var canvasCtrl = GetComponentInParent<BeamProCanvasController>();
             if (canvasCtrl != null && canvasCtrl.IsWorldSpace) return;
 
             // pinch-to-zoom gesture handling
             if (Input.touchCount == 2)
             {
+                // 핀치 줌 중에는 ScrollRect 드래그를 일시 비활성화
+                if (scrollRect != null) scrollRect.enabled = false;
+
                 var t0 = Input.GetTouch(0);
                 var t1 = Input.GetTouch(1);
 
@@ -319,6 +428,12 @@ namespace ARNavExperiment.Presentation.BeamPro
                     float delta = (curDist - prevDist) * zoomSpeed * 0.01f;
                     ZoomTo(currentZoom + delta);
                 }
+            }
+            else
+            {
+                // 핀치 종료 → ScrollRect 재활성화
+                if (scrollRect != null && !scrollRect.enabled)
+                    scrollRect.enabled = true;
             }
         }
     }

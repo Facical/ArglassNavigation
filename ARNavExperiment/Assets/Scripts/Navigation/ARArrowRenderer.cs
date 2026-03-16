@@ -14,7 +14,7 @@ namespace ARNavExperiment.Navigation
         [SerializeField] private float rotationSmoothTime = 0.3f;
 
         [Header("View-Locked Position")]
-        [SerializeField] private Vector3 offsetFromCamera = new Vector3(0, -0.15f, 0.5f);
+        [SerializeField] private Vector3 offsetFromCamera = new Vector3(0, -0.15f, 0.8f);
 
         [Header("Fan Mode (T3)")]
         [SerializeField] private int fanArrowCount = 3; // 한쪽 방향 개수 (총 6개 + 중앙 = 7)
@@ -145,6 +145,15 @@ namespace ARNavExperiment.Navigation
             isVisible = false;
             if (arrowObject) arrowObject.SetActive(false);
             DomainEventBus.Instance?.Publish(ArrowHidden.Default);
+        }
+
+        /// <summary>
+        /// 이벤트 발행 없이 arrowObject의 가시성만 토글 (T1 깜빡임용).
+        /// isVisible 플래그는 변경하지 않음.
+        /// </summary>
+        public void SetVisualOnly(bool visible)
+        {
+            if (arrowObject) arrowObject.SetActive(visible);
         }
 
         public void SetTriggerMode(bool active)

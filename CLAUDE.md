@@ -352,7 +352,7 @@ python3 analysis/diagnose_distance.py            # 거리 진단
 # parse_utils.py, plot_style.py, stat_utils.py, trajectory_utils.py
 ```
 
-`data/raw/` 비어 있으면 데모 데이터 자동 생성. 결과: `analysis/output/`.
+결과: `analysis/output/`.
 
 > **한국어 폰트**: 분석 스크립트가 `matplotlib.rcParams["font.family"] = "AppleGothic"`을 사용. macOS 외 환경에서는 `NanumGothic` 등 한국어 폰트로 변경 필요.
 

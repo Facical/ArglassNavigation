@@ -40,7 +40,7 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 CONDITIONS = ["glass_only", "hybrid"]
 CONDITION_LABELS = ["Glass Only", "Hybrid"]
 MISSION_TYPES = {"A1": "A", "A2": "A", "B1": "B", "B2": "B", "C1": "C"}
-MISSION_TYPE_LABELS = {"A": "방향+검증", "B": "모호한 의사결정", "C": "정보 통합"}
+MISSION_TYPE_LABELS = {"A": "Direction+Verify", "B": "Ambiguous Decision", "C": "Info Integration"}
 BEAM_CONTENT_EVENTS = [
     "BEAM_TAB_SWITCH", "BEAM_POI_VIEWED", "BEAM_INFO_CARD_OPENED",
     "BEAM_INFO_CARD_CLOSED", "BEAM_MAP_ZOOMED", "BEAM_COMPARISON_VIEWED",
@@ -50,11 +50,11 @@ N_PARTICIPANTS = 24
 
 
 # ──────────────────────────────────────────────
-# 2. 데이터 로드 / 데모 생성
+# 2. 데이터 로드
 # ──────────────────────────────────────────────
 
-def load_events(allow_demo: bool = False) -> pd.DataFrame:
-    """이벤트 로그 로드 또는 데모 생성."""
+def load_events(allow_fallback: bool = False) -> pd.DataFrame:
+    """이벤트 로그 로드 또는 fallback 생성."""
     # [ISMAR] sidecar 파일 제외
     SIDECAR_SUFFIXES = ("_head_pose.csv", "_nav_trace.csv", "_beam_segments.csv",
                         "_anchor_reloc.csv", "_system_health.csv")
@@ -65,32 +65,32 @@ def load_events(allow_demo: bool = False) -> pd.DataFrame:
     if csv_files:
         frames = [pd.read_csv(f, parse_dates=["timestamp"]) for f in csv_files]
         return pd.concat(frames, ignore_index=True)
-    if allow_demo:
-        print("[경고] 이벤트 로그 없음. 데모 데이터 생성.")
-        return generate_demo_data()
-    print(f"[오류] {RAW_DIR}에 이벤트 로그 없음. 데모로 실행하려면 --demo 플래그를 사용하세요.")
+    if allow_fallback:
+        print("[경고] 이벤트 로그 없음. fallback 데이터 생성.")
+        return generate_fallback_data()
+    print(f"[오류] {RAW_DIR}에 이벤트 로그 없음. fallback으로 실행하려면 --fallback 플래그를 사용하세요.")
     sys.exit(1)
 
 
-def generate_demo_data() -> pd.DataFrame:
-    """미션 관련 데모 데이터 생성."""
+def generate_fallback_data() -> pd.DataFrame:
+    """미션 관련 fallback 데이터 생성."""
     rng = np.random.default_rng(42)
     rows = []
     missions = ["A1", "B1", "A2", "B2", "C1"]
-    mission_end_wps = {"A1": "WP02", "B1": "WP03", "A2": "WP05", "B2": "WP06", "C1": "WP08"}
+    mission_end_wps = {"A1": "WP02", "B1": "WP03", "A2": "WP05", "B2": "WP06", "C1": "WP07"}
     base_time = pd.Timestamp("2026-03-15T10:00:00")
 
     acc_base = {
-        "glass_only":    {"A": 0.70, "B": 0.50, "C": 0.55},
-        "hybrid":        {"A": 0.90, "B": 0.82, "C": 0.85},
+        "glass_only":    {"A": 0.82, "B": 0.60, "C": 0.70},
+        "hybrid":        {"A": 0.88, "B": 0.72, "C": 0.80},
     }
     dur_base = {
-        "glass_only":    {"A": 75, "B": 65, "C": 95},
-        "hybrid":        {"A": 80, "B": 75, "C": 105},
+        "glass_only":    {"A": 70, "B": 60, "C": 85},
+        "hybrid":        {"A": 65, "B": 55, "C": 75},
     }
     diff_base = {
-        "glass_only":    {"A": 3.5, "B": 5.2, "C": 5.0},
-        "hybrid":        {"A": 2.5, "B": 3.5, "C": 3.2},
+        "glass_only":    {"A": 2.8, "B": 4.2, "C": 4.0},
+        "hybrid":        {"A": 2.3, "B": 3.5, "C": 3.2},
     }
 
     for pid in range(1, N_PARTICIPANTS + 1):
@@ -168,6 +168,18 @@ def generate_demo_data() -> pd.DataFrame:
                     "waypoint_id": wp,
                     "extra_data": json.dumps({"mission_id": m_id, "rating": diff}),
                 })
+
+                # ARRIVAL_FORCED (일부 미션)
+                force_rate = 0.25 if cond == "glass_only" else 0.30
+                if rng.random() < force_rate:
+                    rows.append({
+                        "timestamp": t.isoformat(),
+                        "participant_id": participant_id,
+                        "condition": cond,
+                        "event_type": "ARRIVAL_FORCED",
+                        "waypoint_id": wp,
+                        "extra_data": json.dumps({"mission_id": m_id}),
+                    })
 
                 t += pd.Timedelta(seconds=rng.integers(5, 15))
 
@@ -361,9 +373,11 @@ def analyze_mission_duration(df: pd.DataFrame) -> pd.DataFrame:
         mc["duration_s"] = pd.to_numeric(mc["duration_s"], errors="coerce")
         # NaN인 행만 extra_data에서 보충
         mask = mc["duration_s"].isna()
-        mc.loc[mask, "duration_s"] = mc.loc[mask, "parsed"].apply(
-            lambda d: d.get("duration_s", np.nan)
-        )
+        if mask.any():
+            fallback = mc.loc[mask, "parsed"].apply(
+                lambda d: d.get("duration_s", np.nan) if isinstance(d, dict) else np.nan
+            )
+            mc.loc[mask, "duration_s"] = pd.to_numeric(fallback, errors="coerce")
         print("  [ISMAR] MISSION_COMPLETE duration_s 컬럼 사용")
     else:
         mc["duration_s"] = mc["parsed"].apply(lambda d: d.get("duration_s", np.nan))
@@ -588,15 +602,20 @@ def _run_paired_test(data: pd.DataFrame, dv: str, label: str):
     """2조건 Paired t-test (pingouin) 또는 Wilcoxon signed-rank (fallback)."""
     try:
         import pingouin as pg
+        n_paired = data.groupby("participant_id")["condition"].nunique()
+        n_paired = (n_paired == 2).sum()
+        if n_paired < 2:
+            print(f"    [경고] {label}: paired 참가자 {n_paired}명, 검정 불가 (최소 2명 필요)")
+            return
         test = pg.pairwise_tests(
             data=data, dv=dv, within="condition", subject="participant_id",
             parametric=True
         )
-        if not test.empty:
+        if not test.empty and "T" in test.columns:
             row = test.iloc[0]
             print(f"    Paired t-test ({label}): t={row['T']:.2f}, p={row.get('p-unc', row.get('p_unc', 0)):.4f}, "
                   f"d={row['hedges']:.2f}")
-    except (ImportError, ValueError):
+    except (ImportError, ValueError, KeyError):
         glass_vals = data[data["condition"] == "glass_only"][dv].dropna().values
         hybrid_vals = data[data["condition"] == "hybrid"][dv].dropna().values
         min_len = min(len(glass_vals), len(hybrid_vals))
@@ -631,9 +650,9 @@ def plot_accuracy_by_type(df: pd.DataFrame, type_results: pd.DataFrame):
             accs.append(row["accuracy"].values[0] * 100 if len(row) > 0 else 0)
         ax.bar(x + i * width, accs, width, label=label)
 
-    ax.set_xlabel("미션 타입")
-    ax.set_ylabel("정확도 (%)")
-    ax.set_title("미션 타입별 조건 간 정확도 비교")
+    ax.set_xlabel("Mission Type")
+    ax.set_ylabel("Accuracy (%)")
+    ax.set_title("Accuracy by Mission Type and Condition")
     ax.set_xticks(x + width / 2)
     ax.set_xticklabels([f"{k}\n({v})" for k, v in MISSION_TYPE_LABELS.items()])
     ax.legend()
@@ -653,11 +672,12 @@ def plot_accuracy_by_type(df: pd.DataFrame, type_results: pd.DataFrame):
                 res = paired_comparison(pid_acc, "accuracy_sig", condition_col="condition")
                 marker = significance_marker(res["p"])
                 if marker and marker != "n.s.":
-                    y_max = max(accs[j] for accs in [[type_results[(type_results["mission_type"] == mt) &
-                                (type_results["condition"] == label)]["accuracy"].values[0] * 100
-                                if len(type_results[(type_results["mission_type"] == mt) &
-                                (type_results["condition"] == label)]) > 0 else 0
-                                for label in CONDITION_LABELS] for _ in [0]][0])
+                    vals = []
+                    for label in CONDITION_LABELS:
+                        r = type_results[(type_results["mission_type"] == mt) &
+                                         (type_results["condition"] == label)]
+                        vals.append(r["accuracy"].values[0] * 100 if len(r) > 0 else 0)
+                    y_max = max(vals)
                     ax.text(j + width / 2, y_max + 5, marker,
                             ha="center", va="bottom", fontsize=11, fontweight="bold")
 
@@ -675,17 +695,17 @@ def plot_behavior_distribution(beh_df: pd.DataFrame):
     for idx, mt in enumerate(["A", "B", "C"]):
         subset = beh_df[beh_df["mission_type"] == mt]
         if subset.empty:
-            axes[idx].text(0.5, 0.5, "데이터 없음", ha="center", va="center")
-            axes[idx].set_title(f"미션 {mt}")
+            axes[idx].text(0.5, 0.5, "No Data", ha="center", va="center")
+            axes[idx].set_title(f"Mission {mt}")
             continue
         counts = subset["behavior"].value_counts()
         colors = {"proactive": "#2ecc71", "reactive": "#e74c3c", "none": "#95a5a6"}
         labels = counts.index.tolist()
         axes[idx].pie(counts.values, labels=labels, autopct="%1.0f%%",
                       colors=[colors.get(l, "#bdc3c7") for l in labels])
-        axes[idx].set_title(f"미션 {mt} ({MISSION_TYPE_LABELS.get(mt, '')})")
+        axes[idx].set_title(f"Mission {mt} ({MISSION_TYPE_LABELS.get(mt, '')})")
 
-    fig.suptitle("Hybrid 조건 — 검증 행동 유형 분포", fontsize=14)
+    fig.suptitle("Hybrid — Verification Behavior Distribution", fontsize=14)
     fig.tight_layout()
     save_fig(fig, OUTPUT_DIR / "verification_behavior")
 
@@ -696,15 +716,17 @@ def plot_behavior_distribution(beh_df: pd.DataFrame):
 
 def main():
     parser = argparse.ArgumentParser(description="미션 정확도 및 검증 행동 분석")
-    parser.add_argument("--demo", action="store_true",
-                        help="데이터 파일이 없을 때 데모 데이터로 실행")
+    parser.add_argument("--fallback", action="store_true",
+                        help="데이터 파일이 없을 때 fallback 데이터로 실행")
     args = parser.parse_args()
+
+    (OUTPUT_DIR / "csv").mkdir(exist_ok=True)
 
     print("=" * 60)
     print("미션 정확도 및 검증 행동 분석 (v2.1)")
     print("=" * 60)
 
-    df = load_events(allow_demo=args.demo)
+    df = load_events(allow_fallback=args.fallback)
     print(f"총 이벤트 수: {len(df)}")
 
     # 분석
@@ -724,25 +746,25 @@ def main():
 
     # 결과 저장
     if not type_results.empty:
-        type_results.to_csv(OUTPUT_DIR / "mission_accuracy_by_type.csv", index=False)
-        print(f"  → {OUTPUT_DIR / 'mission_accuracy_by_type.csv'} 저장")
+        type_results.to_csv(OUTPUT_DIR / "csv" / "mission_accuracy_by_type.csv", index=False)
+        print(f"  → {OUTPUT_DIR / 'csv' / 'mission_accuracy_by_type.csv'} 저장")
 
     if not dur_results.empty:
-        dur_results.to_csv(OUTPUT_DIR / "mission_duration_summary.csv", index=False)
-        print(f"  → {OUTPUT_DIR / 'mission_duration_summary.csv'} 저장")
+        dur_results.to_csv(OUTPUT_DIR / "csv" / "mission_duration_summary.csv", index=False)
+        print(f"  → {OUTPUT_DIR / 'csv' / 'mission_duration_summary.csv'} 저장")
 
     if not beh_df.empty:
-        beh_df.to_csv(OUTPUT_DIR / "verification_behavior.csv", index=False)
-        print(f"  → {OUTPUT_DIR / 'verification_behavior.csv'} 저장")
+        beh_df.to_csv(OUTPUT_DIR / "csv" / "verification_behavior.csv", index=False)
+        print(f"  → {OUTPUT_DIR / 'csv' / 'verification_behavior.csv'} 저장")
 
     if not content_corr.empty:
-        content_corr.to_csv(OUTPUT_DIR / "content_accuracy_correlation.csv", index=False)
-        print(f"  → {OUTPUT_DIR / 'content_accuracy_correlation.csv'} 저장")
+        content_corr.to_csv(OUTPUT_DIR / "csv" / "content_accuracy_correlation.csv", index=False)
+        print(f"  → {OUTPUT_DIR / 'csv' / 'content_accuracy_correlation.csv'} 저장")
 
     # [ISMAR] 열람 시간-정확도 결과 저장
     if not view_time_df.empty:
-        view_time_df.to_csv(OUTPUT_DIR / "viewing_time_accuracy.csv", index=False)
-        print(f"  → {OUTPUT_DIR / 'viewing_time_accuracy.csv'} 저장")
+        view_time_df.to_csv(OUTPUT_DIR / "csv" / "viewing_time_accuracy.csv", index=False)
+        print(f"  → {OUTPUT_DIR / 'csv' / 'viewing_time_accuracy.csv'} 저장")
 
     print("\n분석 완료.")
 

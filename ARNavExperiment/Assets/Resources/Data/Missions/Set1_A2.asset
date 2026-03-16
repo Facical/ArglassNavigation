@@ -27,7 +27,8 @@ MonoBehaviour:
   correctAnswerIndex: 0
   associatedTriggerId: 
   relevantPOIs: []
-  infoCards: []
+  infoCards:
+  - {fileID: 11400000, guid: 7cdd43547ffc640499a412854d3c2e87, type: 2}
   comparisonData:
     comparisonId: 
     itemNames: []

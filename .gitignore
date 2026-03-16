@@ -70,6 +70,11 @@ system-prompt-extraction/
 # 대용량 영상 파일
 *.MOV
 *.mov
+*.mp4
+
+# 대용량 데이터 (영상/원본 디바이스 로그)
+data/glass_captures/
+data/raw_device/
 
 # Claude
 .claude/

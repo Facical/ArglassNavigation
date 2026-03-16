@@ -14,8 +14,6 @@ namespace ARNavExperiment.Presentation.BeamPro
         [SerializeField] private Button zoomOutButton;
         [SerializeField] private float zoomStep = 0.3f;
 
-        private float currentZoom = 1f;
-
         private void Start()
         {
             if (zoomInButton != null)
@@ -27,15 +25,13 @@ namespace ARNavExperiment.Presentation.BeamPro
         private void OnZoomIn()
         {
             if (mapController == null) return;
-            currentZoom += zoomStep;
-            mapController.ZoomTo(currentZoom);
+            mapController.ZoomTo(mapController.CurrentZoom + zoomStep);
         }
 
         private void OnZoomOut()
         {
             if (mapController == null) return;
-            currentZoom -= zoomStep;
-            mapController.ZoomTo(currentZoom);
+            mapController.ZoomTo(mapController.CurrentZoom - zoomStep);
         }
 
         private void OnDestroy()

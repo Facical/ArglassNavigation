@@ -199,7 +199,7 @@ python3 analysis/analyze_verification.py         # Mission accuracy analysis
 python3 analysis/analyze_triggers.py             # Uncertainty trigger analysis
 ```
 
-Results are saved to `analysis/output/`. Scripts auto-generate demo data if `data/raw/` is empty.
+Results are saved to `analysis/output/`.
 
 > **Note:** Analysis scripts use `AppleGothic` font for Korean labels (macOS). On other platforms, change to `NanumGothic` or another Korean font in the matplotlib config.
 

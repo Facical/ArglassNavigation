@@ -11,12 +11,12 @@ namespace ARNavExperiment.Presentation.Glass
         [SerializeField] private GameObject panel;
         [SerializeField] private TextMeshProUGUI missionIdText;
         [SerializeField] private TextMeshProUGUI briefingText;
+        [SerializeField] private TextMeshProUGUI autoAdvanceText;
         [SerializeField] private Button confirmButton;
         [SerializeField] private float autoAdvanceTimeout = 15f;
 
         private System.Action onConfirm;
         private Coroutine autoAdvanceCoroutine;
-        private string originalBriefingText;
 
         private void Awake()
         {
@@ -39,6 +39,7 @@ namespace ARNavExperiment.Presentation.Glass
             {
                 if (t.gameObject.name == "MissionIdText" && missionIdText == null) missionIdText = t;
                 if (t.gameObject.name == "BriefingText" && briefingText == null) briefingText = t;
+                if (t.gameObject.name == "AutoAdvanceText" && autoAdvanceText == null) autoAdvanceText = t;
             }
             if (confirmButton == null)
             {
@@ -46,7 +47,8 @@ namespace ARNavExperiment.Presentation.Glass
                 if (btns.Length > 0) confirmButton = btns[0];
             }
             Debug.LogWarning($"[MissionBriefingUI] AutoWireChildren — missionIdText={missionIdText != null}, " +
-                $"briefingText={briefingText != null}, confirmButton={confirmButton != null}");
+                $"briefingText={briefingText != null}, autoAdvanceText={autoAdvanceText != null}, " +
+                $"confirmButton={confirmButton != null}");
         }
 
         public void Show(MissionData mission, System.Action onConfirmCallback)
@@ -110,6 +112,7 @@ namespace ARNavExperiment.Presentation.Glass
         public void Hide()
         {
             StopAutoAdvance();
+            if (autoAdvanceText) autoAdvanceText.text = "";
             if (panel) panel.SetActive(false);
             onConfirm = null;
         }
@@ -125,15 +128,14 @@ namespace ARNavExperiment.Presentation.Glass
 
         private IEnumerator AutoAdvanceAfterTimeout()
         {
-            originalBriefingText = briefingText ? briefingText.text : "";
             float remaining = autoAdvanceTimeout;
             while (remaining > 0f)
             {
-                if (briefingText)
+                if (autoAdvanceText)
                 {
                     string autoText = string.Format(
                         LocalizationManager.Get("briefing.auto_advance"), Mathf.CeilToInt(remaining));
-                    briefingText.text = $"{originalBriefingText}\n\n<color=#FFCC00><size=80%>{autoText}</size></color>";
+                    autoAdvanceText.text = autoText;
                 }
                 yield return new WaitForSeconds(1f);
                 remaining -= 1f;

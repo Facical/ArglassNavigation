@@ -125,19 +125,27 @@ namespace ARNavExperiment.EditorTools
 
         private static void WireCards(string missionName, string[] cardPaths)
         {
-            var mission = AssetDatabase.LoadAssetAtPath<MissionData>($"Assets/Data/Missions/{missionName}.asset");
-            if (mission == null) { Debug.LogWarning($"Mission not found: {missionName}"); return; }
+            // 기본 경로: Assets/Data/Missions/
+            WireCardsToPath($"Assets/Data/Missions/{missionName}.asset", cardPaths, "Assets/Data/InfoCards");
+            // Resources fallback 경로: Assets/Resources/Data/Missions/
+            WireCardsToPath($"Assets/Resources/Data/Missions/{missionName}.asset", cardPaths, "Assets/Resources/Data/InfoCards");
+        }
+
+        private static void WireCardsToPath(string missionPath, string[] cardPaths, string cardBasePath)
+        {
+            var mission = AssetDatabase.LoadAssetAtPath<MissionData>(missionPath);
+            if (mission == null) return; // Resources 경로에 미션이 없을 수 있으므로 경고 생략
 
             var so = new SerializedObject(mission);
             var prop = so.FindProperty("infoCards");
             prop.arraySize = cardPaths.Length;
             for (int i = 0; i < cardPaths.Length; i++)
             {
-                var card = AssetDatabase.LoadAssetAtPath<InfoCardData>($"Assets/Data/InfoCards/{cardPaths[i]}.asset");
+                var card = AssetDatabase.LoadAssetAtPath<InfoCardData>($"{cardBasePath}/{cardPaths[i]}.asset");
                 if (card != null)
                     prop.GetArrayElementAtIndex(i).objectReferenceValue = card;
                 else
-                    Debug.LogWarning($"InfoCard not found: {cardPaths[i]}");
+                    Debug.LogWarning($"InfoCard not found: {cardBasePath}/{cardPaths[i]}");
             }
             so.ApplyModifiedProperties();
             EditorUtility.SetDirty(mission);

@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections;
 using ARNavExperiment.Core;
 using ARNavExperiment.Mission;
 using ARNavExperiment.Logging;
@@ -63,8 +64,78 @@ namespace ARNavExperiment.Presentation.Experimenter
             TryBindCaptureEvent();
             UpdateCaptureUI(false);
 
+            // ── 디버그 진단 (레이아웃 문제 추적) ──
+            LogLayoutDiagnostics();
+
             // Idle(모드 선택) 상태에서는 HUD 숨김
             gameObject.SetActive(false);
+        }
+
+        private void LogLayoutDiagnostics()
+        {
+            var canvas = GetComponentInParent<Canvas>();
+            var canvasRT = canvas != null ? canvas.GetComponent<RectTransform>() : null;
+            var scaler = canvas != null ? canvas.GetComponent<CanvasScaler>() : null;
+            var adapter = canvas != null ? canvas.GetComponent<ARNavExperiment.Presentation.Shared.BeamProUIAdapter>() : null;
+
+            Debug.Log($"[ExperimenterHUD] ── Layout Diagnostics ──\n" +
+                $"  Screen={Screen.width}×{Screen.height}, DPI={Screen.dpi}\n" +
+                $"  Canvas: renderMode={canvas?.renderMode}, sortOrder={canvas?.sortingOrder}\n" +
+                $"  CanvasRT: rect={canvasRT?.rect}, sizeDelta={canvasRT?.sizeDelta}\n" +
+                $"  Scaler: mode={scaler?.uiScaleMode}, refRes={scaler?.referenceResolution}, match={scaler?.matchWidthOrHeight}\n" +
+                $"  BeamProUIAdapter: exists={adapter != null}, enabled={adapter?.enabled}");
+
+            var hudRT = GetComponent<RectTransform>();
+            Debug.Log($"[ExperimenterHUD] HUD rect={hudRT?.rect}, " +
+                $"anchorMin={hudRT?.anchorMin}, anchorMax={hudRT?.anchorMax}");
+
+            var statusArea = transform.Find("StatusArea");
+            if (statusArea != null)
+            {
+                var statusRT = statusArea.GetComponent<RectTransform>();
+                var hlg = statusArea.GetComponent<HorizontalLayoutGroup>();
+                var vlg = statusArea.GetComponent<VerticalLayoutGroup>();
+                Debug.Log($"[ExperimenterHUD] StatusArea: rect={statusRT?.rect}, " +
+                    $"HLG={hlg != null}(enabled={hlg?.enabled}), " +
+                    $"VLG={vlg != null}(enabled={vlg?.enabled})");
+            }
+            else
+            {
+                Debug.LogWarning("[ExperimenterHUD] StatusArea not found!");
+            }
+
+            // Display 정보
+            Debug.Log($"[ExperimenterHUD] Display.main: sys={Display.main.systemWidth}×{Display.main.systemHeight}, " +
+                $"render={Display.main.renderingWidth}×{Display.main.renderingHeight}");
+        }
+
+        private void OnEnable()
+        {
+            // HUD가 활성화될 때마다 레이아웃 진단 (Multi Resume 등 상태 변경 후)
+            Debug.Log("[ExperimenterHUD] ── OnEnable Diagnostics ──");
+            LogLayoutDiagnostics();
+            StartCoroutine(DelayedLayoutDiagnostics());
+        }
+
+        private IEnumerator DelayedLayoutDiagnostics()
+        {
+            yield return new WaitForSeconds(3f);
+            Debug.Log("[ExperimenterHUD] ── Delayed Diagnostics (3s after OnEnable) ──");
+            LogLayoutDiagnostics();
+
+            // 각 텍스트 자식의 실제 렌더 크기도 기록
+            var statusArea = transform.Find("StatusArea");
+            if (statusArea != null)
+            {
+                for (int i = 0; i < statusArea.childCount; i++)
+                {
+                    var child = statusArea.GetChild(i);
+                    var rt = child.GetComponent<RectTransform>();
+                    var tmp = child.GetComponent<TextMeshProUGUI>();
+                    Debug.Log($"[ExperimenterHUD] StatusChild[{i}] '{child.name}': " +
+                        $"rect={rt?.rect}, text='{tmp?.text}', fontSize={tmp?.fontSize}");
+                }
+            }
         }
 
         private void Update()

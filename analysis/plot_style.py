@@ -69,7 +69,7 @@ DPI = 300
 def apply_style():
     """CHI 출판용 전역 matplotlib 스타일 적용."""
     matplotlib.rcParams.update({
-        "font.family": "AppleGothic",
+        "font.family": "DejaVu Sans",
         "font.size": 9,
         "axes.unicode_minus": False,
         "axes.labelsize": 10,
@@ -90,17 +90,51 @@ def apply_style():
     })
 
 
+# Paper-specific colors (ISMAR 2026)
+COLOR_GLASS_PAPER = "#4A90D9"
+COLOR_HYBRID_PAPER = "#50B86C"
+
+
+def apply_paper_style():
+    """ISMAR 논문용 축소 폰트 + 클린 스타일."""
+    matplotlib.rcParams.update({
+        "font.family": "sans-serif",
+        "font.size": 8,
+        "axes.titlesize": 9,
+        "axes.titleweight": "bold",
+        "axes.labelsize": 8,
+        "axes.linewidth": 0.6,
+        "axes.grid": False,
+        "axes.spines.top": False,
+        "axes.spines.right": False,
+        "axes.unicode_minus": False,
+        "xtick.labelsize": 7,
+        "ytick.labelsize": 7,
+        "xtick.major.width": 0.6,
+        "ytick.major.width": 0.6,
+        "legend.fontsize": 7,
+        "legend.framealpha": 0.8,
+        "figure.dpi": DPI,
+        "savefig.dpi": DPI,
+        "savefig.bbox": "tight",
+        "savefig.pad_inches": 0.05,
+    })
+
+
 # ──────────────────────────────────────────────
 # 저장 유틸
 # ──────────────────────────────────────────────
 
 def save_fig(fig, path: Path, formats: Sequence[str] = ("png", "pdf")):
-    """PNG + 벡터(PDF/SVG) 저장."""
+    """PNG + 벡터(PDF/SVG) 저장 — 포맷별 하위 폴더에 저장."""
     path = Path(path)
+    parent = path.parent  # e.g. analysis/output
     for fmt in formats:
-        out = path.with_suffix(f".{fmt}")
+        fmt_dir = parent / fmt
+        fmt_dir.mkdir(parents=True, exist_ok=True)
+        out = fmt_dir / path.with_suffix(f".{fmt}").name
         fig.savefig(out, dpi=DPI, format=fmt)
-    print(f"  → {path.stem} 저장 ({', '.join(formats)})")
+    print(f"  → {path.stem} saved ({', '.join(formats)})")
     plt.close(fig)
 
 
@@ -329,7 +363,7 @@ def diverging_likert_bar(
 
     ax.set_yticks(y_positions)
     ax.set_yticklabels(item_labels)
-    ax.set_xlabel("응답 분포 (%)")
+    ax.set_xlabel("Response Distribution (%)")
     ax.axvline(x=0, color="black", linewidth=0.8)
     if title:
         ax.set_title(title)
@@ -503,7 +537,7 @@ def calibration_curve(
         ax.annotate(f"n={bc}", (nc, ba), textcoords="offset points",
                     xytext=(0, 8), ha="center", fontsize=7, color=color)
 
-    ax.set_xlabel("확신도 (정규화)")
-    ax.set_ylabel("실제 정확도")
+    ax.set_xlabel("Confidence (normalized)")
+    ax.set_ylabel("Actual Accuracy")
     ax.set_xlim(-0.05, 1.05)
     ax.set_ylim(-0.05, 1.05)

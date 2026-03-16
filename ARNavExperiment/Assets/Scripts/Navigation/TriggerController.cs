@@ -22,8 +22,13 @@ namespace ARNavExperiment.Navigation
 
         [Header("T1 Settings")]
         [SerializeField] private float t1JitterDuration = 6f;
-        [SerializeField] private float t1JitterAngle = 5f;
-        [SerializeField] private float t1BlackoutDuration = 3f;
+        [SerializeField] private float t1JitterAngle = 20f;
+        [SerializeField] private float t1BlackoutDuration = 5f;
+        [SerializeField] private float t1FlickerInterval = 0.3f;
+
+        [Header("T2 Settings")]
+        [SerializeField] private float t2ConflictAngle = 120f;
+        [SerializeField] private float t2SwitchInterval = 2f;
 
         [Header("T3 Settings")]
         [SerializeField] private float t3SpreadAngle = 30f;
@@ -86,8 +91,7 @@ namespace ARNavExperiment.Navigation
                     activeTrigger = StartCoroutine(RunT1());
                     break;
                 case TriggerType.T2_InformationConflict:
-                    // T2 is physical signage conflict, no arrow change needed
-                    LogTriggerComplete(type, triggerId);
+                    activeTrigger = StartCoroutine(RunT2());
                     break;
                 case TriggerType.T3_LowResolution:
                     activeTrigger = StartCoroutine(RunT3());
@@ -102,8 +106,11 @@ namespace ARNavExperiment.Navigation
         {
             arrowRenderer.SetTriggerMode(true);
 
-            // jitter phase
+            // jitter + flicker phase: 큰 흔들림(±20°) + 깜빡임
             float elapsed = 0f;
+            float nextFlicker = t1FlickerInterval;
+            bool flickerVisible = true;
+
             while (elapsed < t1JitterDuration)
             {
                 float jitter = Random.Range(-t1JitterAngle, t1JitterAngle);
@@ -115,19 +122,59 @@ namespace ARNavExperiment.Navigation
 
                 DomainEventBus.Instance?.Publish(new ArrowOffset("T1", jitter));
 
-                elapsed += 0.2f;
-                yield return new WaitForSeconds(0.2f);
+                // 깜빡임: arrowObject를 직접 토글 (Hide/Show 이벤트 발행 없이)
+                if (elapsed >= nextFlicker)
+                {
+                    flickerVisible = !flickerVisible;
+                    arrowRenderer.SetVisualOnly(flickerVisible);
+                    nextFlicker += t1FlickerInterval;
+                }
+
+                elapsed += 0.15f;
+                yield return new WaitForSeconds(0.15f);
             }
 
-            // blackout phase
+            // blackout phase: 완전 숨김
+            arrowRenderer.SetVisualOnly(false);
             arrowRenderer.Hide();
             yield return new WaitForSeconds(t1BlackoutDuration);
 
             // recovery
+            arrowRenderer.SetVisualOnly(true);
             arrowRenderer.Show();
             arrowRenderer.SetTriggerMode(false);
             LogTriggerComplete(TriggerType.T1_TrackingDegradation, "T1");
             activeTrigger = null;
+        }
+
+        /// <summary>
+        /// T2: 화살표가 정상 방향과 충돌 방향(120° 오프셋)을 번갈아 가리킴.
+        /// 미션 완료 시 DeactivateCurrentTrigger()로 종료.
+        /// </summary>
+        private IEnumerator RunT2()
+        {
+            arrowRenderer.SetTriggerMode(true);
+
+            while (true)
+            {
+                // 정상 방향
+                var correctDir = WaypointManager.Instance.GetDirectionToNext();
+                arrowRenderer.UpdateDirection(correctDir);
+                yield return new WaitForSeconds(t2SwitchInterval);
+
+                // 충돌 방향 (t2ConflictAngle만큼 오프셋)
+                correctDir = WaypointManager.Instance.GetDirectionToNext();
+                float baseYaw = Mathf.Atan2(correctDir.x, correctDir.z) * Mathf.Rad2Deg;
+                float conflictYaw = baseYaw + t2ConflictAngle;
+                var conflictDir = new Vector3(
+                    Mathf.Sin(conflictYaw * Mathf.Deg2Rad), 0,
+                    Mathf.Cos(conflictYaw * Mathf.Deg2Rad));
+                arrowRenderer.UpdateDirection(conflictDir);
+
+                DomainEventBus.Instance?.Publish(new ArrowOffset("T2", t2ConflictAngle));
+
+                yield return new WaitForSeconds(t2SwitchInterval);
+            }
         }
 
         private IEnumerator RunT3()

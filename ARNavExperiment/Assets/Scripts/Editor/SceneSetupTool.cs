@@ -237,6 +237,7 @@ namespace ARNavExperiment.EditorTools
             phoneBgRect.offsetMax = Vector2.zero;
             var phoneBgImg = phoneBg.AddComponent<Image>();
             phoneBgImg.color = new Color(0.06f, 0.06f, 0.10f, 1f);
+            phoneBgImg.raycastTarget = false; // 시각 전용 — 터치 차단 방지
             phoneBg.transform.SetAsFirstSibling();
 
             // Locked Screen
@@ -275,13 +276,34 @@ namespace ARNavExperiment.EditorTools
             var mapPanel = CreatePanel("MapPanel", contentAreaGO.transform, new Color(0, 0, 0, 0));
             mapPanel.AddComponent<Presentation.BeamPro.InteractiveMapController>();
 
-            // MapContainer (줌 대상 + 마커 컨테이너)
-            var mapContainer = CreateGameObject("MapContainer", mapPanel.transform);
+            // MapViewport (스크롤/팬 뷰포트 — RectMask2D로 콘텐츠 클리핑)
+            var mapViewport = CreateGameObject("MapViewport", mapPanel.transform);
+            var mvpRect = mapViewport.AddComponent<RectTransform>();
+            mvpRect.anchorMin = Vector2.zero;
+            mvpRect.anchorMax = Vector2.one;
+            mvpRect.offsetMin = Vector2.zero;
+            mvpRect.offsetMax = Vector2.zero;
+            mapViewport.AddComponent<Image>().color = Color.clear;
+            mapViewport.AddComponent<RectMask2D>();
+
+            // ScrollRect (터치 드래그로 맵 팬 이동)
+            var mapScrollRect = mapPanel.AddComponent<ScrollRect>();
+            mapScrollRect.viewport = mvpRect;
+            mapScrollRect.horizontal = true;
+            mapScrollRect.vertical = true;
+            mapScrollRect.movementType = ScrollRect.MovementType.Clamped;
+            mapScrollRect.inertia = false;
+            mapScrollRect.scrollSensitivity = 0;
+
+            // MapContainer (줌 대상 + 마커 컨테이너 — ScrollRect content)
+            var mapContainer = CreateGameObject("MapContainer", mapViewport.transform);
             var mapContainerRect = mapContainer.AddComponent<RectTransform>();
-            mapContainerRect.anchorMin = Vector2.zero;
-            mapContainerRect.anchorMax = Vector2.one;
-            mapContainerRect.offsetMin = Vector2.zero;
-            mapContainerRect.offsetMax = Vector2.zero;
+            mapContainerRect.anchorMin = new Vector2(0.5f, 0.5f);
+            mapContainerRect.anchorMax = new Vector2(0.5f, 0.5f);
+            mapContainerRect.pivot = new Vector2(0.5f, 0.5f);
+            mapContainerRect.sizeDelta = new Vector2(800, 800);
+
+            mapScrollRect.content = mapContainerRect;
 
             // FloorPlanImage (MapContainer 자식)
             var floorPlanGO = CreateGameObject("FloorPlanImage", mapContainer.transform);
@@ -291,7 +313,7 @@ namespace ARNavExperiment.EditorTools
             floorPlanRect.offsetMin = Vector2.zero;
             floorPlanRect.offsetMax = Vector2.zero;
             var floorPlanImg = floorPlanGO.AddComponent<Image>();
-            floorPlanImg.preserveAspect = true;
+            floorPlanImg.preserveAspect = true; // AdjustForPreserveAspect()가 마커 좌표 보정 처리
             floorPlanImg.color = new Color(1, 1, 1, 0.9f);
 
             // DestinationPin (MapContainer 자식, 빨간색 24x24, 초기 비활성)
@@ -319,22 +341,22 @@ namespace ARNavExperiment.EditorTools
             CreateUIButton("ZoomOutBtn", zoomPanel.transform, "\u2212");
             zoomPanel.SetActive(false); // BeamProCanvasController가 GlassOnly에서 활성화
 
-            // GlassOnly Map Toggle Button (ZoomButtonPanel 옆, 왼쪽 하단)
+            // GlassOnly Map Toggle Button — Canvas 루트 기준 앵커 (RepositionGlassButtons에서 reparent)
             var mapToggleBtn = CreateUIButton("GlassMapToggleBtn", contentAreaGO.transform, "Map");
             var mtRect = mapToggleBtn.GetComponent<RectTransform>();
-            mtRect.anchorMin = new Vector2(0.02f, 0.02f);
-            mtRect.anchorMax = new Vector2(0.18f, 0.10f);
+            mtRect.anchorMin = new Vector2(0.35f, 0.27f);
+            mtRect.anchorMax = new Vector2(0.50f, 0.40f);
             mtRect.offsetMin = Vector2.zero;
             mtRect.offsetMax = Vector2.zero;
             var mtImg = mapToggleBtn.GetComponent<Image>();
             if (mtImg != null) mtImg.color = new Color(0.2f, 0.4f, 0.7f, 0.9f);
             mapToggleBtn.gameObject.SetActive(false); // BeamProCanvasController가 GlassOnly에서 활성화
 
-            // GlassOnly ForceArrival Button (Map 토글 옆, 오른쪽)
-            var forceArrBtn = CreateUIButton("GlassForceArrivalBtn", contentAreaGO.transform, "도착");
+            // GlassOnly ForceArrival Button — Map 버튼 우측
+            var forceArrBtn = CreateUIButton("GlassForceArrivalBtn", contentAreaGO.transform, "Arrive");
             var faRect = forceArrBtn.GetComponent<RectTransform>();
-            faRect.anchorMin = new Vector2(0.20f, 0.02f);
-            faRect.anchorMax = new Vector2(0.36f, 0.10f);
+            faRect.anchorMin = new Vector2(0.52f, 0.27f);
+            faRect.anchorMax = new Vector2(0.67f, 0.40f);
             faRect.offsetMin = Vector2.zero;
             faRect.offsetMax = Vector2.zero;
             var faImg = forceArrBtn.GetComponent<Image>();
@@ -343,6 +365,85 @@ namespace ARNavExperiment.EditorTools
 
             var infoPanel = CreatePanel("InfoCardPanel", contentAreaGO.transform, new Color(0, 0, 0, 0));
             infoPanel.AddComponent<Presentation.BeamPro.InfoCardManager>();
+
+            // === CardListContainer (카드 목록 ScrollRect) ===
+            var cardListContainer = CreateGameObject("CardListContainer", infoPanel.transform);
+            var clcRect = cardListContainer.AddComponent<RectTransform>();
+            clcRect.anchorMin = Vector2.zero;
+            clcRect.anchorMax = Vector2.one;
+            clcRect.offsetMin = Vector2.zero;
+            clcRect.offsetMax = Vector2.zero;
+
+            var viewport = CreateGameObject("Viewport", cardListContainer.transform);
+            var vpRect = viewport.AddComponent<RectTransform>();
+            vpRect.anchorMin = Vector2.zero;
+            vpRect.anchorMax = Vector2.one;
+            vpRect.offsetMin = Vector2.zero;
+            vpRect.offsetMax = Vector2.zero;
+            viewport.AddComponent<Image>().color = Color.clear;
+            viewport.AddComponent<Mask>().showMaskGraphic = false;
+
+            var cardListContent = CreateGameObject("CardListContent", viewport.transform);
+            var clContentRect = cardListContent.AddComponent<RectTransform>();
+            clContentRect.anchorMin = new Vector2(0, 1);
+            clContentRect.anchorMax = Vector2.one;
+            clContentRect.pivot = new Vector2(0.5f, 1);
+            clContentRect.offsetMin = Vector2.zero;
+            clContentRect.offsetMax = Vector2.zero;
+            var clVLG = cardListContent.AddComponent<VerticalLayoutGroup>();
+            clVLG.padding = new RectOffset(20, 20, 20, 20);
+            clVLG.spacing = 12;
+            clVLG.childForceExpandWidth = true;
+            clVLG.childForceExpandHeight = false;
+            clVLG.childAlignment = TextAnchor.UpperCenter;
+            var clFitter = cardListContent.AddComponent<ContentSizeFitter>();
+            clFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            var scrollRect = cardListContainer.AddComponent<ScrollRect>();
+            scrollRect.content = clContentRect;
+            scrollRect.viewport = vpRect;
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+
+            // CardListEmptyText
+            var emptyText = CreateTMPText("CardListEmptyText", cardListContent.transform, "No info cards available");
+            emptyText.fontSize = BP_FS_BODY;
+            emptyText.color = new Color(0.6f, 0.6f, 0.6f, 1f);
+            emptyText.alignment = TextAlignmentOptions.Center;
+            emptyText.enableWordWrapping = true;
+            var emptyLE = emptyText.gameObject.AddComponent<LayoutElement>();
+            emptyLE.minHeight = 60;
+
+            // CardItemTemplate (비활성, 런타임에 Instantiate)
+            var cardItemTemplate = CreateGameObject("CardItemTemplate", cardListContent.transform);
+            var citRect = cardItemTemplate.AddComponent<RectTransform>();
+            citRect.sizeDelta = new Vector2(0, 90);
+            var citImg = cardItemTemplate.AddComponent<Image>();
+            citImg.color = new Color(0.18f, 0.18f, 0.25f, 1f);
+            cardItemTemplate.AddComponent<Button>();
+            var citVLG = cardItemTemplate.AddComponent<VerticalLayoutGroup>();
+            citVLG.padding = new RectOffset(20, 20, 10, 10);
+            citVLG.spacing = 4;
+            citVLG.childForceExpandWidth = true;
+            citVLG.childForceExpandHeight = false;
+            citVLG.childAlignment = TextAnchor.MiddleLeft;
+            var citLE = cardItemTemplate.AddComponent<LayoutElement>();
+            citLE.minHeight = 90;
+
+            var citTitle = CreateTMPText("CardItemTitle", cardItemTemplate.transform, "Card Title");
+            citTitle.fontSize = BP_FS_BODY;
+            citTitle.fontStyle = TMPro.FontStyles.Bold;
+            citTitle.color = Color.white;
+            citTitle.enableWordWrapping = true;
+
+            var citLocation = CreateTMPText("CardItemLocation", cardItemTemplate.transform, "Location");
+            citLocation.fontSize = 20;
+            citLocation.color = new Color(0.6f, 0.6f, 0.6f, 1f);
+            citLocation.enableWordWrapping = true;
+
+            cardItemTemplate.SetActive(false);
+
             infoPanel.SetActive(false);
 
             // InfoCardPanel 자식: CardPanel (제목+내용+이미지+닫기)
@@ -352,18 +453,27 @@ namespace ARNavExperiment.EditorTools
             cardLayout.spacing = 12;
             cardLayout.childForceExpandWidth = true;
             cardLayout.childForceExpandHeight = false;
+            cardLayout.childControlWidth = true;
+            cardLayout.childControlHeight = true;
             cardLayout.childAlignment = TextAnchor.UpperCenter;
             cardPanel.SetActive(false);
 
             var cardTitle = CreateTMPText("CardTitleText", cardPanel.transform, "");
             cardTitle.fontSize = BP_FS_TITLE;
             cardTitle.fontStyle = TMPro.FontStyles.Bold;
+            cardTitle.enableAutoSizing = true;
+            cardTitle.fontSizeMin = 18;
+            cardTitle.fontSizeMax = BP_FS_TITLE;
             cardTitle.alignment = TextAlignmentOptions.Center;
             var cardTitleLE = cardTitle.gameObject.AddComponent<LayoutElement>();
             cardTitleLE.minHeight = 50;
 
             var cardContent = CreateTMPText("CardContentText", cardPanel.transform, "");
             cardContent.fontSize = BP_FS_BODY;
+            cardContent.enableWordWrapping = true;
+            cardContent.enableAutoSizing = true;
+            cardContent.fontSizeMin = 14;
+            cardContent.fontSizeMax = BP_FS_BODY;
             cardContent.alignment = TextAlignmentOptions.TopLeft;
             var cardContentLE = cardContent.gameObject.AddComponent<LayoutElement>();
             cardContentLE.flexibleHeight = 1;
@@ -396,6 +506,8 @@ namespace ARNavExperiment.EditorTools
             mRefLayout.spacing = 12;
             mRefLayout.childForceExpandWidth = true;
             mRefLayout.childForceExpandHeight = false;
+            mRefLayout.childControlWidth = true;
+            mRefLayout.childControlHeight = true;
             mRefLayout.childAlignment = TextAnchor.UpperCenter;
 
             var refMissionId = CreateTMPText("RefMissionIdText", missionRefPanel.transform, "");
@@ -407,12 +519,20 @@ namespace ARNavExperiment.EditorTools
 
             var refBriefing = CreateTMPText("RefBriefingText", missionRefPanel.transform, "");
             refBriefing.fontSize = BP_FS_BODY;
+            refBriefing.enableWordWrapping = true;
+            refBriefing.enableAutoSizing = true;
+            refBriefing.fontSizeMin = 14;
+            refBriefing.fontSizeMax = BP_FS_BODY;
             refBriefing.alignment = TextAlignmentOptions.TopLeft;
             var refBriefingLE = refBriefing.gameObject.AddComponent<LayoutElement>();
             refBriefingLE.flexibleHeight = 1;
 
             var refHint = CreateTMPText("RefHintText", missionRefPanel.transform, "");
             refHint.fontSize = BP_FS_BODY;
+            refHint.enableWordWrapping = true;
+            refHint.enableAutoSizing = true;
+            refHint.fontSizeMin = 14;
+            refHint.fontSizeMax = BP_FS_BODY;
             refHint.color = new Color(1f, 0.85f, 0.2f, 1f); // 노란색 힌트
             refHint.alignment = TextAlignmentOptions.TopLeft;
             var refHintLE = refHint.gameObject.AddComponent<LayoutElement>();
@@ -462,14 +582,14 @@ namespace ARNavExperiment.EditorTools
             bpLogger.AddComponent<Presentation.BeamPro.BeamProEventLogger>();
         }
 
-        // BeamPro 폰트 크기 상수
-        private const int BP_FS_TITLE = 36;
-        private const int BP_FS_BODY = 28;
-        private const int BP_FS_QUESTION = 32;
-        private const int BP_FS_ANSWER = 26;
-        private const int BP_FS_PROMPT = 30;
-        private const int BP_FS_RATING = 28;
-        private const int BP_FS_CONFIRM = 28;
+        // BeamPro 폰트 크기 상수 (540px 너비 기준 축소)
+        private const int BP_FS_TITLE = 28;
+        private const int BP_FS_BODY = 22;
+        private const int BP_FS_QUESTION = 26;
+        private const int BP_FS_ANSWER = 22;
+        private const int BP_FS_PROMPT = 24;
+        private const int BP_FS_RATING = 24;
+        private const int BP_FS_CONFIRM = 24;
 
         private static void CreateHybridMissionOverlay(Transform contentArea)
         {
@@ -481,6 +601,8 @@ namespace ARNavExperiment.EditorTools
             overlayLayout.spacing = 15;
             overlayLayout.childForceExpandWidth = true;
             overlayLayout.childForceExpandHeight = false;
+            overlayLayout.childControlWidth = true;
+            overlayLayout.childControlHeight = true;
             overlayLayout.childAlignment = TextAnchor.UpperCenter;
             overlayPanel.SetActive(false);
 
@@ -496,6 +618,8 @@ namespace ARNavExperiment.EditorTools
             briefingLayout.spacing = 15;
             briefingLayout.childForceExpandWidth = true;
             briefingLayout.childForceExpandHeight = false;
+            briefingLayout.childControlWidth = true;
+            briefingLayout.childControlHeight = true;
             briefingLayout.childAlignment = TextAnchor.UpperCenter;
 
             var ovMissionId = CreateTMPText("OvMissionIdText", briefingGO.transform, "Mission");
@@ -506,6 +630,10 @@ namespace ARNavExperiment.EditorTools
             var ovBriefing = CreateTMPText("OvBriefingText", briefingGO.transform, "");
             ovBriefing.fontSize = BP_FS_BODY;
             ovBriefing.alignment = TextAlignmentOptions.Center;
+            ovBriefing.enableWordWrapping = true;
+            ovBriefing.enableAutoSizing = true;
+            ovBriefing.fontSizeMin = 18;
+            ovBriefing.fontSizeMax = BP_FS_BODY;
             var briefingLE = ovBriefing.gameObject.AddComponent<LayoutElement>();
             briefingLE.flexibleHeight = 1;
 
@@ -519,6 +647,12 @@ namespace ARNavExperiment.EditorTools
             var confirmTxt = ovConfirmBtn.GetComponentInChildren<TextMeshProUGUI>();
             if (confirmTxt) confirmTxt.fontSize = BP_FS_CONFIRM;
 
+            // Auto-advance 카운트다운 (별도 텍스트 요소)
+            var ovAutoAdvance = CreateTMPText("OvAutoAdvanceText", briefingGO.transform, "");
+            ovAutoAdvance.fontSize = BP_FS_BODY;
+            ovAutoAdvance.alignment = TextAlignmentOptions.Center;
+            ovAutoAdvance.color = new Color(1f, 0.8f, 0f, 1f);
+
             // --- Verification Content ---
             var verifyGO = CreateGameObject("OverlayVerificationContent", overlayPanel.transform);
             var verifyRect = verifyGO.AddComponent<RectTransform>();
@@ -531,6 +665,8 @@ namespace ARNavExperiment.EditorTools
             verifyLayout.spacing = 12;
             verifyLayout.childForceExpandWidth = true;
             verifyLayout.childForceExpandHeight = false;
+            verifyLayout.childControlWidth = true;
+            verifyLayout.childControlHeight = true;
             verifyLayout.childAlignment = TextAnchor.UpperCenter;
             verifyGO.SetActive(false);
 
@@ -538,11 +674,17 @@ namespace ARNavExperiment.EditorTools
             ovQuestion.fontSize = BP_FS_QUESTION;
             ovQuestion.fontStyle = FontStyles.Bold;
             ovQuestion.alignment = TextAlignmentOptions.Center;
+            ovQuestion.enableWordWrapping = true;
+            ovQuestion.enableAutoSizing = true;
+            ovQuestion.fontSizeMin = 20;
+            ovQuestion.fontSizeMax = BP_FS_QUESTION;
 
             var answersGO = CreateGameObject("OvAnswers", verifyGO.transform);
             answersGO.AddComponent<RectTransform>();
             var answersLayout = answersGO.AddComponent<VerticalLayoutGroup>();
             answersLayout.spacing = 10;
+            answersLayout.childControlWidth = true;
+            answersLayout.childControlHeight = true;
             answersLayout.childForceExpandWidth = true;
             answersLayout.childForceExpandHeight = false;
             var answersLE = answersGO.AddComponent<LayoutElement>();
@@ -571,6 +713,8 @@ namespace ARNavExperiment.EditorTools
             ratingLayout.spacing = 20;
             ratingLayout.childForceExpandWidth = true;
             ratingLayout.childForceExpandHeight = false;
+            ratingLayout.childControlWidth = true;
+            ratingLayout.childControlHeight = true;
             ratingLayout.childAlignment = TextAnchor.UpperCenter;
             ratingGO.SetActive(false);
 
@@ -587,6 +731,8 @@ namespace ARNavExperiment.EditorTools
             ratingBtnsGO.AddComponent<RectTransform>();
             var ratingBtnsLayout = ratingBtnsGO.AddComponent<HorizontalLayoutGroup>();
             ratingBtnsLayout.spacing = 8;
+            ratingBtnsLayout.childControlWidth = true;
+            ratingBtnsLayout.childControlHeight = true;
             ratingBtnsLayout.childForceExpandWidth = true;
             ratingBtnsLayout.childForceExpandHeight = true;
             var ratingBtnsLE = ratingBtnsGO.AddComponent<LayoutElement>();
@@ -639,33 +785,43 @@ namespace ARNavExperiment.EditorTools
             briefRect.offsetMax = Vector2.zero;
 
             var briefLayout = briefing.AddComponent<VerticalLayoutGroup>();
-            briefLayout.spacing = SPACING_PANEL;
-            briefLayout.padding = new RectOffset(PADDING_PANEL, PADDING_PANEL, 30, 30);
+            briefLayout.spacing = 16;
+            briefLayout.padding = new RectOffset(60, 60, 40, 30);
             briefLayout.childForceExpandWidth = true;
             briefLayout.childForceExpandHeight = false;
             briefLayout.childControlWidth = true;
             briefLayout.childControlHeight = true;
-            briefLayout.childAlignment = TextAnchor.MiddleCenter;
+            briefLayout.childAlignment = TextAnchor.UpperCenter;
 
             var midText = CreateTMPText("MissionIdText", briefing.transform, "Mission A1");
-            midText.fontSize = FS_TITLE;
+            midText.fontSize = 40;
             midText.fontStyle = FontStyles.Bold;
             midText.alignment = TextAlignmentOptions.Center;
             var midLE = midText.gameObject.AddComponent<LayoutElement>();
-            midLE.minHeight = 60;
+            midLE.minHeight = 50;
+            midLE.preferredHeight = 50;
 
             var brText = CreateTMPText("BriefingText", briefing.transform, "Mission briefing text");
-            brText.fontSize = FS_BODY;
-            brText.alignment = TextAlignmentOptions.Center;
+            brText.fontSize = 28;
+            brText.alignment = TextAlignmentOptions.Left;
+            brText.enableWordWrapping = true;
             var brLE = brText.gameObject.AddComponent<LayoutElement>();
             brLE.flexibleHeight = 1;
 
             var confirmBtn = CreateUIButton("ConfirmBtn", briefing.transform, "Confirm");
             var confirmBtnLE = confirmBtn.gameObject.AddComponent<LayoutElement>();
-            confirmBtnLE.minHeight = BTN_H_CONFIRM;
+            confirmBtnLE.minHeight = 90;
             confirmBtn.GetComponent<Image>().color = BTN_PRIMARY;
             var confirmBtnText = confirmBtn.GetComponentInChildren<TextMeshProUGUI>();
-            if (confirmBtnText) confirmBtnText.fontSize = FS_CONFIRM_BTN;
+            if (confirmBtnText) confirmBtnText.fontSize = 30;
+
+            var autoAdvText = CreateTMPText("AutoAdvanceText", briefing.transform, "");
+            autoAdvText.fontSize = 24;
+            autoAdvText.alignment = TextAlignmentOptions.Center;
+            autoAdvText.color = new Color(1f, 0.8f, 0f, 1f);
+            var autoAdvLE = autoAdvText.gameObject.AddComponent<LayoutElement>();
+            autoAdvLE.minHeight = 30;
+
             briefing.SetActive(false);
 
             // Verification Panel
@@ -952,7 +1108,7 @@ namespace ARNavExperiment.EditorTools
             wt.fontSize = FS_HUD;
 
             // Glass ForceArrival 버튼 (Glass Only 조건에서만 표시)
-            var forceArrivalBtn = CreateUIButton("ForceArrivalBtn", hud.transform, "도착");
+            var forceArrivalBtn = CreateUIButton("ForceArrivalBtn", hud.transform, "Arrive");
             var fabRect = forceArrivalBtn.GetComponent<RectTransform>();
             fabRect.sizeDelta = new Vector2(180, 70);
             var fabImg = forceArrivalBtn.GetComponent<Image>();

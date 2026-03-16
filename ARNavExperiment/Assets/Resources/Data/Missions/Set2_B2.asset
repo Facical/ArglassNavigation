@@ -25,7 +25,8 @@ MonoBehaviour:
   correctAnswerIndex: 0
   associatedTriggerId: T4
   relevantPOIs: []
-  infoCards: []
+  infoCards:
+  - {fileID: 11400000, guid: c0a6a41a2263e46859742a16d86c38c2, type: 2}
   comparisonData:
     comparisonId: 
     itemNames: []

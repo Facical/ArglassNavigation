@@ -108,6 +108,9 @@ namespace ARNavExperiment.Core
             { "missionref.hint_b", ("Refer to the surrounding map info", "\uc8fc\ubcc0 \uc9c0\ub3c4 \uc815\ubcf4\ub97c \ucc38\uace0\ud558\uc138\uc694") },
             { "missionref.hint_c", ("Compare the attributes of both items", "\ub450 \ud56d\ubaa9\uc758 \uc18d\uc131\uc744 \ube44\uad50\ud558\uc138\uc694") },
 
+            // ===== InfoCardManager =====
+            { "infocard.empty", ("No info cards available", "정보 카드 없음") },
+
             // ===== POIDetailPanel =====
             { "poi.capacity", ("Capacity: {0}", "\uc218\uc6a9 \uc778\uc6d0: {0}") },
             { "poi.equipment", ("Equipment: {0}", "\uc7a5\ube44: {0}") },

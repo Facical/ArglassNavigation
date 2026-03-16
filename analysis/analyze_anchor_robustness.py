@@ -38,10 +38,10 @@ WAYPOINTS = [f"WP{i:02d}" for i in range(9)]
 
 # AnchorRelocState enum (SpatialAnchorManager.cs)
 RELOC_STATES = {
-    "Tracking": "성공",
-    "TimedOut": "타임아웃",
-    "LoadFailed": "로드 실패",
-    "InProgress": "진행 중",
+    "Tracking": "Success",
+    "TimedOut": "Timed Out",
+    "LoadFailed": "Load Failed",
+    "InProgress": "In Progress",
 }
 SUCCESS_STATE = "Tracking"
 FAILURE_STATES = ["TimedOut", "LoadFailed"]
@@ -57,7 +57,7 @@ STATE_COLORS = {
 # 데이터 로드
 # ──────────────────────────────────────────────
 
-def load_all_data(data_dir: Path, allow_demo: bool = False):
+def load_all_data(data_dir: Path, allow_fallback: bool = False):
     """anchor_reloc + system_health CSV를 모두 로드.
 
     Returns:
@@ -66,20 +66,20 @@ def load_all_data(data_dir: Path, allow_demo: bool = False):
     """
     from trajectory_utils import (
         load_anchor_reloc, load_system_health,
-        find_session_files, generate_demo_data
+        find_session_files, generate_fallback_data
     )
 
     sessions = find_session_files(str(data_dir))
 
     has_reloc = any("anchor_reloc" in v for v in sessions.values())
     if not sessions or not has_reloc:
-        if allow_demo:
-            print("[경고] anchor_reloc 파일 없음. 데모 데이터를 생성합니다.")
-            generate_demo_data(str(data_dir))
+        if allow_fallback:
+            print("[경고] anchor_reloc 파일 없음. Fallback 데이터를 생성합니다.")
+            generate_fallback_data(str(data_dir))
             sessions = find_session_files(str(data_dir))
         else:
             print(f"[오류] {data_dir}에 anchor_reloc 파일 없음.")
-            print("  데모로 실행하려면 --demo 플래그를 사용하세요.")
+            print("  fallback으로 실행하려면 --fallback 플래그를 사용하세요.")
             sys.exit(1)
 
     reloc_dfs = []
@@ -280,13 +280,13 @@ def plot_reloc_rates(rates_df: pd.DataFrame):
     bottom_fail = bottom_timeout + rates_df["timeout_rate"].values
 
     ax.bar(x, rates_df["success_rate"], width,
-          label="성공 (Tracking)", color=STATE_COLORS["Tracking"])
+          label="Success (Tracking)", color=STATE_COLORS["Tracking"])
     ax.bar(x, rates_df["timeout_rate"], width,
           bottom=bottom_timeout,
-          label="타임아웃 (TimedOut)", color=STATE_COLORS["TimedOut"])
+          label="Timed Out (TimedOut)", color=STATE_COLORS["TimedOut"])
     ax.bar(x, rates_df["fail_rate"], width,
           bottom=bottom_fail,
-          label="로드 실패 (LoadFailed)", color=STATE_COLORS["LoadFailed"])
+          label="Load Failed (LoadFailed)", color=STATE_COLORS["LoadFailed"])
 
     # 성공률 텍스트
     for i, row in rates_df.iterrows():
@@ -295,9 +295,9 @@ def plot_reloc_rates(rates_df: pd.DataFrame):
                    ha="center", va="center", fontsize=9, fontweight="bold",
                    color="white")
 
-    ax.set_xlabel("웨이포인트")
-    ax.set_ylabel("비율")
-    ax.set_title("웨이포인트별 앵커 재인식 결과 분포")
+    ax.set_xlabel("Waypoint")
+    ax.set_ylabel("Ratio")
+    ax.set_title("Anchor Relocalization Result Distribution by Waypoint")
     ax.set_xticks(x)
     ax.set_xticklabels(rates_df["waypoint_id"], rotation=45)
     ax.set_ylim(0, 1.05)
@@ -342,9 +342,9 @@ def plot_reloc_time_distribution(times_df: pd.DataFrame):
                     ax.scatter([i + 1] * len(vals), vals, marker=marker,
                              color=color, s=50, zorder=3, label=state if i == 0 else "")
 
-    ax.set_xlabel("웨이포인트")
-    ax.set_ylabel("재인식 소요 시간 (s)")
-    ax.set_title("웨이포인트별 재인식 소요 시간 분포")
+    ax.set_xlabel("Waypoint")
+    ax.set_ylabel("Relocalization Time (s)")
+    ax.set_title("Relocalization Time Distribution by Waypoint")
     ax.grid(axis="y", alpha=0.3)
 
     # 범례 중복 제거
@@ -365,10 +365,10 @@ def plot_slam_failure_reasons(slam_df: pd.DataFrame):
     fig, ax = plt.subplots(figsize=(8, 6))
 
     slam_labels = {
-        "feature_insufficient": "특징점 부족",
-        "relocalizing": "재위치 추정 중",
-        "limited_tracking": "제한된 트래킹",
-        "file_not_found": "파일 미발견",
+        "feature_insufficient": "Insufficient Features",
+        "relocalizing": "Relocalizing",
+        "limited_tracking": "Limited Tracking",
+        "file_not_found": "File Not Found",
     }
 
     labels = [slam_labels.get(r, r) for r in slam_df["slam_reason"]]
@@ -383,7 +383,7 @@ def plot_slam_failure_reasons(slam_df: pd.DataFrame):
         autotext.set_fontsize(10)
         autotext.set_fontweight("bold")
 
-    ax.set_title("앵커 재인식 실패 시 SLAM 상태 분포")
+    ax.set_title("SLAM State Distribution at Anchor Relocalization Failure")
 
     fig.tight_layout()
     save_fig(fig, OUTPUT_DIR / "anchor_slam_failure")
@@ -422,16 +422,16 @@ def plot_recovery_timeline(timeline_df: pd.DataFrame):
         ax.text(-10, y_offset, short_sess, ha="right", va="center", fontsize=8)
         y_offset += 1
 
-    ax.set_xlabel("웨이포인트 구간 + 소요 시간 (s)")
+    ax.set_xlabel("Waypoint Segment + Elapsed Time (s)")
     ax.set_ylabel("")
-    ax.set_title("세션별 앵커 재인식 타임라인")
+    ax.set_title("Anchor Relocalization Timeline by Session")
 
     # 범례
     from matplotlib.patches import Patch
     legend_elements = [
-        Patch(facecolor=STATE_COLORS["Tracking"], label="성공"),
-        Patch(facecolor=STATE_COLORS["TimedOut"], label="타임아웃"),
-        Patch(facecolor=STATE_COLORS["LoadFailed"], label="로드 실패"),
+        Patch(facecolor=STATE_COLORS["Tracking"], label="Success"),
+        Patch(facecolor=STATE_COLORS["TimedOut"], label="Timed Out"),
+        Patch(facecolor=STATE_COLORS["LoadFailed"], label="Load Failed"),
     ]
     ax.legend(handles=legend_elements, loc="upper right")
     ax.grid(axis="x", alpha=0.3)
@@ -471,7 +471,7 @@ def plot_health_correlation(health_dfs: list):
             patch.set_alpha(0.7)
 
     ax.set_ylabel("FPS")
-    ax.set_title("트래킹 상태별 FPS 분포")
+    ax.set_title("FPS Distribution by Tracking State")
     ax.grid(axis="y", alpha=0.3)
 
     # 통계 검정
@@ -502,11 +502,11 @@ def plot_health_correlation(health_dfs: list):
                           alpha=0.3, linewidth=1)
             ax.axvline(x=not_ready_elapsed.iloc[0],
                       color=STATE_COLORS["TimedOut"], alpha=0.5,
-                      linewidth=1, label="트래킹 불안정")
+                      linewidth=1, label="Tracking Unstable")
 
-        ax.set_xlabel("경과 시간 (s)")
+        ax.set_xlabel("Elapsed Time (s)")
         ax.set_ylabel("FPS")
-        ax.set_title("FPS 시계열 + 트래킹 불안정 구간")
+        ax.set_title("FPS Time Series + Tracking Instability")
         ax.legend()
         ax.grid(alpha=0.3)
 
@@ -522,18 +522,19 @@ def main():
     parser = argparse.ArgumentParser(description="앵커 재인식 견고성 분석")
     parser.add_argument("--data-dir", type=str, default=None,
                         help="데이터 디렉토리 (기본: data/raw/)")
-    parser.add_argument("--demo", action="store_true",
-                        help="데이터 파일이 없을 때 데모 데이터로 실행")
+    parser.add_argument("--fallback", action="store_true",
+                        help="데이터 파일이 없을 때 fallback 데이터로 실행")
     args = parser.parse_args()
 
     data_dir = Path(args.data_dir) if args.data_dir else RAW_DIR
+    (OUTPUT_DIR / "csv").mkdir(exist_ok=True)
 
     print("=" * 60)
     print("앵커 재인식 견고성 분석 (ISMAR 로깅)")
     print("=" * 60)
 
     # 데이터 로드
-    reloc_dfs, health_dfs = load_all_data(data_dir, allow_demo=args.demo)
+    reloc_dfs, health_dfs = load_all_data(data_dir, allow_fallback=args.fallback)
     print(f"anchor_reloc 세션 수: {len(reloc_dfs)}")
     print(f"system_health 세션 수: {len(health_dfs)}")
 
@@ -609,20 +610,20 @@ def main():
 
     # ── 결과 CSV 저장 ──
     if not rates_df.empty:
-        rates_df.to_csv(OUTPUT_DIR / "anchor_reloc_rates.csv", index=False)
-        print(f"  -> {OUTPUT_DIR / 'anchor_reloc_rates.csv'} 저장")
+        rates_df.to_csv(OUTPUT_DIR / "csv" / "anchor_reloc_rates.csv", index=False)
+        print(f"  -> {OUTPUT_DIR / 'csv' / 'anchor_reloc_rates.csv'} 저장")
 
     if not times_df.empty:
-        times_df.to_csv(OUTPUT_DIR / "anchor_reloc_times.csv", index=False)
-        print(f"  -> {OUTPUT_DIR / 'anchor_reloc_times.csv'} 저장")
+        times_df.to_csv(OUTPUT_DIR / "csv" / "anchor_reloc_times.csv", index=False)
+        print(f"  -> {OUTPUT_DIR / 'csv' / 'anchor_reloc_times.csv'} 저장")
 
     if not slam_df.empty:
-        slam_df.to_csv(OUTPUT_DIR / "anchor_slam_failure.csv", index=False)
-        print(f"  -> {OUTPUT_DIR / 'anchor_slam_failure.csv'} 저장")
+        slam_df.to_csv(OUTPUT_DIR / "csv" / "anchor_slam_failure.csv", index=False)
+        print(f"  -> {OUTPUT_DIR / 'csv' / 'anchor_slam_failure.csv'} 저장")
 
     if not health_corr.empty:
-        health_corr.to_csv(OUTPUT_DIR / "anchor_health_correlation.csv", index=False)
-        print(f"  -> {OUTPUT_DIR / 'anchor_health_correlation.csv'} 저장")
+        health_corr.to_csv(OUTPUT_DIR / "csv" / "anchor_health_correlation.csv", index=False)
+        print(f"  -> {OUTPUT_DIR / 'csv' / 'anchor_health_correlation.csv'} 저장")
 
     print("\n분석 완료.")
 

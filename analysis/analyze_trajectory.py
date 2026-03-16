@@ -52,7 +52,7 @@ HESITATION_MIN_DURATION = 2.0  # seconds
 # 데이터 로드
 # ──────────────────────────────────────────────
 
-def load_all_nav_traces(data_dir: Path, allow_demo: bool = False):
+def load_all_nav_traces(data_dir: Path, allow_fallback: bool = False):
     """모든 nav_trace CSV를 로드하여 조건별로 그룹핑.
 
     Returns:
@@ -60,21 +60,21 @@ def load_all_nav_traces(data_dir: Path, allow_demo: bool = False):
         sessions_meta: list of (participant_id, condition, filepath)
     """
     from trajectory_utils import (
-        load_nav_trace, find_session_files, generate_demo_data
+        load_nav_trace, find_session_files, generate_fallback_data
     )
 
     sessions = find_session_files(str(data_dir))
 
-    # nav_trace가 없으면 데모 생성
+    # nav_trace가 없으면 fallback 생성
     has_nav = any("nav_trace" in v for v in sessions.values())
     if not sessions or not has_nav:
-        if allow_demo:
-            print("[경고] nav_trace 파일 없음. 데모 데이터를 생성합니다.")
-            generate_demo_data(str(data_dir))
+        if allow_fallback:
+            print("[경고] nav_trace 파일 없음. Fallback 데이터를 생성합니다.")
+            generate_fallback_data(str(data_dir))
             sessions = find_session_files(str(data_dir))
         else:
             print(f"[오류] {data_dir}에 nav_trace 파일 없음.")
-            print("  데모로 실행하려면 --demo 플래그를 사용하세요.")
+            print("  fallback으로 실행하려면 --fallback 플래그를 사용하세요.")
             sys.exit(1)
 
     result = {"glass_only": [], "hybrid": []}
@@ -265,9 +265,9 @@ def plot_speed_profile(profiles: dict):
                         p["mean"] + p["std"],
                         alpha=0.2, color=CONDITION_COLORS[cond])
 
-    ax.set_xlabel("경과 시간 (s)")
-    ax.set_ylabel("이동 속도 (m/s)")
-    ax.set_title("조건별 속도 프로필")
+    ax.set_xlabel("Elapsed Time (s)")
+    ax.set_ylabel("Speed (m/s)")
+    ax.set_title("Speed Profile by Condition")
     ax.legend()
     ax.grid(axis="y", alpha=0.3)
     ax.set_ylim(bottom=0)
@@ -284,18 +284,21 @@ def plot_path_heatmap(nav_by_cond: dict):
         ax = axes[idx]
         dfs = nav_by_cond.get(cond, [])
         if not dfs:
-            ax.set_title(f"{label} (데이터 없음)")
+            ax.set_title(f"{label} (No Data)")
             continue
 
         all_x, all_z, all_speed = [], [], []
         for df in dfs:
-            all_x.extend(df["player_x"].values)
-            all_z.extend(df["player_z"].values)
-            all_speed.extend(df["speed_ms"].values)
+            # Filter out points outside route corridor (x ≈ 25-45m)
+            mask = (df["player_x"] > 20) & (df["player_x"] < 50)
+            filtered = df[mask]
+            all_x.extend(filtered["player_x"].values)
+            all_z.extend(filtered["player_z"].values)
+            all_speed.extend(filtered["speed_ms"].values)
 
         sc = ax.scatter(all_x, all_z, c=all_speed, cmap="RdYlGn",
                        s=2, alpha=0.5, vmin=0, vmax=2.0)
-        fig.colorbar(sc, ax=ax, label="속도 (m/s)", shrink=0.8)
+        fig.colorbar(sc, ax=ax, label="Speed (m/s)", shrink=0.8)
 
         # 웨이포인트 표시
         from trajectory_utils import WAYPOINT_POSITIONS
@@ -307,7 +310,7 @@ def plot_path_heatmap(nav_by_cond: dict):
 
         ax.set_xlabel("X (m)")
         ax.set_ylabel("Z (m)")
-        ax.set_title(f"{label} - 경로 히트맵")
+        ax.set_title(f"{label} - Path Heatmap")
         ax.set_aspect("equal")
         ax.grid(alpha=0.2)
 
@@ -341,13 +344,13 @@ def plot_hesitation_zones(nav_by_cond: dict, zones_df: pd.DataFrame):
                 continue
             sizes = cond_zones["duration_s"] * 15
             ax.scatter(cond_zones["center_x"], cond_zones["center_z"],
-                      s=sizes, alpha=0.5, label=f"{label} 정체 구간",
+                      s=sizes, alpha=0.5, label=f"{label} Hesitation",
                       color=CONDITION_COLORS[cond], edgecolors="black",
                       linewidth=0.5)
 
     ax.set_xlabel("X (m)")
     ax.set_ylabel("Z (m)")
-    ax.set_title("정체 구간 분포 (원 크기 = 체류 시간)")
+    ax.set_title("Hesitation Zone Distribution (circle size = dwell time)")
     handles, labels = ax.get_legend_handles_labels()
     if handles:
         ax.legend()
@@ -384,9 +387,9 @@ def plot_waypoint_dwell_time(dwell_df: pd.DataFrame):
         ax.axvspan(wp_idx - 0.4, wp_idx + width + 0.4,
                   alpha=0.1, color="red")
 
-    ax.set_xlabel("웨이포인트")
-    ax.set_ylabel("체류 시간 (s)")
-    ax.set_title("웨이포인트별 체류 시간 (조건 비교)")
+    ax.set_xlabel("Waypoint")
+    ax.set_ylabel("Dwell Time (s)")
+    ax.set_title("Dwell Time per Waypoint (by Condition)")
     ax.set_xticks(x + width / 2)
     ax.set_xticklabels(WAYPOINTS, rotation=45)
     ax.legend()
@@ -416,14 +419,14 @@ def plot_path_length_comparison(stats_df: pd.DataFrame):
     # 이상 경로 수평선
     ideal = stats_df["ideal_path_m"].iloc[0] if not stats_df.empty else 0
     ax.axhline(y=ideal, color="red", linestyle="--", alpha=0.7,
-              label=f"이상 경로 ({ideal:.0f}m)")
+              label=f"Ideal Path ({ideal:.0f}m)")
 
     for bar, m in zip(bars, means):
         ax.text(bar.get_x() + bar.get_width() / 2., bar.get_height() + 2,
                f"{m:.0f}m", ha="center", va="bottom", fontsize=10)
 
-    ax.set_ylabel("경로 길이 (m)")
-    ax.set_title("조건별 경로 길이 비교")
+    ax.set_ylabel("Path Length (m)")
+    ax.set_title("Path Length by Condition")
     ax.legend()
 
     # 통계 검정
@@ -447,14 +450,14 @@ def plot_path_length_comparison(stats_df: pd.DataFrame):
                   color=[CONDITION_COLORS[c] for c in CONDITIONS])
 
     ax.axhline(y=1.0, color="red", linestyle="--", alpha=0.7,
-              label="이상 효율 (1.0)")
+              label="Ideal Efficiency (1.0)")
 
     for bar, m in zip(bars, means_eff):
         ax.text(bar.get_x() + bar.get_width() / 2., bar.get_height() + 0.01,
                f"{m:.2f}", ha="center", va="bottom", fontsize=10)
 
-    ax.set_ylabel("경로 효율 (이상/실제)")
-    ax.set_title("조건별 경로 효율")
+    ax.set_ylabel("Path Efficiency (ideal/actual)")
+    ax.set_title("Path Efficiency by Condition")
     ax.legend()
     ax.set_ylim(0, 1.2)
 
@@ -470,18 +473,19 @@ def main():
     parser = argparse.ArgumentParser(description="궤적 분석 (ISMAR 로깅)")
     parser.add_argument("--data-dir", type=str, default=None,
                         help="데이터 디렉토리 (기본: data/raw/)")
-    parser.add_argument("--demo", action="store_true",
-                        help="데이터 파일이 없을 때 데모 데이터로 실행")
+    parser.add_argument("--fallback", action="store_true",
+                        help="데이터 파일이 없을 때 fallback 데이터로 실행")
     args = parser.parse_args()
 
     data_dir = Path(args.data_dir) if args.data_dir else RAW_DIR
+    (OUTPUT_DIR / "csv").mkdir(exist_ok=True)
 
     print("=" * 60)
     print("궤적 분석 (ISMAR 로깅 시스템)")
     print("=" * 60)
 
     # 데이터 로드
-    nav_by_cond, sessions_meta = load_all_nav_traces(data_dir, allow_demo=args.demo)
+    nav_by_cond, sessions_meta = load_all_nav_traces(data_dir, allow_fallback=args.fallback)
     total_sessions = sum(len(v) for v in nav_by_cond.values())
     total_samples = sum(len(df) for dfs in nav_by_cond.values() for df in dfs)
     print(f"세션 수: {total_sessions}")
@@ -547,16 +551,16 @@ def main():
 
     # ── 결과 CSV 저장 ──
     if not zones_df.empty:
-        zones_df.to_csv(OUTPUT_DIR / "trajectory_hesitation_zones.csv", index=False)
-        print(f"  -> {OUTPUT_DIR / 'trajectory_hesitation_zones.csv'} 저장")
+        zones_df.to_csv(OUTPUT_DIR / "csv" / "trajectory_hesitation_zones.csv", index=False)
+        print(f"  -> {OUTPUT_DIR / 'csv' / 'trajectory_hesitation_zones.csv'} 저장")
 
     if not dwell_df.empty:
-        dwell_df.to_csv(OUTPUT_DIR / "trajectory_dwell_time.csv", index=False)
-        print(f"  -> {OUTPUT_DIR / 'trajectory_dwell_time.csv'} 저장")
+        dwell_df.to_csv(OUTPUT_DIR / "csv" / "trajectory_dwell_time.csv", index=False)
+        print(f"  -> {OUTPUT_DIR / 'csv' / 'trajectory_dwell_time.csv'} 저장")
 
     if not stats_df.empty:
-        stats_df.to_csv(OUTPUT_DIR / "trajectory_path_stats.csv", index=False)
-        print(f"  -> {OUTPUT_DIR / 'trajectory_path_stats.csv'} 저장")
+        stats_df.to_csv(OUTPUT_DIR / "csv" / "trajectory_path_stats.csv", index=False)
+        print(f"  -> {OUTPUT_DIR / 'csv' / 'trajectory_path_stats.csv'} 저장")
 
     print("\n분석 완료.")
 

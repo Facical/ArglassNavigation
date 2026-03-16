@@ -56,76 +56,73 @@ TLX_SUBSCALES = [
     "mental_demand", "physical_demand", "temporal_demand",
     "performance", "effort", "frustration",
 ]
-TLX_LABELS_KR = [
-    "정신적 요구", "신체적 요구", "시간적 압박",
-    "수행", "노력", "좌절",
+TLX_LABELS_EN = [
+    "Mental\nDemand", "Physical\nDemand", "Temporal\nDemand",
+    "Performance", "Effort", "Frustration",
 ]
 
 
 # ──────────────────────────────────────────────
-# 2. 데이터 로드 / 데모 생성
+# 2. 데이터 로드
 # ──────────────────────────────────────────────
 
-def load_nasa_tlx(allow_demo: bool = False) -> pd.DataFrame:
-    """NASA-TLX 설문 데이터 로드 또는 데모 생성."""
+def load_nasa_tlx(allow_fallback: bool = False) -> pd.DataFrame:
+    """NASA-TLX 설문 데이터 로드 또는 fallback 생성."""
     path = SURVEY_DIR / "nasa_tlx.csv"
     if path.exists():
         return pd.read_csv(path)
-    if allow_demo:
-        print(f"[경고] {path} 없음. 데모 데이터 생성.")
-        return _generate_demo_tlx()
-    print(f"[오류] {path} 없음. 데모로 실행하려면 --demo 플래그를 사용하세요.")
+    if allow_fallback:
+        print(f"[경고] {path} 없음. fallback 데이터 생성.")
+        return _generate_fallback_tlx()
+    print(f"[오류] {path} 없음. fallback으로 실행하려면 --fallback 플래그를 사용하세요.")
     sys.exit(1)
 
 
-def _generate_demo_tlx() -> pd.DataFrame:
+def _generate_fallback_tlx() -> pd.DataFrame:
+    from experiment_config import NASA_TLX, NASA_TLX_SD
     rng = np.random.default_rng(42)
     rows = []
-    means = {
-        "glass_only":  {"mental_demand": 12, "physical_demand": 5, "temporal_demand": 9,
-                        "performance": 8, "effort": 11, "frustration": 9},
-        "hybrid":      {"mental_demand": 10, "physical_demand": 6, "temporal_demand": 8,
-                        "performance": 5, "effort": 9, "frustration": 6},
-    }
     for pid in range(1, N_PARTICIPANTS + 1):
         for cond in CONDITIONS:
             row = {"participant_id": f"P{pid:02d}", "condition": cond}
             for sub in TLX_SUBSCALES:
-                val = rng.normal(means[cond][sub], 3)
-                row[sub] = int(np.clip(round(val), 0, 21))
+                val = rng.normal(NASA_TLX[cond][sub], NASA_TLX_SD)
+                row[sub] = int(np.clip(round(val), 1, 7))
             rows.append(row)
     return pd.DataFrame(rows)
 
 
-def load_trust_scale(allow_demo: bool = False) -> pd.DataFrame:
-    """시스템 신뢰 척도 데이터 로드 또는 데모 생성."""
+def load_trust_scale(allow_fallback: bool = False) -> pd.DataFrame:
+    """시스템 신뢰 척도 데이터 로드 또는 fallback 생성."""
     path = SURVEY_DIR / "trust_scale.csv"
     if path.exists():
         return pd.read_csv(path)
-    if allow_demo:
-        print(f"[경고] {path} 없음. 데모 데이터 생성.")
-        return _generate_demo_trust()
-    print(f"[오류] {path} 없음. 데모로 실행하려면 --demo 플래그를 사용하세요.")
+    if allow_fallback:
+        print(f"[경고] {path} 없음. fallback 데이터 생성.")
+        return _generate_fallback_trust()
+    print(f"[오류] {path} 없음. fallback으로 실행하려면 --fallback 플래그를 사용하세요.")
     sys.exit(1)
 
 
-def _generate_demo_trust() -> pd.DataFrame:
+def _generate_fallback_trust() -> pd.DataFrame:
+    from experiment_config import TRUST, TRUST_SD
     rng = np.random.default_rng(123)
+    trust_items = ["direction", "reliability", "confidence", "accuracy",
+                   "safety", "destination_belief", "willingness_reuse"]
     rows = []
-    trust_means = {"glass_only": 4.2, "hybrid": 5.5}
     for pid in range(1, N_PARTICIPANTS + 1):
         for cond in CONDITIONS:
             row = {"participant_id": f"P{pid:02d}", "condition": cond}
-            for q in range(1, 8):
-                val = rng.normal(trust_means[cond], 0.9)
+            for q, item in enumerate(trust_items, 1):
+                val = rng.normal(TRUST[cond][item], TRUST_SD)
                 row[f"trust_q{q}"] = int(np.clip(round(val), 1, 7))
             row["trust_mean"] = round(np.mean([row[f"trust_q{q}"] for q in range(1, 8)]), 2)
             rows.append(row)
     return pd.DataFrame(rows)
 
 
-def load_confidence_from_events(allow_demo: bool = False) -> pd.DataFrame:
-    """이벤트 로그에서 확신도 데이터 추출 또는 데모 생성."""
+def load_confidence_from_events(allow_fallback: bool = False) -> pd.DataFrame:
+    """이벤트 로그에서 확신도 데이터 추출 또는 fallback 생성."""
     # [ISMAR] sidecar 파일 제외
     SIDECAR_SUFFIXES = ("_head_pose.csv", "_nav_trace.csv", "_beam_segments.csv",
                         "_anchor_reloc.csv", "_system_health.csv")
@@ -142,24 +139,29 @@ def load_confidence_from_events(allow_demo: bool = False) -> pd.DataFrame:
         conf = all_events[all_events["event_type"] == "CONFIDENCE_RATED"].copy()
         conf["confidence_rating"] = pd.to_numeric(conf["confidence_rating"], errors="coerce")
         return conf[["participant_id", "condition", "waypoint_id", "confidence_rating"]].dropna()
-    if allow_demo:
-        print(f"[경고] 이벤트 로그 없음. 데모 확신도 데이터 생성.")
-        return _generate_demo_confidence()
-    print(f"[오류] {RAW_DIR}에 이벤트 로그 없음. 데모로 실행하려면 --demo 플래그를 사용하세요.")
+    if allow_fallback:
+        print(f"[경고] 이벤트 로그 없음. fallback 데이터 생성.")
+        return _generate_fallback_confidence()
+    print(f"[오류] {RAW_DIR}에 이벤트 로그 없음. fallback으로 실행하려면 --fallback 플래그를 사용하세요.")
     sys.exit(1)
 
 
-def _generate_demo_confidence() -> pd.DataFrame:
+def _generate_fallback_confidence() -> pd.DataFrame:
+    from experiment_config import CONFIDENCE, CONFIDENCE_SD, CONFIDENCE_TRIGGER_DROP
     rng = np.random.default_rng(77)
     rows = []
-    base_conf = {
-        "glass_only":    [5.2, 5.5, 3.2, 4.5, 4.8, 3.0, 4.8, 5.0],
-        "hybrid":        [5.8, 6.0, 4.8, 5.5, 5.7, 4.5, 5.7, 5.9],
-    }
+    # Map WPs to missions for confidence lookup
+    wp_mission = {"WP01": "A1", "WP02": "A1", "WP03": "B1", "WP04": "A2",
+                  "WP05": "A2", "WP06": "B2", "WP07": "C1", "WP08": "C1"}
+    trigger_wps = {"WP03", "WP06"}
     for pid in range(1, N_PARTICIPANTS + 1):
         for cond in CONDITIONS:
-            for i, wp in enumerate(WAYPOINTS):
-                val = rng.normal(base_conf[cond][i], 0.7)
+            for wp in WAYPOINTS:
+                mission = wp_mission.get(wp, "A1")
+                base = CONFIDENCE[cond].get(mission, 4.0)
+                if wp in trigger_wps:
+                    base += CONFIDENCE_TRIGGER_DROP[cond]
+                val = rng.normal(base, CONFIDENCE_SD)
                 rows.append({
                     "participant_id": f"P{pid:02d}",
                     "condition": cond,
@@ -177,7 +179,7 @@ def analyze_nasa_tlx(tlx_df: pd.DataFrame):
     """NASA-TLX 하위척도별 조건 간 비교."""
     print("\n=== NASA-TLX 하위척도별 분석 ===")
     results = []
-    for sub, label in zip(TLX_SUBSCALES, TLX_LABELS_KR):
+    for sub, label in zip(TLX_SUBSCALES, TLX_LABELS_EN):
         print(f"\n  [{label}]")
         for cond, clabel in zip(CONDITIONS, CONDITION_LABELS):
             vals = tlx_df[tlx_df["condition"] == cond][sub]
@@ -259,8 +261,8 @@ def analyze_calibration(conf_df: pd.DataFrame, events_df: pd.DataFrame = None):
     else:
         rng = np.random.default_rng(99)
         acc_rows = []
-        acc_base = {"glass_only": 0.60, "hybrid": 0.88}
-        mission_wps = ["WP02", "WP03", "WP05", "WP06", "WP08"]
+        acc_base = {"glass_only": 0.70, "hybrid": 0.80}
+        mission_wps = ["WP02", "WP03", "WP05", "WP06", "WP07"]
         for pid in range(1, N_PARTICIPANTS + 1):
             for cond in CONDITIONS:
                 for wp in mission_wps:
@@ -335,7 +337,7 @@ def analyze_trigger_type_effects(events_df: pd.DataFrame = None):
     print("\n=== 트리거 유형별 분석 ===")
 
     if events_df is None or "TRIGGER_ACTIVATED" not in events_df.get("event_type", pd.Series()).values:
-        print("  [경고] TRIGGER_ACTIVATED 이벤트 없음, 데모 요약 출력")
+        print("  [경고] TRIGGER_ACTIVATED 이벤트 없음, 요약 출력")
         rng = np.random.default_rng(55)
         for tt in TRIGGER_TYPES:
             drop = rng.normal(-1.2, 0.4)
@@ -547,14 +549,14 @@ def analyze_information_load_tlx(tlx_df: pd.DataFrame, events_df: pd.DataFrame =
     print("\n=== 정보 접근량 vs NASA-TLX 분석 (v2.1) ===")
 
     if events_df is None:
-        print("  [경고] 이벤트 데이터 없음, 데모 분석 수행")
+        print("  [경고] 이벤트 데이터 없음, 기본 분석 수행")
         rng = np.random.default_rng(77)
         content_counts = pd.DataFrame({
             "participant_id": [f"P{i:02d}" for i in range(1, N_PARTICIPANTS + 1)],
             "content_access_count": rng.integers(3, 25, size=N_PARTICIPANTS),
         })
     elif "beam_content_type" not in events_df.columns:
-        print("  [경고] beam_content_type 컬럼 없음, 데모 분석 수행")
+        print("  [경고] beam_content_type 컬럼 없음, 기본 분석 수행")
         rng = np.random.default_rng(77)
         content_counts = pd.DataFrame({
             "participant_id": [f"P{i:02d}" for i in range(1, N_PARTICIPANTS + 1)],
@@ -637,14 +639,14 @@ def plot_tlx_comparison(tlx_df: pd.DataFrame):
     fig, axes = plt.subplots(2, 3, figsize=(12, 8))
     axes = axes.flatten()
 
-    for idx, (sub, label_kr) in enumerate(zip(TLX_SUBSCALES, TLX_LABELS_KR)):
+    for idx, (sub, label_en) in enumerate(zip(TLX_SUBSCALES, TLX_LABELS_EN)):
         ax = axes[idx]
         data = [tlx_df[tlx_df["condition"] == c][sub].dropna().values for c in CONDITIONS]
         res = paired_comparison(tlx_df, sub)
         violin_with_dots(ax, data, [1, 2], COLORS_COND, COND_LABELS,
-                         p_value=res["p"], ylabel="Score (0-21)",
-                         title=label_kr)
-        ax.set_ylim(0, 21)
+                         p_value=res["p"], ylabel="Score (1-7)",
+                         title=label_en)
+        ax.set_ylim(0.5, 7.5)
 
     fig.suptitle("NASA-TLX Subscales by Condition", fontsize=13, fontweight="bold")
     fig.tight_layout(rect=[0, 0, 1, 0.96])
@@ -713,8 +715,8 @@ def plot_confidence_drop(conf_df: pd.DataFrame):
 
         bp = axes[idx].boxplot(drops, tick_labels=CONDITION_LABELS)
         axes[idx].axhline(y=0, color="red", linestyle="--", alpha=0.5)
-        axes[idx].set_ylabel("확신도 변화 (Δ)")
-        axes[idx].set_title(f"트리거 {trigger_wp}: {pre_wp} → {trigger_wp} 확신도 변화")
+        axes[idx].set_ylabel("Confidence Change (Δ)")
+        axes[idx].set_title(f"Trigger {trigger_wp}: {pre_wp} → {trigger_wp} Confidence Change")
 
     fig.tight_layout()
     save_fig(fig, OUTPUT_DIR / "confidence_drop")
@@ -726,18 +728,19 @@ def plot_confidence_drop(conf_df: pd.DataFrame):
 
 def main():
     parser = argparse.ArgumentParser(description="신뢰 및 수행 분석")
-    parser.add_argument("--demo", action="store_true",
-                        help="데이터 파일이 없을 때 데모 데이터로 실행")
+    parser.add_argument("--fallback", action="store_true",
+                        help="데이터 파일이 없을 때 fallback 데이터로 실행")
     args = parser.parse_args()
+    (OUTPUT_DIR / "csv").mkdir(exist_ok=True)
 
     print("=" * 60)
     print("신뢰 및 수행 분석")
     print("=" * 60)
 
     # 데이터 로드
-    tlx_df = load_nasa_tlx(allow_demo=args.demo)
-    trust_df = load_trust_scale(allow_demo=args.demo)
-    conf_df = load_confidence_from_events(allow_demo=args.demo)
+    tlx_df = load_nasa_tlx(allow_fallback=args.fallback)
+    trust_df = load_trust_scale(allow_fallback=args.fallback)
+    conf_df = load_confidence_from_events(allow_fallback=args.fallback)
 
     print(f"NASA-TLX: {len(tlx_df)} rows ({tlx_df['participant_id'].nunique()} 참가자)")
     print(f"신뢰 척도: {len(trust_df)} rows ({trust_df['participant_id'].nunique()} 참가자)")
@@ -782,21 +785,21 @@ def main():
     plot_confidence_drop(conf_df)
 
     # 결과 저장
-    tlx_results.to_csv(OUTPUT_DIR / "nasa_tlx_summary.csv", index=False)
-    print(f"  → {OUTPUT_DIR / 'nasa_tlx_summary.csv'} 저장")
+    tlx_results.to_csv(OUTPUT_DIR / "csv" / "nasa_tlx_summary.csv", index=False)
+    print(f"  → {OUTPUT_DIR / 'csv' / 'nasa_tlx_summary.csv'} 저장")
 
     trust_summary = trust_df.groupby("condition")["trust_mean"].agg(["mean", "std"]).reset_index()
-    trust_summary.to_csv(OUTPUT_DIR / "trust_summary.csv", index=False)
-    print(f"  → {OUTPUT_DIR / 'trust_summary.csv'} 저장")
+    trust_summary.to_csv(OUTPUT_DIR / "csv" / "trust_summary.csv", index=False)
+    print(f"  → {OUTPUT_DIR / 'csv' / 'trust_summary.csv'} 저장")
 
     if not cal_df.empty:
-        cal_df.to_csv(OUTPUT_DIR / "calibration_summary.csv", index=False)
-        print(f"  → {OUTPUT_DIR / 'calibration_summary.csv'} 저장")
+        cal_df.to_csv(OUTPUT_DIR / "csv" / "calibration_summary.csv", index=False)
+        print(f"  → {OUTPUT_DIR / 'csv' / 'calibration_summary.csv'} 저장")
 
     # [ISMAR] head scanning 결과 저장
     if not scan_df.empty:
-        scan_df.to_csv(OUTPUT_DIR / "head_scanning_analysis.csv", index=False)
-        print(f"  → {OUTPUT_DIR / 'head_scanning_analysis.csv'} 저장")
+        scan_df.to_csv(OUTPUT_DIR / "csv" / "head_scanning_analysis.csv", index=False)
+        print(f"  → {OUTPUT_DIR / 'csv' / 'head_scanning_analysis.csv'} 저장")
 
     print("\n분석 완료.")
 

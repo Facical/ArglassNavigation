@@ -12,15 +12,12 @@ namespace ARNavExperiment.Core
         public Language CurrentLanguage { get; private set; } = Language.EN;
         public event Action<Language> OnLanguageChanged;
 
-        private const string PREF_KEY = "ARNav_Language";
-
         private void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
-
-            string saved = PlayerPrefs.GetString(PREF_KEY, "EN");
-            CurrentLanguage = saved == "KO" ? Language.KO : Language.EN;
+            // 항상 영어로 시작 (실험 영상 녹화 시 한국어 노출 방지)
+            CurrentLanguage = Language.EN;
         }
 
         public void ToggleLanguage()
@@ -32,8 +29,6 @@ namespace ARNavExperiment.Core
         {
             if (lang == CurrentLanguage) return;
             CurrentLanguage = lang;
-            PlayerPrefs.SetString(PREF_KEY, lang.ToString());
-            PlayerPrefs.Save();
             OnLanguageChanged?.Invoke(lang);
         }
 

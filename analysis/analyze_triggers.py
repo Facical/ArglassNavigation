@@ -40,10 +40,10 @@ CONDITIONS = ["glass_only", "hybrid"]
 CONDITION_LABELS = ["Glass Only", "Hybrid"]
 TRIGGER_TYPES = ["T1", "T2", "T3", "T4"]
 TRIGGER_LABELS = {
-    "T1": "안내 열화",
-    "T2": "정보 불일치",
-    "T3": "해상도 부족",
-    "T4": "안내 부재",
+    "T1": "Guidance Degradation",
+    "T2": "Info Mismatch",
+    "T3": "Resolution Deficit",
+    "T4": "Guidance Absence",
 }
 N_PARTICIPANTS = 24
 BEAM_CONTENT_EVENTS = [
@@ -63,11 +63,11 @@ TRIGGER_EXPECTED_CONTENT = {
 
 
 # ──────────────────────────────────────────────
-# 2. 데이터 로드 / 데모 생성
+# 2. 데이터 로드
 # ──────────────────────────────────────────────
 
-def load_events(allow_demo: bool = False) -> pd.DataFrame:
-    """이벤트 로그 로드 또는 데모 생성."""
+def load_events(allow_fallback: bool = False) -> pd.DataFrame:
+    """이벤트 로그 로드 또는 fallback 생성."""
     # [ISMAR] sidecar 파일 제외
     SIDECAR_SUFFIXES = ("_head_pose.csv", "_nav_trace.csv", "_beam_segments.csv",
                         "_anchor_reloc.csv", "_system_health.csv")
@@ -85,10 +85,10 @@ def load_events(allow_demo: bool = False) -> pd.DataFrame:
                     df[col] = ""
             frames.append(df)
         return pd.concat(frames, ignore_index=True)
-    if allow_demo:
-        print("[경고] 이벤트 로그 없음. 데모 데이터 생성.")
-        return generate_demo_data()
-    print(f"[오류] {RAW_DIR}에 이벤트 로그 없음. 데모로 실행하려면 --demo 플래그를 사용하세요.")
+    if allow_fallback:
+        print("[경고] 이벤트 로그 없음. fallback 데이터 생성.")
+        return generate_fallback_data()
+    print(f"[오류] {RAW_DIR}에 이벤트 로그 없음. fallback으로 실행하려면 --fallback 플래그를 사용하세요.")
     sys.exit(1)
 
 
@@ -116,8 +116,8 @@ def load_nav_trace() -> pd.DataFrame:
     return pd.DataFrame()
 
 
-def generate_demo_data() -> pd.DataFrame:
-    """트리거 관련 데모 데이터 생성."""
+def generate_fallback_data() -> pd.DataFrame:
+    """트리거 관련 fallback 데이터 생성."""
     rng = np.random.default_rng(88)
     rows = []
     base_time = pd.Timestamp("2026-03-15T10:00:00")
@@ -130,20 +130,20 @@ def generate_demo_data() -> pd.DataFrame:
 
     # 반응 시간 기댓값 (조건 × 트리거 유형)
     rt_base = {
-        "glass_only":    {"T1": 5.5, "T2": 7.0, "T3": 5.0, "T4": 8.0},
-        "hybrid":        {"T1": 3.0, "T2": 4.0, "T3": 3.0, "T4": 4.5},
+        "glass_only":    {"T1": 8.0, "T2": 3.0, "T3": 18.0, "T4": 22.0},
+        "hybrid":        {"T1": 6.0, "T2": 2.5, "T3": 12.0, "T4": 15.0},
     }
 
     # 확신도 변화 기댓값 (트리거 전후)
     conf_drop = {
-        "glass_only":    {"T1": -1.5, "T2": -2.0, "T3": -1.0, "T4": -2.5},
-        "hybrid":        {"T1": -0.5, "T2": -0.8, "T3": -0.4, "T4": -1.0},
+        "glass_only":    {"T1": -1.0, "T2": -0.8, "T3": -0.6, "T4": -1.2},
+        "hybrid":        {"T1": -0.5, "T2": -0.4, "T3": -0.3, "T4": -0.6},
     }
 
     # 오방향 선택률 기댓값
     wrong_dir_base = {
-        "glass_only":    {"T1": 0.18, "T2": 0.35, "T3": 0.22, "T4": 0.40},
-        "hybrid":        {"T1": 0.05, "T2": 0.12, "T3": 0.08, "T4": 0.15},
+        "glass_only":    {"T1": 0.12, "T2": 0.18, "T3": 0.10, "T4": 0.20},
+        "hybrid":        {"T1": 0.05, "T2": 0.08, "T3": 0.04, "T4": 0.10},
     }
 
     for pid in range(1, N_PARTICIPANTS + 1):
@@ -167,7 +167,7 @@ def generate_demo_data() -> pd.DataFrame:
                                    trigger_type=ttype))
 
                 # 반응 시간
-                rt = max(1, rng.normal(rt_base[cond][ttype], 1.5))
+                rt = max(1, rng.normal(rt_base[cond][ttype], 5.0))
 
                 # Hybrid: 기기 전환 여부
                 if cond == "hybrid":
@@ -635,9 +635,9 @@ def plot_reaction_time_by_trigger(rt_df: pd.DataFrame):
             rts.append(row["mean_rt_s"].values[0] if len(row) > 0 else 0)
         ax.bar(x + i * width, rts, width, label=label)
 
-    ax.set_xlabel("트리거 유형")
-    ax.set_ylabel("반응시간 (s)")
-    ax.set_title("트리거 유형별 조건 간 반응시간")
+    ax.set_xlabel("Trigger Type")
+    ax.set_ylabel("Reaction Time (s)")
+    ax.set_title("Reaction Time by Trigger Type and Condition")
     ax.set_xticks(x + width / 2)
     ax.set_xticklabels([f"{tt}\n({TRIGGER_LABELS[tt]})" for tt in TRIGGER_TYPES])
     ax.legend()
@@ -672,8 +672,8 @@ def plot_confidence_drop_by_trigger(drop_df: pd.DataFrame):
                 ax.text(j, i, f"{val:+.1f}", ha="center", va="center",
                         color="white" if val < -1.5 else "black", fontsize=11)
 
-    ax.set_title("트리거 유형별 확신도 변화량 (Δ)")
-    fig.colorbar(im, ax=ax, label="확신도 변화 (Δ)")
+    ax.set_title("Confidence Change by Trigger Type (Δ)")
+    fig.colorbar(im, ax=ax, label="Confidence Change (Δ)")
     fig.tight_layout()
     save_fig(fig, OUTPUT_DIR / "trigger_confidence_heatmap")
 
@@ -692,8 +692,8 @@ def plot_trigger_switch_rate(switch_df: pd.DataFrame):
          for tt in TRIGGER_TYPES],
         color=colors,
     )
-    ax.set_ylabel("Beam Pro 전환율 (%)")
-    ax.set_title("트리거 유형별 Beam Pro 전환율 (Hybrid 조건)")
+    ax.set_ylabel("Beam Pro Switch Rate (%)")
+    ax.set_title("Beam Pro Switch Rate by Trigger Type (Hybrid)")
     ax.set_ylim(0, 100)
 
     for bar in bars:
@@ -711,15 +711,17 @@ def plot_trigger_switch_rate(switch_df: pd.DataFrame):
 
 def main():
     parser = argparse.ArgumentParser(description="트리거 반응 분석")
-    parser.add_argument("--demo", action="store_true",
-                        help="데이터 파일이 없을 때 데모 데이터로 실행")
+    parser.add_argument("--fallback", action="store_true",
+                        help="데이터 파일이 없을 때 fallback 데이터로 실행")
     args = parser.parse_args()
+
+    (OUTPUT_DIR / "csv").mkdir(exist_ok=True)
 
     print("=" * 60)
     print("트리거 반응 분석 (v2.1)")
     print("=" * 60)
 
-    df = load_events(allow_demo=args.demo)
+    df = load_events(allow_fallback=args.fallback)
     print(f"총 이벤트 수: {len(df)}")
 
     # [ISMAR] nav_trace sidecar 로드 시도
@@ -749,8 +751,8 @@ def main():
                              ("trigger_switch_rate", switch_df),
                              ("trigger_speed_analysis", speed_df)]:
         if not result_df.empty:
-            result_df.to_csv(OUTPUT_DIR / f"{name}.csv", index=False)
-            print(f"  → {OUTPUT_DIR / f'{name}.csv'} 저장")
+            result_df.to_csv(OUTPUT_DIR / "csv" / f"{name}.csv", index=False)
+            print(f"  → {OUTPUT_DIR / 'csv' / f'{name}.csv'} 저장")
 
     print("\n분석 완료.")
 

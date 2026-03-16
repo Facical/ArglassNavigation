@@ -92,25 +92,25 @@ COMPARISON_PAGES = {
 
 
 # ──────────────────────────────────────────────
-# 2. 데이터 로드 / 데모 생성
+# 2. 데이터 로드
 # ──────────────────────────────────────────────
 
-def load_all_events(allow_demo: bool = False) -> pd.DataFrame:
+def load_all_events(allow_fallback: bool = False) -> pd.DataFrame:
     """data/raw/ 내 모든 이벤트 로그 CSV를 통합하여 반환.
 
-    allow_demo=True인 경우, CSV가 없거나 설문 이벤트가 없으면 데모 데이터를 생성.
+    allow_fallback=True인 경우, CSV가 없거나 설문 이벤트가 없으면 fallback 데이터를 생성.
     """
     csv_files = sorted(
         f for f in RAW_DIR.glob("P*_*.csv")
         if not any(f.name.endswith(s) for s in SIDECAR_SUFFIXES)
     )
     if not csv_files:
-        if allow_demo:
-            print(f"[경고] {RAW_DIR}에 CSV 파일이 없습니다. 데모 데이터를 생성합니다.")
-            return generate_demo_data()
+        if allow_fallback:
+            print(f"[경고] {RAW_DIR}에 CSV 파일이 없습니다. fallback 데이터를 생성합니다.")
+            return generate_fallback_data()
         else:
             print(f"[오류] {RAW_DIR}에 CSV 파일이 없습니다.")
-            print("  데모 데이터로 실행하려면 --demo 플래그를 사용하세요.")
+            print("  fallback 데이터로 실행하려면 --fallback 플래그를 사용하세요.")
             sys.exit(1)
 
     frames = []
@@ -119,70 +119,45 @@ def load_all_events(allow_demo: bool = False) -> pd.DataFrame:
         frames.append(df)
     combined = pd.concat(frames, ignore_index=True)
 
-    # 설문 이벤트가 없으면 데모 데이터로 대체
-    survey_events = combined[combined["event_type"].isin([
-        "SURVEY_ITEM_ANSWERED", "SURVEY_COMPLETED",
-        "COMPARISON_SURVEY_ANSWERED", "COMPARISON_SURVEY_COMPLETED",
+    # 설문 응답 이벤트가 없으면 fallback 데이터로 대체 (완료 이벤트만 있는 경우 포함)
+    survey_answer_events = combined[combined["event_type"].isin([
+        "SURVEY_ITEM_ANSWERED", "COMPARISON_SURVEY_ANSWERED",
     ])]
-    if survey_events.empty:
-        if allow_demo:
-            print(f"[경고] 이벤트 로그에 설문 이벤트가 없습니다. 데모 데이터를 생성합니다.")
-            return generate_demo_data()
+    if survey_answer_events.empty:
+        if allow_fallback:
+            print(f"[경고] 이벤트 로그에 설문 이벤트가 없습니다. fallback 데이터를 생성합니다.")
+            return generate_fallback_data()
         else:
             print(f"[경고] 이벤트 로그에 설문 이벤트(SURVEY_ITEM_ANSWERED 등)가 없습니다.")
             print("  인앱 설문 데이터가 포함된 로그가 필요합니다.")
-            print("  데모 데이터로 실행하려면 --demo 플래그를 사용하세요.")
+            print("  fallback 데이터로 실행하려면 --fallback 플래그를 사용하세요.")
 
     return combined
 
 
-def generate_demo_data() -> pd.DataFrame:
-    """인앱 설문 데모 데이터 생성 (24명 x 2조건)."""
+def generate_fallback_data() -> pd.DataFrame:
+    """인앱 설문 fallback 데이터 생성 (24명 x 2조건)."""
+    from experiment_config import (NASA_TLX, NASA_TLX_SD, TRUST, TRUST_SD,
+                              PREF_PROBS, TRUST_COMP_PROBS)
     rng = np.random.default_rng(42)
     rows = []
     base_time = pd.Timestamp("2026-03-15T10:00:00")
 
-    # --- NASA-TLX 기댓값 (7점 척도) ---
-    tlx_means = {
-        "glass_only": {
-            "mental_demand": 5.0, "physical_demand": 3.5, "temporal_demand": 4.2,
-            "performance": 3.8, "effort": 4.8, "frustration": 4.5,
-        },
-        "hybrid": {
-            "mental_demand": 4.0, "physical_demand": 3.2, "temporal_demand": 3.5,
-            "performance": 3.0, "effort": 3.8, "frustration": 3.2,
-        },
-    }
-
-    # --- Trust 기댓값 (7점 척도) ---
-    trust_means = {
-        "glass_only": {
-            "direction": 4.0, "reliability": 4.3, "confidence": 4.0,
-            "accuracy": 4.5, "safety": 4.2, "destination_belief": 4.0,
-            "willingness_reuse": 4.4,
-        },
-        "hybrid": {
-            "direction": 5.5, "reliability": 5.6, "confidence": 5.3,
-            "accuracy": 5.7, "safety": 5.5, "destination_belief": 5.4,
-            "willingness_reuse": 5.8,
-        },
-    }
-
     # --- 비교 설문 기댓값 ---
-    # ~60% hybrid, ~30% glass, ~10% no preference
-    pref_probs = [0.30, 0.60, 0.10]  # glass, hybrid, no_preference
+    pref_probs = PREF_PROBS
     pref_choices = ["glass_only", "hybrid", "no_preference"]
 
-    trust_comp_probs = [0.25, 0.65, 0.10]  # glass, hybrid, same
+    trust_comp_probs = TRUST_COMP_PROBS
     trust_comp_choices = ["glass_only", "hybrid", "same"]
 
     reason_categories = [
-        "정보 접근성", "직관성", "시야 방해 최소", "화면 크기",
-        "양손 자유", "지도 활용", "기타",
+        "Info accessibility", "Intuitiveness", "Minimal view obstruction",
+        "Screen size", "Hands free", "Map usage", "Other",
     ]
 
     switch_behaviors = [
-        "자주 전환", "필요시만 전환", "거의 전환하지 않음", "기타",
+        "Frequent switching", "Switch only when needed",
+        "Rarely switched", "Other",
     ]
 
     for pid in range(1, N_PARTICIPANTS + 1):
@@ -195,7 +170,7 @@ def generate_demo_data() -> pd.DataFrame:
 
             # NASA-TLX 설문 응답
             for item in NASA_TLX_ITEMS:
-                val = int(np.clip(round(rng.normal(tlx_means[cond][item], 1.0)), 1, 7))
+                val = int(np.clip(round(rng.normal(NASA_TLX[cond][item], NASA_TLX_SD)), 1, 7))
                 t += pd.Timedelta(seconds=rng.uniform(3, 8))
                 rows.append(_event(t, participant_id, cond, "SURVEY_ITEM_ANSWERED",
                                    item_id=f"nasa_{item}", value=val,
@@ -208,7 +183,7 @@ def generate_demo_data() -> pd.DataFrame:
 
             # Trust 설문 응답
             for item in TRUST_ITEMS:
-                val = int(np.clip(round(rng.normal(trust_means[cond][item], 0.9)), 1, 7))
+                val = int(np.clip(round(rng.normal(TRUST[cond][item], TRUST_SD)), 1, 7))
                 t += pd.Timedelta(seconds=rng.uniform(3, 8))
                 rows.append(_event(t, participant_id, cond, "SURVEY_ITEM_ANSWERED",
                                    item_id=f"trust_{item}", value=val,
@@ -247,8 +222,8 @@ def generate_demo_data() -> pd.DataFrame:
 
         # Page 5: 제안
         t += pd.Timedelta(seconds=rng.uniform(10, 30))
-        suggestion = rng.choice(["화면 더 크게", "반응 속도 개선", "디자인 개선",
-                                  "잘 모르겠음", "만족함"])
+        suggestion = rng.choice(["Larger screen", "Faster response", "Better design",
+                                  "Not sure", "Satisfied"])
         rows.append(_event(t, participant_id, "", "COMPARISON_SURVEY_ANSWERED",
                            page=5, question="suggestion", answer=suggestion))
 
@@ -538,7 +513,7 @@ def analyze_comparison_survey(comp_df: pd.DataFrame) -> dict:
         print(f"\n  [선호 조건] (n={total})")
         for ans, cnt in pref_counts.items():
             label = {"glass_only": "Glass Only", "hybrid": "Hybrid",
-                     "no_preference": "선호 없음"}.get(ans, ans)
+                     "no_preference": "No Preference"}.get(ans, ans)
             print(f"    {label}: {cnt}명 ({cnt/total:.0%})")
         results["preferred_condition"] = pref_counts.to_dict()
 
@@ -625,12 +600,12 @@ def plot_fig5_nasa_tlx_violin(tlx_df: pd.DataFrame, tlx_results: pd.DataFrame):
             colors=COLORS_COND,
             labels=CONDITION_LABELS,
             p_value=p_val,
-            ylabel="점수 (1-7)" if idx == 0 else "",
-            title=NASA_TLX_LABELS_KR[NASA_TLX_ITEMS.index(item)],
+            ylabel="Score (1-7)" if idx == 0 else "",
+            title=NASA_TLX_LABELS[NASA_TLX_ITEMS.index(item)],
         )
         ax.set_ylim(0.5, 7.5)
 
-    fig.suptitle("Fig 5. NASA-TLX 하위척도별 조건 비교 (인앱, 7점)", fontsize=12,
+    fig.suptitle("Fig 5. NASA-TLX Subscales by Condition (In-app, 7-point)", fontsize=12,
                  fontweight="bold", y=1.02)
     fig.tight_layout()
     save_fig(fig, OUTPUT_DIR / "fig5_nasa_tlx_violin")
@@ -664,8 +639,8 @@ def plot_trust_violin(trust_df: pd.DataFrame, trust_results: pd.DataFrame):
             colors=COLORS_COND,
             labels=CONDITION_LABELS,
             p_value=p_val,
-            ylabel="Trust 평균 (1-7)",
-            title="Trust 평균점수",
+            ylabel="Trust Mean (1-7)",
+            title="Trust Mean Score",
         )
         ax.set_ylim(0.5, 7.5)
         fig.tight_layout()
@@ -708,12 +683,12 @@ def plot_trust_violin(trust_df: pd.DataFrame, trust_results: pd.DataFrame):
                     ax.text(j + width / 2, y_max + 0.5, marker,
                             ha="center", va="bottom", fontsize=9, fontweight="bold")
 
-    ax.set_xlabel("Trust 항목")
-    ax.set_ylabel("점수 (1-7)")
-    ax.set_title("Trust 항목별 조건 비교 (인앱, 7점)")
+    ax.set_xlabel("Trust Item")
+    ax.set_ylabel("Score (1-7)")
+    ax.set_title("Trust Items by Condition (In-app, 7-point)")
     ax.set_xticks(x + width / 2)
     ax.set_xticklabels(
-        [TRUST_LABELS_KR[TRUST_ITEMS.index(i)] for i in available_items],
+        [TRUST_LABELS[TRUST_ITEMS.index(i)] for i in available_items],
         rotation=20, ha="right",
     )
     ax.legend()
@@ -744,8 +719,8 @@ def plot_fig9_diverging_likert(tlx_df: pd.DataFrame, trust_df: pd.DataFrame):
 
     all_items = tlx_available + trust_available
     all_labels = (
-        [NASA_TLX_LABELS_KR[NASA_TLX_ITEMS.index(i)] for i in tlx_available] +
-        [TRUST_LABELS_KR[TRUST_ITEMS.index(i)] for i in trust_available]
+        [NASA_TLX_LABELS[NASA_TLX_ITEMS.index(i)] for i in tlx_available] +
+        [TRUST_LABELS[TRUST_ITEMS.index(i)] for i in trust_available]
     )
 
     if not all_items:
@@ -793,12 +768,12 @@ def plot_fig9_diverging_likert(tlx_df: pd.DataFrame, trust_df: pd.DataFrame):
     mid_color = "#ffffbf"
     pos_colors = ["#d9ef8b", "#91cf60", "#1a9850"]
     legend_colors = neg_colors + [mid_color] + pos_colors
-    legend_labels = ["1 (매우 낮음)", "2", "3", "4 (중립)", "5", "6", "7 (매우 높음)"]
+    legend_labels = ["1 (Very Low)", "2", "3", "4 (Neutral)", "5", "6", "7 (Very High)"]
     handles = [Patch(facecolor=c, label=l) for c, l in zip(legend_colors, legend_labels)]
     fig.legend(handles=handles, loc="lower center", ncol=7, fontsize=7,
                bbox_to_anchor=(0.5, -0.02))
 
-    fig.suptitle("Fig 9. NASA-TLX + Trust 응답 분포 (Diverging Likert, 7점)",
+    fig.suptitle("Fig 9. NASA-TLX + Trust Response Distribution (Diverging Likert, 7-point)",
                  fontsize=12, fontweight="bold")
     fig.tight_layout(rect=[0, 0.05, 1, 0.95])
     save_fig(fig, OUTPUT_DIR / "fig9_diverging_likert")
@@ -828,7 +803,7 @@ def plot_comparison_survey(comp_results: dict):
         ax = axes[ax_idx]
         pref = comp_results["preferred_condition"]
         label_map = {"glass_only": "Glass Only", "hybrid": "Hybrid",
-                     "no_preference": "선호 없음"}
+                     "no_preference": "No Preference"}
         color_map = {"glass_only": COLOR_GLASS, "hybrid": COLOR_HYBRID,
                      "no_preference": "#999999"}
         labels = [label_map.get(k, k) for k in pref.keys()]
@@ -839,14 +814,14 @@ def plot_comparison_survey(comp_results: dict):
             startangle=90, textprops={"fontsize": 9})
         for autotext in autotexts:
             autotext.set_fontweight("bold")
-        ax.set_title("선호 조건")
+        ax.set_title("Preferred Condition")
         ax_idx += 1
 
     # Plot 2: 신뢰 비교 (바)
     if "trust_comparison" in comp_results:
         ax = axes[ax_idx]
         tc = comp_results["trust_comparison"]
-        label_map = {"glass_only": "Glass Only", "hybrid": "Hybrid", "same": "동일"}
+        label_map = {"glass_only": "Glass Only", "hybrid": "Hybrid", "same": "Same"}
         color_map = {"glass_only": COLOR_GLASS, "hybrid": COLOR_HYBRID,
                      "same": "#999999"}
         labels = [label_map.get(k, k) for k in tc.keys()]
@@ -857,8 +832,8 @@ def plot_comparison_survey(comp_results: dict):
             h = bar.get_height()
             ax.text(bar.get_x() + bar.get_width() / 2., h + 0.3,
                     f"{int(h)}명", ha="center", va="bottom", fontsize=9)
-        ax.set_ylabel("응답 수")
-        ax.set_title("더 신뢰하는 조건")
+        ax.set_ylabel("Response Count")
+        ax.set_title("More Trusted Condition")
         ax_idx += 1
 
     # Plot 3: 선호 이유 (수평 바)
@@ -872,8 +847,8 @@ def plot_comparison_survey(comp_results: dict):
         ax.barh(y_pos, values, color=COLOR_HYBRID, alpha=0.8)
         ax.set_yticks(y_pos)
         ax.set_yticklabels(labels, fontsize=8)
-        ax.set_xlabel("응답 수")
-        ax.set_title("선호 이유")
+        ax.set_xlabel("Response Count")
+        ax.set_title("Preference Reason")
         ax.invert_yaxis()
         ax_idx += 1
 
@@ -888,8 +863,8 @@ def plot_comparison_survey(comp_results: dict):
         ax.barh(y_pos, values, color=COLOR_GLASS, alpha=0.8)
         ax.set_yticks(y_pos)
         ax.set_yticklabels(labels, fontsize=8)
-        ax.set_xlabel("응답 수")
-        ax.set_title("전환 행동 자기 보고")
+        ax.set_xlabel("Response Count")
+        ax.set_title("Switching Behavior Self-report")
         ax.invert_yaxis()
         ax_idx += 1
 
@@ -897,7 +872,7 @@ def plot_comparison_survey(comp_results: dict):
     for i in range(ax_idx, len(axes)):
         axes[i].set_visible(False)
 
-    fig.suptitle("비교 설문 결과", fontsize=12, fontweight="bold")
+    fig.suptitle("Comparison Survey Results", fontsize=12, fontweight="bold")
     fig.tight_layout()
     save_fig(fig, OUTPUT_DIR / "comparison_survey")
 
@@ -921,8 +896,8 @@ def run_batch_analysis(tlx_df: pd.DataFrame, trust_df: pd.DataFrame):
             tlx_available.append("tlx_total")
         all_dvs.extend(tlx_available)
         all_labels.extend(
-            [NASA_TLX_LABELS_KR[NASA_TLX_ITEMS.index(i)] if i in NASA_TLX_ITEMS
-             else "TLX 총점" for i in tlx_available]
+            [NASA_TLX_LABELS[NASA_TLX_ITEMS.index(i)] if i in NASA_TLX_ITEMS
+             else "TLX Total" for i in tlx_available]
         )
         combined_df = tlx_df[["participant_id", "condition"] + tlx_available].copy()
 
@@ -933,8 +908,8 @@ def run_batch_analysis(tlx_df: pd.DataFrame, trust_df: pd.DataFrame):
             trust_available.append("trust_mean")
         all_dvs.extend(trust_available)
         all_labels.extend(
-            [TRUST_LABELS_KR[TRUST_ITEMS.index(i)] if i in TRUST_ITEMS
-             else "Trust 평균" for i in trust_available]
+            [TRUST_LABELS[TRUST_ITEMS.index(i)] if i in TRUST_ITEMS
+             else "Trust Mean" for i in trust_available]
         )
         trust_subset = trust_df[["participant_id", "condition"] + trust_available].copy()
         if not combined_df.empty:
@@ -997,7 +972,7 @@ def plot_forest(batch_df: pd.DataFrame):
     fig, ax = plt.subplots(figsize=(7, max(3, len(plot_df) * 0.45)))
     forest_plot(
         ax, plot_df, label_col=label_col,
-        title="효과크기 Forest Plot (Cohen's d, 95% CI)\nGlass Only vs Hybrid"
+        title="Effect Size Forest Plot (Cohen's d, 95% CI)\nGlass Only vs Hybrid"
     )
     fig.tight_layout()
     save_fig(fig, OUTPUT_DIR / "survey_forest_plot")
@@ -1009,16 +984,18 @@ def plot_forest(batch_df: pd.DataFrame):
 
 def main():
     parser = argparse.ArgumentParser(description="인앱 설문 분석")
-    parser.add_argument("--demo", action="store_true",
-                        help="CSV 파일이 없을 때 데모 데이터로 실행")
+    parser.add_argument("--fallback", action="store_true",
+                        help="CSV 파일이 없을 때 fallback 데이터로 실행")
     args = parser.parse_args()
 
     print("=" * 60)
     print("인앱 설문 분석 (NASA-TLX + Trust + 비교 설문)")
     print("=" * 60)
 
+    (OUTPUT_DIR / "csv").mkdir(exist_ok=True)
+
     # 데이터 로드
-    df = load_all_events(allow_demo=args.demo)
+    df = load_all_events(allow_fallback=args.fallback)
     print(f"총 이벤트 수: {len(df)}")
     print(f"참가자 수: {df['participant_id'].nunique()}")
 
@@ -1047,29 +1024,29 @@ def main():
     # 결과 저장
     print(f"\n=== 결과 저장 ===")
     if not tlx_results.empty:
-        tlx_results.to_csv(OUTPUT_DIR / "inapp_nasa_tlx_summary.csv", index=False)
-        print(f"  -> {OUTPUT_DIR / 'inapp_nasa_tlx_summary.csv'} 저장")
+        tlx_results.to_csv(OUTPUT_DIR / "csv" / "inapp_nasa_tlx_summary.csv", index=False)
+        print(f"  -> {OUTPUT_DIR / 'csv' / 'inapp_nasa_tlx_summary.csv'} 저장")
 
     if not trust_results.empty:
-        trust_results.to_csv(OUTPUT_DIR / "inapp_trust_summary.csv", index=False)
-        print(f"  -> {OUTPUT_DIR / 'inapp_trust_summary.csv'} 저장")
+        trust_results.to_csv(OUTPUT_DIR / "csv" / "inapp_trust_summary.csv", index=False)
+        print(f"  -> {OUTPUT_DIR / 'csv' / 'inapp_trust_summary.csv'} 저장")
 
     if comp_df is not None and not comp_df.empty:
-        comp_df.to_csv(OUTPUT_DIR / "inapp_comparison_survey.csv", index=False)
-        print(f"  -> {OUTPUT_DIR / 'inapp_comparison_survey.csv'} 저장")
+        comp_df.to_csv(OUTPUT_DIR / "csv" / "inapp_comparison_survey.csv", index=False)
+        print(f"  -> {OUTPUT_DIR / 'csv' / 'inapp_comparison_survey.csv'} 저장")
 
     if not batch_df.empty:
-        batch_df.to_csv(OUTPUT_DIR / "inapp_survey_batch_stats.csv", index=False)
-        print(f"  -> {OUTPUT_DIR / 'inapp_survey_batch_stats.csv'} 저장")
+        batch_df.to_csv(OUTPUT_DIR / "csv" / "inapp_survey_batch_stats.csv", index=False)
+        print(f"  -> {OUTPUT_DIR / 'csv' / 'inapp_survey_batch_stats.csv'} 저장")
 
     # TLX wide 데이터 저장 (재사용용)
     if not tlx_df.empty:
-        tlx_df.to_csv(OUTPUT_DIR / "inapp_nasa_tlx_wide.csv", index=False)
-        print(f"  -> {OUTPUT_DIR / 'inapp_nasa_tlx_wide.csv'} 저장")
+        tlx_df.to_csv(OUTPUT_DIR / "csv" / "inapp_nasa_tlx_wide.csv", index=False)
+        print(f"  -> {OUTPUT_DIR / 'csv' / 'inapp_nasa_tlx_wide.csv'} 저장")
 
     if not trust_df.empty:
-        trust_df.to_csv(OUTPUT_DIR / "inapp_trust_wide.csv", index=False)
-        print(f"  -> {OUTPUT_DIR / 'inapp_trust_wide.csv'} 저장")
+        trust_df.to_csv(OUTPUT_DIR / "csv" / "inapp_trust_wide.csv", index=False)
+        print(f"  -> {OUTPUT_DIR / 'csv' / 'inapp_trust_wide.csv'} 저장")
 
     print("\n분석 완료.")
 

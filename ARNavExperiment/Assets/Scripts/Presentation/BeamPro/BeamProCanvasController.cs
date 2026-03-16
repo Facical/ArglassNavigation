@@ -43,6 +43,7 @@ namespace ARNavExperiment.Presentation.BeamPro
         private CanvasGroup canvasGroup;
 
         private bool isGlassOnlyMode;
+        private bool isSubscribed;
 
         // 원본 설정 캐시
         private RenderMode cachedRenderMode;
@@ -93,19 +94,29 @@ namespace ARNavExperiment.Presentation.BeamPro
             MissionManager.Instance?.ForceArrival();
         }
 
+        private void TrySubscribe()
+        {
+            if (isSubscribed) return;
+            if (ConditionController.Instance == null) return;
+            ConditionController.Instance.OnConditionChanged += OnConditionChanged;
+            isSubscribed = true;
+        }
+
         private void OnEnable()
         {
-            if (ConditionController.Instance != null)
-            {
-                ConditionController.Instance.OnConditionChanged += OnConditionChanged;
-                // ApplyCondition 즉시 호출 제거 — 기본 enum값(GlassOnly=0)으로 불필요한 전환 방지
-            }
+            TrySubscribe();
+        }
+
+        private void Start()
+        {
+            TrySubscribe();
         }
 
         private void OnDisable()
         {
             if (ConditionController.Instance != null)
                 ConditionController.Instance.OnConditionChanged -= OnConditionChanged;
+            isSubscribed = false;
         }
 
         private void OnConditionChanged(ExperimentCondition condition)
@@ -190,14 +201,29 @@ namespace ARNavExperiment.Presentation.BeamPro
             // GlassOnly 도착선언 버튼 — Navigation 상태에서만 표시 (Update에서 갱신)
             isGlassOnlyMode = true;
 
+            // 버튼을 FOV 안쪽 우측 하단으로 재배치 (기존 씬 호환)
+            RepositionGlassButtons();
+
+            // 버튼을 sibling 최상위로 이동하여 탭 패널의 레이캐스트 차단 방지
+            if (glassMapToggleButton) glassMapToggleButton.transform.SetAsLastSibling();
+            if (glassForceArrivalButton) glassForceArrivalButton.transform.SetAsLastSibling();
+
             IsWorldSpace = true;
-            Debug.Log($"[BeamProCanvasCtrl] WorldSpace로 전환 — distance={distanceFromCamera}m, scale={canvasScale}");
+            Debug.Log($"[BeamProCanvasCtrl] SwitchToWorldSpace — cam={cam != null}, mapBtn={glassMapToggleButton != null}, arriveBtn={glassForceArrivalButton != null}, distance={distanceFromCamera}m, scale={canvasScale}");
 #else
             // 에디터에서는 ScreenSpaceOverlay 유지
             IsWorldSpace = false;
             isGlassOnlyMode = true;
             if (zoomButtonPanel) zoomButtonPanel.SetActive(true);
             if (glassMapToggleButton) glassMapToggleButton.gameObject.SetActive(true);
+
+            // 버튼을 FOV 안쪽 우측 하단으로 재배치 (기존 씬 호환)
+            RepositionGlassButtons();
+
+            // 버튼을 sibling 최상위로 이동하여 탭 패널의 레이캐스트 차단 방지
+            if (glassMapToggleButton) glassMapToggleButton.transform.SetAsLastSibling();
+            if (glassForceArrivalButton) glassForceArrivalButton.transform.SetAsLastSibling();
+
             Debug.Log("[BeamProCanvasCtrl] 에디터 — WorldSpace 전환 건너뜀 (ScreenSpaceOverlay 유지)");
 #endif
         }
@@ -221,6 +247,9 @@ namespace ARNavExperiment.Presentation.BeamPro
 
             // 캐시된 원본 설정 복원
             RestoreOriginalSettings();
+
+            // CanvasGroup 복원 (GlassOnly에서 SetGlassVisibility(false)로 비활성화됐을 수 있음)
+            RestoreCanvasGroup();
 
             // GraphicRaycaster 복원
             var currentRaycaster = GetComponent<GraphicRaycaster>();
@@ -246,6 +275,7 @@ namespace ARNavExperiment.Presentation.BeamPro
 #else
             IsWorldSpace = false;
             isGlassOnlyMode = false;
+            RestoreCanvasGroup();
             if (zoomButtonPanel) zoomButtonPanel.SetActive(false);
             if (glassMapToggleButton) glassMapToggleButton.gameObject.SetActive(false);
             if (glassForceArrivalButton) glassForceArrivalButton.gameObject.SetActive(false);
@@ -265,6 +295,51 @@ namespace ARNavExperiment.Presentation.BeamPro
                 && MissionManager.Instance != null
                 && MissionManager.Instance.CurrentState == MissionState.Navigation;
             glassForceArrivalButton.gameObject.SetActive(show);
+        }
+
+        /// <summary>
+        /// GlassOnly 버튼을 Canvas 루트로 reparent하여 ContentArea offsetMax 영향을 제거하고,
+        /// 글래스 FOV 중앙 영역으로 런타임 재배치합니다.
+        /// </summary>
+        private void RepositionGlassButtons()
+        {
+            if (glassMapToggleButton != null)
+            {
+                glassMapToggleButton.transform.SetParent(transform, false);
+                var rt = glassMapToggleButton.GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    rt.anchorMin = new Vector2(0.35f, 0.27f);
+                    rt.anchorMax = new Vector2(0.50f, 0.40f);
+                    rt.offsetMin = Vector2.zero;
+                    rt.offsetMax = Vector2.zero;
+                }
+            }
+
+            if (glassForceArrivalButton != null)
+            {
+                glassForceArrivalButton.transform.SetParent(transform, false);
+                var rt = glassForceArrivalButton.GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    rt.anchorMin = new Vector2(0.52f, 0.27f);
+                    rt.anchorMax = new Vector2(0.67f, 0.40f);
+                    rt.offsetMin = Vector2.zero;
+                    rt.offsetMax = Vector2.zero;
+                }
+            }
+        }
+
+        /// <summary>
+        /// CanvasGroup을 완전 활성 상태로 복원합니다.
+        /// GlassOnly→Hybrid 전환 시 SetGlassVisibility(false)로 비활성화된 상태를 복원합니다.
+        /// </summary>
+        public void RestoreCanvasGroup()
+        {
+            if (canvasGroup == null) return;
+            canvasGroup.alpha = 1f;
+            canvasGroup.interactable = true;
+            canvasGroup.blocksRaycasts = true;
         }
 
         /// <summary>

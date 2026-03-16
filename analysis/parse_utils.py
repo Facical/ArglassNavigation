@@ -9,7 +9,7 @@ def parse_extra(extra_str) -> dict:
 
     우선순위:
     1. json.loads — 표준 JSON (C# 측 출력)
-    2. ast.literal_eval — Python repr 형태 (데모 데이터의 str({...}))
+    2. ast.literal_eval — Python repr 형태 (str({...}))
     3. 빈 dict — 파싱 실패 시
     """
     if not isinstance(extra_str, str) or not extra_str:

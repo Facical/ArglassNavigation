@@ -34,7 +34,8 @@ namespace ARNavExperiment.Logging
             "target_x", "target_y", "target_z",
             "distance_m", "speed_ms",
             "anchor_bound", "is_fallback", "has_map_calib", "calib_source",
-            "heading_offset_deg", "arrow_visible", "beam_on", "trigger_id"
+            "heading_offset_deg", "calib_scale",
+            "arrow_visible", "beam_on", "trigger_id"
         };
 
         private void Awake()
@@ -91,6 +92,7 @@ namespace ARNavExperiment.Logging
             bool hasMapCalib = wm.HasMapCalibration;
             string calibSource = wm.CalibrationSource ?? "none";
             float headingOffset = wm.HeadingCalibrationOffset;
+            float calibScale = wm.CalibrationScale;
 
             bool arrowVisible = false;
             var arrowRenderer = GetArrowRenderer();
@@ -122,6 +124,7 @@ namespace ARNavExperiment.Logging
                 hasMapCalib.ToString().ToLower(),
                 calibSource,
                 headingOffset.ToString("F1"),
+                calibScale.ToString("F3"),
                 arrowVisible.ToString().ToLower(),
                 beamOn.ToString().ToLower(),
                 triggerId

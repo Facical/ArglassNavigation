@@ -48,6 +48,9 @@ namespace ARNavExperiment.EditorTools
             // ExperimenterHUD 패널 (하단 12%)
             var hudPanel = CreatePanel("ExperimenterHUD", canvasGO.transform,
                 new Color(0.05f, 0.05f, 0.1f, 0.85f));
+            // HUD 배경 Image raycastTarget=false — 하위 버튼만 터치 수신
+            var hudImg = hudPanel.GetComponent<Image>();
+            if (hudImg != null) hudImg.raycastTarget = false;
             hudPanel.AddComponent<Presentation.Experimenter.ExperimenterHUD>();
             var hudRect = hudPanel.GetComponent<RectTransform>();
             hudRect.anchorMin = new Vector2(0, 0);

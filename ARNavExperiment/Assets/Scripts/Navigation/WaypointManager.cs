@@ -5,6 +5,7 @@ using ARNavExperiment.Core;
 using ARNavExperiment.Domain.Events;
 using ARNavExperiment.Application;
 using ARNavExperiment.Utils;
+using ARNavExperiment.Presentation.BeamPro;
 
 namespace ARNavExperiment.Navigation
 {
@@ -97,14 +98,18 @@ namespace ARNavExperiment.Navigation
         private float headingCalibrationOffset;
         private string headingSource = "none";
 
-        // SLAM→도면 좌표 변환 파라미터
+        // SLAM→도면 좌표 변환 파라미터 (similarity transform: scale × Rotate + offset)
         private bool hasMapCalibration;
         private float mapCalibCos = 1f, mapCalibSin = 0f;
         private Vector2 mapCalibOffset;
         private string calibrationSource = "none";
+        private float mapCalibScale = 1f; // similarity transform에서 추출된 스케일
 
         // Image Tracking에서 주입된 가상 앵커 쌍 (Phase 2)
         private List<(Vector2 slamXZ, Vector2 fallbackXZ)> injectedPairs;
+
+        // ForceArrival에서 수집된 보정 쌍 (실험자가 확인한 위치)
+        private List<(Vector2 slamXZ, Vector2 fallbackXZ)> forceArrivalPairs;
 
         // 2점 수동 보정용 필드
         private bool manualCalibFirstPointRecorded;
@@ -133,6 +138,9 @@ namespace ARNavExperiment.Navigation
 
         /// <summary>맵 보정 소스 ("none", "auto_zero_anchor", "anchor_1", "anchor_N", "manual", "injected")</summary>
         public string CalibrationSource => calibrationSource;
+
+        /// <summary>similarity transform의 스케일 팩터 (1.0 = 스케일 없음, >1 = SLAM이 실제보다 작음)</summary>
+        public float CalibrationScale => mapCalibScale;
 
         public event Action<Waypoint> OnWaypointReached;
         public event Action OnRouteComplete;
@@ -164,6 +172,7 @@ namespace ARNavExperiment.Navigation
         {
             activeRoute = null;
             CurrentWaypointIndex = 0;
+            forceArrivalPairs = null;
             Debug.Log("[WaypointManager] Route reset");
         }
 
@@ -628,6 +637,7 @@ namespace ARNavExperiment.Navigation
         /// <summary>
         /// 강제 도착 시 CurrentWaypointIndex를 타겟 웨이포인트 이후로 전진시킵니다.
         /// MissionManager.ForceArrival()에서 호출.
+        /// 현재 SLAM 위치와 WP 도면 좌표를 보정 쌍으로 추가하여 transform 정확도를 점진적으로 개선합니다.
         /// </summary>
         public void ForceAdvancePastWaypoint(string targetWaypointId)
         {
@@ -637,6 +647,9 @@ namespace ARNavExperiment.Navigation
             {
                 if (activeRoute.waypoints[i].waypointId == targetWaypointId)
                 {
+                    // ForceArrival 보정 쌍 수집: 실험자가 "사용자가 여기 있다"고 확인
+                    AddForceArrivalCalibrationPair(activeRoute.waypoints[i]);
+
                     int oldIdx = CurrentWaypointIndex;
                     CurrentWaypointIndex = i + 1;
                     Debug.Log($"[WaypointManager] ForceAdvancePastWaypoint: index {oldIdx} → {CurrentWaypointIndex} (past {targetWaypointId})");
@@ -651,6 +664,41 @@ namespace ARNavExperiment.Navigation
             }
 
             Debug.LogWarning($"[WaypointManager] ForceAdvancePastWaypoint: {targetWaypointId} not found after index {CurrentWaypointIndex}");
+        }
+
+        /// <summary>
+        /// ForceArrival 시 현재 SLAM 위치와 WP의 도면 좌표를 보정 쌍에 추가합니다.
+        /// 보정 쌍이 누적될수록 similarity transform의 스케일/회전 정확도가 향상됩니다.
+        /// </summary>
+        private void AddForceArrivalCalibrationPair(Waypoint wp)
+        {
+            if (playerTransform == null) return;
+
+            var slamXZ = new Vector2(playerTransform.position.x, playerTransform.position.z);
+            var fallbackXZ = new Vector2(wp.fallbackPosition.x, wp.fallbackPosition.z);
+
+            if (forceArrivalPairs == null)
+                forceArrivalPairs = new List<(Vector2 slamXZ, Vector2 fallbackXZ)>();
+
+            forceArrivalPairs.Add((slamXZ, fallbackXZ));
+
+            Debug.Log($"[WaypointManager] ForceArrival calibration pair added: " +
+                $"SLAM=({slamXZ.x:F1},{slamXZ.y:F1}) → FloorPlan=({fallbackXZ.x:F1},{fallbackXZ.y:F1}), " +
+                $"total forceArrival pairs={forceArrivalPairs.Count}");
+
+            // heading도 재계산 (ForceArrival 쌍 포함 — 멀리 떨어진 쌍이 추가되면 정밀도 향상)
+            AutoCalibrateFromAnchors();
+
+            // transform 재계산 (새 쌍 포함)
+            ComputeMapCalibration();
+
+            // InteractiveMapController 재보정 트리거
+            var mapCtrl = FindObjectOfType<InteractiveMapController>();
+            if (mapCtrl != null)
+                mapCtrl.InvalidateCalibration();
+
+            Debug.Log($"[WaypointManager] MapCalibration recomputed after ForceArrival: " +
+                $"scale={mapCalibScale:F3}, source={calibrationSource}");
         }
 
         public Vector3 GetDirectionToNext()
@@ -776,6 +824,16 @@ namespace ARNavExperiment.Navigation
             return null;
         }
 
+        /// <summary>웨이포인트 ID로 도면 좌표(fallback XZ)를 조회한다.</summary>
+        public Vector2? GetWaypointFallbackXZ(string waypointId)
+        {
+            if (activeRoute == null) return null;
+            foreach (var wp in activeRoute.waypoints)
+                if (wp.waypointId == waypointId)
+                    return new Vector2(wp.fallbackPosition.x, wp.fallbackPosition.z);
+            return null;
+        }
+
         public float GetDistanceToNext()
         {
             if (playerTransform == null || activeRoute == null || CurrentWaypointIndex >= activeRoute.waypoints.Count)
@@ -833,6 +891,7 @@ namespace ARNavExperiment.Navigation
                 float rotY = cameraXZ.x * mapCalibSin + cameraXZ.y * mapCalibCos;
                 mapCalibOffset = fallbackXZ - new Vector2(rotX, rotY);
 
+                mapCalibScale = 1f;
                 hasMapCalibration = true;
                 calibrationSource = "auto_zero_anchor";
                 Debug.Log($"[WaypointManager] Zero-anchor auto-calibration: camera({cameraXZ}) → " +
@@ -851,11 +910,14 @@ namespace ARNavExperiment.Navigation
                 float rotX = slamXZ.x * mapCalibCos - slamXZ.y * mapCalibSin;
                 float rotY = slamXZ.x * mapCalibSin + slamXZ.y * mapCalibCos;
                 mapCalibOffset = fallbackXZ - new Vector2(rotX, rotY);
+                mapCalibScale = 1f;
                 calibrationSource = "anchor_1";
             }
             else
             {
-                // 최소자승법 (InteractiveMapController.ComputeLeastSquaresTransform과 동일)
+                // Similarity transform (회전 + 스케일 + 평행이동)
+                // rigid transform은 스케일=1 고정 → SLAM과 도면의 스케일 불일치 시 원거리 오차 증폭
+                // similarity: floorPlan = [a -b; b a] * slam + offset, scale = sqrt(a² + b²)
                 int n = pairs.Count;
                 Vector2 centroidS = Vector2.zero, centroidF = Vector2.zero;
                 for (int i = 0; i < n; i++)
@@ -866,18 +928,32 @@ namespace ARNavExperiment.Navigation
                 centroidS /= n;
                 centroidF /= n;
 
-                float sumCross = 0f, sumDot = 0f;
+                float sumCross = 0f, sumDot = 0f, sumSS = 0f;
                 for (int i = 0; i < n; i++)
                 {
                     var ds = pairs[i].slamXZ - centroidS;
                     var df = pairs[i].fallbackXZ - centroidF;
                     sumCross += ds.x * df.y - ds.y * df.x;
                     sumDot += ds.x * df.x + ds.y * df.y;
+                    sumSS += ds.x * ds.x + ds.y * ds.y; // SLAM 쪽 분산
                 }
 
-                float theta = Mathf.Atan2(sumCross, sumDot);
-                mapCalibCos = Mathf.Cos(theta);
-                mapCalibSin = Mathf.Sin(theta);
+                if (sumSS < 0.01f)
+                {
+                    // 쌍들이 너무 가깝다 → rigid fallback
+                    float theta = Mathf.Atan2(sumCross, sumDot);
+                    mapCalibCos = Mathf.Cos(theta);
+                    mapCalibSin = Mathf.Sin(theta);
+                    mapCalibScale = 1f;
+                    Debug.LogWarning($"[WaypointManager] Anchor pairs too close (sumSS={sumSS:F3}), falling back to rigid transform");
+                }
+                else
+                {
+                    // Similarity transform: a = sumDot/sumSS, b = sumCross/sumSS
+                    mapCalibCos = sumDot / sumSS;   // a = scale * cos(θ)
+                    mapCalibSin = sumCross / sumSS;  // b = scale * sin(θ)
+                    mapCalibScale = Mathf.Sqrt(mapCalibCos * mapCalibCos + mapCalibSin * mapCalibSin);
+                }
 
                 var rotatedCentroidS = new Vector2(
                     centroidS.x * mapCalibCos - centroidS.y * mapCalibSin,
@@ -888,7 +964,7 @@ namespace ARNavExperiment.Navigation
 
             hasMapCalibration = true;
             Debug.Log($"[WaypointManager] MapCalibration computed: cos={mapCalibCos:F3}, sin={mapCalibSin:F3}, " +
-                $"offset={mapCalibOffset}, source={calibrationSource}, pairs={pairs.Count}");
+                $"scale={mapCalibScale:F3}, offset={mapCalibOffset}, source={calibrationSource}, pairs={pairs.Count}");
         }
 
         /// <summary>
@@ -985,6 +1061,13 @@ namespace ARNavExperiment.Navigation
                     anchored.Add((new Vector3(fallbackXZ.x, 0, fallbackXZ.y), new Vector3(slamXZ.x, 0, slamXZ.y)));
             }
 
+            // ForceArrival에서 수집된 보정 쌍 추가
+            if (forceArrivalPairs != null)
+            {
+                foreach (var (slamXZ, fallbackXZ) in forceArrivalPairs)
+                    anchored.Add((new Vector3(fallbackXZ.x, 0, fallbackXZ.y), new Vector3(slamXZ.x, 0, slamXZ.y)));
+            }
+
             if (anchored.Count < 2) return false;
 
             // 가장 먼 쌍을 선택 (정밀도 향상 — 가까운 쌍은 노이즈에 취약)
@@ -1056,6 +1139,10 @@ namespace ARNavExperiment.Navigation
                 var refPairs = anchorMgr.GetReferenceCalibratedPairs();
                 pairs.AddRange(refPairs);
             }
+
+            // ForceArrival에서 수집된 보정 쌍 추가
+            if (forceArrivalPairs != null)
+                pairs.AddRange(forceArrivalPairs);
 
             return pairs;
         }

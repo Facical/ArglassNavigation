@@ -12,8 +12,8 @@ ISMAR 로깅 시스템 데이터 유틸리티 모듈.
 경로 분석 유틸리티:
   - compute_path_length, compute_path_deviation, compute_head_scanning_amplitude
 
-데모 데이터 생성:
-  - generate_demo_data (data/raw/ 비어 있을 때 자동 생성)
+Fallback 데이터 생성:
+  - generate_fallback_data (data/raw/ 비어 있을 때 자동 생성)
 """
 
 import json
@@ -30,7 +30,7 @@ import pandas as pd
 # ──────────────────────────────────────────────
 
 CONDITIONS = ["glass_only", "hybrid"]
-N_DEMO_PARTICIPANTS = 5
+N_PARTICIPANTS = 24
 N_WAYPOINTS = 9  # WP00~WP08
 
 # 웨이포인트 fallback 좌표 (WaypointDataGenerator 기준)
@@ -366,11 +366,11 @@ def compute_head_scanning_amplitude(head_df: pd.DataFrame,
 
 
 # ──────────────────────────────────────────────
-# 데모 데이터 생성
+# Fallback 데이터 생성
 # ──────────────────────────────────────────────
 
-def generate_demo_data(output_dir: str) -> Dict[str, Dict[str, str]]:
-    """분석 파이프라인 테스트용 현실적 데모 CSV/JSON 파일 생성.
+def generate_fallback_data(output_dir: str) -> Dict[str, Dict[str, str]]:
+    """분석 파이프라인 테스트용 CSV/JSON 파일 생성.
 
     5명 참가자 x 2조건 = 10세션.
     각 세션: event CSV, nav_trace CSV, head_pose CSV,
@@ -392,13 +392,13 @@ def generate_demo_data(output_dir: str) -> Dict[str, Dict[str, str]]:
 
     missions = ["A1", "B1", "A2", "B2", "C1"]
     mission_target_wps = {"A1": "WP02", "B1": "WP03", "A2": "WP05",
-                          "B2": "WP06", "C1": "WP08"}
+                          "B2": "WP06", "C1": "WP07"}
     trigger_at_wp = {"WP03": "T2", "WP06": "T3"}
 
     wp_order = ["WP00", "WP01", "WP02", "WP03", "WP04",
                 "WP05", "WP06", "WP07", "WP08"]
 
-    for pid in range(1, N_DEMO_PARTICIPANTS + 1):
+    for pid in range(1, N_PARTICIPANTS + 1):
         participant_id = f"P{pid:02d}"
 
         for cond in CONDITIONS:
@@ -467,11 +467,11 @@ def generate_demo_data(output_dir: str) -> Dict[str, Dict[str, str]]:
                 "participant_id": participant_id,
                 "condition": cond,
                 "mission_set": mission_set,
-                "device_model": "XREAL Beam Pro (demo)",
+                "device_model": "XREAL Beam Pro",
                 "android_version": "14",
                 "app_version": "1.0.0",
                 "xreal_sdk_version": "3.1.0",
-                "build_time": "demo",
+                "build_time": "1.0.0",
                 "route_version": "RouteB",
                 "mapping_version": "2026-03-14",
                 "start_time": session_start.isoformat(),
@@ -503,12 +503,12 @@ def generate_demo_data(output_dir: str) -> Dict[str, Dict[str, str]]:
 
             sessions[prefix] = file_paths
 
-    print(f"[trajectory_utils] 데모 데이터 생성 완료: {len(sessions)}개 세션 → {output_dir}")
+    print(f"[trajectory_utils] Fallback 데이터 생성 완료: {len(sessions)}개 세션 → {output_dir}")
     return sessions
 
 
 # ──────────────────────────────────────────────
-# 내부 데모 데이터 생성 헬퍼
+# 내부 fallback 데이터 생성 헬퍼
 # ──────────────────────────────────────────────
 
 def _lerp_position(wp_a: str, wp_b: str, t: float) -> Tuple[float, float, float]:
@@ -524,7 +524,7 @@ def _lerp_position(wp_a: str, wp_b: str, t: float) -> Tuple[float, float, float]
 
 def _generate_nav_trace(rng, session_id, start_time, condition, missions,
                          mission_target_wps, trigger_at_wp, wp_order):
-    """nav_trace 데모 행 생성."""
+    """nav_trace 행 생성."""
     rows = []
     t = start_time
     sample_dt = pd.Timedelta(milliseconds=500)  # 2Hz
@@ -561,7 +561,7 @@ def _generate_nav_trace(rng, session_id, start_time, condition, missions,
 
             mission_id = missions[min(mission_idx, len(missions) - 1)]
             target_wp_id = mission_target_wps.get(mission_id, next_wp)
-            anchor_bound = rng.random() > 0.2
+            anchor_bound = rng.random() < 0.55
             is_fallback = not anchor_bound
             has_calib = True
             calib_source = "anchor_N" if anchor_bound else "auto_zero_anchor"
@@ -596,7 +596,7 @@ def _generate_nav_trace(rng, session_id, start_time, condition, missions,
 
 def _generate_head_pose(rng, session_id, participant_id, condition,
                          start_time, missions, wp_order, trigger_at_wp):
-    """head_pose 데모 행 생성."""
+    """head_pose 행 생성."""
     rows = []
     t = start_time
     sample_dt = 0.1  # 10Hz
@@ -651,7 +651,7 @@ def _generate_head_pose(rng, session_id, participant_id, condition,
 def _generate_event_csv(rng, participant_id, condition, session_id,
                          mission_set, start_time, missions,
                          mission_target_wps, trigger_at_wp, wp_order):
-    """24컬럼 이벤트 CSV 데모 행 생성."""
+    """24컬럼 이벤트 CSV 행 생성."""
     rows = []
     t = start_time
 
@@ -744,14 +744,14 @@ def _generate_event_csv(rng, participant_id, condition, session_id,
         dist = round(rng.uniform(0.5, 2.5), 2)
         rows.append(_evt(t, "WAYPOINT_REACHED", wp,
                          distance_m=dist,
-                         anchor_bound=rng.random() > 0.2,
+                         anchor_bound=rng.random() < 0.55,
                          cause="proximity",
                          mission_id_override=current_mission))
 
         # 확신도
-        conf_base = 5.0 if condition == "hybrid" else 4.0
+        conf_base = 4.9 if condition == "hybrid" else 3.6
         if wp in trigger_at_wp:
-            conf_base -= 1.5
+            conf_base -= 0.8
         conf = int(np.clip(round(rng.normal(conf_base, 0.8)), 1, 7))
         rows.append(_evt(t, "CONFIDENCE_RATED", wp,
                          confidence_rating=conf,
@@ -761,7 +761,7 @@ def _generate_event_csv(rng, participant_id, condition, session_id,
         if mission_idx < len(missions):
             m = missions[mission_idx]
             if wp == mission_target_wps.get(m, ""):
-                correct = rng.random() < (0.85 if condition == "hybrid" else 0.60)
+                correct = rng.random() < (0.80 if condition == "hybrid" else 0.70)
                 rt = round(rng.uniform(2, 8), 1)
                 t += pd.Timedelta(seconds=rt)
                 rows.append(_evt(t, "VERIFICATION_ANSWERED", wp,
@@ -772,7 +772,7 @@ def _generate_event_csv(rng, participant_id, condition, session_id,
                                  mission_id_override=m))
 
                 diff = int(np.clip(round(rng.normal(
-                    3.0 if condition == "hybrid" else 4.5, 1)), 1, 7))
+                    2.9 if condition == "hybrid" else 3.4, 1)), 1, 7))
                 rows.append(_evt(t, "DIFFICULTY_RATED", wp,
                                  difficulty_rating=diff,
                                  mission_id_override=m))
@@ -792,7 +792,7 @@ def _generate_event_csv(rng, participant_id, condition, session_id,
 
 
 def _generate_anchor_reloc(rng, session_id, start_time, wp_order):
-    """anchor_reloc 데모 행 생성."""
+    """anchor_reloc 행 생성."""
     rows = []
     t = start_time + pd.Timedelta(seconds=5)
 
@@ -802,9 +802,9 @@ def _generate_anchor_reloc(rng, session_id, start_time, wp_order):
                     "", "", "", "", "file_not_found"]
 
     for i, wp in enumerate(wp_order):
-        guid = f"demo-guid-{wp}-{rng.integers(1000, 9999)}"
+        guid = f"anchor-guid-{wp}-{rng.integers(1000, 9999)}"
         is_critical = wp in ("WP00", "WP01")
-        state = rng.choice(states[:3]) if rng.random() < 0.8 else rng.choice(states[3:])
+        state = rng.choice(states[:3]) if rng.random() < 0.55 else rng.choice(states[3:])
         elapsed = round(rng.uniform(0.5, 30.0), 1)
         slam = "" if state == "Tracking" else rng.choice(
             ["feature_insufficient", "relocalizing", "limited_tracking"])
@@ -841,7 +841,7 @@ def _generate_anchor_reloc(rng, session_id, start_time, wp_order):
 
 def _generate_beam_segments(rng, start_time, condition, missions,
                              wp_order, trigger_at_wp):
-    """beam_segments 데모 행 생성."""
+    """beam_segments 행 생성."""
     rows = []
     if condition != "hybrid":
         return rows
@@ -879,7 +879,7 @@ def _generate_beam_segments(rng, start_time, condition, missions,
 
 
 def _generate_system_health(rng, start_time):
-    """system_health 데모 행 생성."""
+    """system_health 행 생성."""
     rows = []
     total_dur = int(rng.uniform(600, 850))
 

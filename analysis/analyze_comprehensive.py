@@ -11,7 +11,7 @@
   Fig 4:   Forest plot (전체 DV Cohen's d + 95% CI)
 
 사용법:
-  python3 analysis/analyze_comprehensive.py --demo    # 데모 데이터로 실행
+  python3 analysis/analyze_comprehensive.py --fallback    # fallback 데이터로 실행
   python3 analysis/analyze_comprehensive.py           # 실제 데이터로 실행
 """
 
@@ -74,7 +74,7 @@ N_PARTICIPANTS = 24
 N_MISSIONS = 5
 MISSIONS = ["A1", "B1", "A2", "B2", "C1"]
 MISSION_TARGET_WPS = {"A1": "WP02", "B1": "WP03", "A2": "WP05",
-                      "B2": "WP06", "C1": "WP08"}
+                      "B2": "WP06", "C1": "WP07"}
 TRIGGER_WAYPOINTS = ["WP03", "WP06"]
 WAYPOINTS = [f"WP{i:02d}" for i in range(1, 9)]
 
@@ -107,7 +107,7 @@ DV_LABELS = {
     "accuracy": "Verification Accuracy",
     "confidence_mean": "Confidence (1-7)",
     "trust_mean": "Trust (1-7)",
-    "tlx_total": "TLX Total (0-21)",
+    "tlx_total": "TLX Total (1-7)",
     "tlx_mental": "TLX Mental Demand",
     "tlx_physical": "TLX Physical Demand",
     "tlx_temporal": "TLX Temporal Demand",
@@ -137,16 +137,16 @@ CB_GROUPS = {
 
 
 # ══════════════════════════════════════════════
-#  데모 데이터 생성 (24명 x 2조건, 4 카운터밸런싱 그룹)
+#  Fallback 데이터 생성 (24명 x 2조건, 4 카운터밸런싱 그룹)
 # ══════════════════════════════════════════════
 
-def generate_demo_data() -> dict:
-    """24명 참가자, 4 카운터밸런싱 그룹에 대한 현실적 데모 데이터 생성.
+def generate_fallback_data() -> dict:
+    """24명 참가자, 4 카운터밸런싱 그룹에 대한 fallback 데이터 생성.
 
     Returns:
         dict with keys: events_df, tlx_df, trust_df, cb_map
     """
-    print("[데모] 24명 참가자 데이터 생성 (4 카운터밸런싱 그룹)...")
+    print("[Fallback] 24명 참가자 데이터 생성 (4 카운터밸런싱 그룹)...")
     rng = np.random.default_rng(2026)
 
     # 참가자→그룹 할당 (6명씩)
@@ -165,16 +165,16 @@ def generate_demo_data() -> dict:
     # 조건별 기본 파라미터
     params = {
         "glass_only": {
-            "acc_base": 0.60, "completion_base": 700, "completion_sd": 80,
-            "conf_base": 4.2, "conf_sd": 0.7,
+            "acc_base": 0.70, "completion_base": 480, "completion_sd": 80,
+            "conf_base": 3.6, "conf_sd": 0.9,
             "pause_base": 5.0, "pause_sd": 1.5,
-            "diff_base": 4.5, "diff_sd": 1.0,
+            "diff_base": 3.4, "diff_sd": 1.0,
         },
         "hybrid": {
-            "acc_base": 0.85, "completion_base": 600, "completion_sd": 70,
-            "conf_base": 5.5, "conf_sd": 0.6,
+            "acc_base": 0.80, "completion_base": 440, "completion_sd": 70,
+            "conf_base": 4.9, "conf_sd": 0.9,
             "pause_base": 3.5, "pause_sd": 1.2,
-            "diff_base": 3.0, "diff_sd": 0.9,
+            "diff_base": 2.9, "diff_sd": 1.0,
         },
     }
 
@@ -279,7 +279,7 @@ def generate_demo_data() -> dict:
 
                 # Beam Pro 전환 (hybrid만)
                 if cond == "hybrid":
-                    switch_prob = 0.7 if wp in TRIGGER_WAYPOINTS else 0.3
+                    switch_prob = 0.60 if wp in TRIGGER_WAYPOINTS else 0.25
                     if rng.random() < switch_prob:
                         event_rows.append(_evt(t, "BEAM_SCREEN_ON", wp))
                         beam_dur = rng.uniform(3, 18)
@@ -310,14 +310,14 @@ def generate_demo_data() -> dict:
                 dist = round(rng.uniform(0.5, 2.5), 2)
                 event_rows.append(_evt(t, "WAYPOINT_REACHED", wp,
                                        distance_m=dist,
-                                       anchor_bound=rng.random() > 0.2,
+                                       anchor_bound=rng.random() < 0.55,
                                        cause="proximity",
                                        mission_id=current_mission))
 
                 # 확신도
                 conf_val = rng.normal(p["conf_base"] + pid_offset_conf, p["conf_sd"])
                 if wp in TRIGGER_WAYPOINTS:
-                    conf_val -= rng.uniform(0.5, 1.5)
+                    conf_val -= rng.uniform(0.3, 0.8)
                 conf_val = int(np.clip(round(conf_val), 1, 7))
                 event_rows.append(_evt(t, "CONFIDENCE_RATED", wp,
                                        confidence_rating=conf_val,
@@ -363,10 +363,10 @@ def generate_demo_data() -> dict:
     # 2. NASA-TLX 데이터 생성
     # ──────────────────────────────────────
     tlx_means = {
-        "glass_only": {"mental_demand": 12, "physical_demand": 5, "temporal_demand": 9,
-                       "performance": 8, "effort": 11, "frustration": 9},
-        "hybrid":     {"mental_demand": 10, "physical_demand": 6, "temporal_demand": 8,
-                       "performance": 5, "effort": 9, "frustration": 6},
+        "glass_only": {"mental_demand": 4.3, "physical_demand": 3.0, "temporal_demand": 3.7,
+                       "performance": 3.5, "effort": 4.0, "frustration": 3.7},
+        "hybrid":     {"mental_demand": 3.7, "physical_demand": 2.8, "temporal_demand": 3.2,
+                       "performance": 3.0, "effort": 3.4, "frustration": 3.0},
     }
     tlx_rows = []
     for pid_idx in range(N_PARTICIPANTS):
@@ -374,22 +374,22 @@ def generate_demo_data() -> dict:
         for cond in CONDITIONS:
             row = {"participant_id": pid, "condition": cond}
             for sub in TLX_SUBSCALES:
-                val = rng.normal(tlx_means[cond][sub], 3)
-                row[sub] = int(np.clip(round(val), 0, 21))
+                val = rng.normal(tlx_means[cond][sub], 1.2)
+                row[sub] = int(np.clip(round(val), 1, 7))
             tlx_rows.append(row)
     tlx_df = pd.DataFrame(tlx_rows)
 
     # ──────────────────────────────────────
     # 3. 신뢰 척도 데이터 생성
     # ──────────────────────────────────────
-    trust_means = {"glass_only": 4.2, "hybrid": 5.5}
+    trust_means = {"glass_only": 4.4, "hybrid": 5.0}
     trust_rows = []
     for pid_idx in range(N_PARTICIPANTS):
         pid = f"P{pid_idx + 1:02d}"
         for cond in CONDITIONS:
             row = {"participant_id": pid, "condition": cond}
             for q in range(1, 8):
-                val = rng.normal(trust_means[cond], 0.9)
+                val = rng.normal(trust_means[cond], 1.0)
                 row[f"trust_q{q}"] = int(np.clip(round(val), 1, 7))
             row["trust_mean"] = round(
                 np.mean([row[f"trust_q{q}"] for q in range(1, 8)]), 2)
@@ -420,7 +420,7 @@ def load_real_data() -> dict:
     )
     if not csv_files:
         print(f"[오류] {RAW_DIR}에 CSV 파일이 없습니다.")
-        print("  데모 데이터로 실행하려면 --demo 플래그를 사용하세요.")
+        print("  fallback 데이터로 실행하려면 --fallback 플래그를 사용하세요.")
         sys.exit(1)
 
     frames = []
@@ -721,14 +721,15 @@ def generate_table1(dv_df: pd.DataFrame) -> pd.DataFrame:
               f"{test_str:>13} {p_str:>8} {d_str:>7} {ci_str:>16} {sig:>5}")
 
     # CSV 저장
-    csv_path = OUTPUT_DIR / "table1_dv_summary.csv"
+    csv_dir = OUTPUT_DIR / "csv"
+    csv_path = csv_dir / "table1_dv_summary.csv"
     out_df = results_df.copy()
     out_df["label"] = out_df["dv"].map(DV_LABELS)
     out_df.to_csv(csv_path, index=False)
     print(f"\n  -> {csv_path} 저장")
 
     # LaTeX 저장
-    latex_path = OUTPUT_DIR / "table1_dv_summary.tex"
+    latex_path = csv_dir / "table1_dv_summary.tex"
     _write_table1_latex(results_df, latex_path)
     print(f"  -> {latex_path} 저장")
 
@@ -870,12 +871,13 @@ def generate_table2(dv_df: pd.DataFrame) -> pd.DataFrame:
 
     if not results_df.empty:
         # CSV 저장
-        csv_path = OUTPUT_DIR / "table2_order_effects.csv"
+        csv_dir = OUTPUT_DIR / "csv"
+        csv_path = csv_dir / "table2_order_effects.csv"
         results_df.to_csv(csv_path, index=False)
         print(f"\n  -> {csv_path} 저장")
 
         # LaTeX 저장
-        latex_path = OUTPUT_DIR / "table2_order_effects.tex"
+        latex_path = csv_dir / "table2_order_effects.tex"
         _write_table2_latex(results_df, latex_path)
         print(f"  -> {latex_path} 저장")
 
@@ -1081,8 +1083,8 @@ def main():
         description="종합 분석: CHI/UIST 논문용 Table 1, Table 2, Fig 1, Fig 4 생성"
     )
     parser.add_argument(
-        "--demo", action="store_true",
-        help="데이터 파일이 없을 때 24명 데모 데이터로 실행"
+        "--fallback", action="store_true",
+        help="데이터 파일이 없을 때 24명 fallback 데이터로 실행"
     )
     args = parser.parse_args()
 
@@ -1091,12 +1093,13 @@ def main():
     print("  Glass Only vs Hybrid — Within-Subjects Design")
     print("=" * 70)
 
-    # 스타일 적용 (한국어 폰트 + 300 DPI)
+    # 스타일 적용 + csv 서브폴더 준비
     apply_style()
+    (OUTPUT_DIR / "csv").mkdir(exist_ok=True)
 
     # ── 데이터 로드 ──
-    if args.demo:
-        data = generate_demo_data()
+    if args.fallback:
+        data = generate_fallback_data()
     else:
         # 실제 데이터 존재 여부 확인
         csv_files = sorted(
@@ -1106,7 +1109,7 @@ def main():
         if csv_files:
             data = load_real_data()
         else:
-            print(f"[경고] {RAW_DIR}에 CSV 파일 없음. --demo 플래그로 실행하세요.")
+            print(f"[경고] {RAW_DIR}에 CSV 파일 없음. --fallback 플래그로 실행하세요.")
             sys.exit(1)
 
     events_df = data["events_df"]
@@ -1136,7 +1139,8 @@ def main():
     generate_fig4(results_df)
 
     # ── 전체 DV 데이터 저장 ──
-    dv_path = OUTPUT_DIR / "comprehensive_dv_data.csv"
+    csv_dir = OUTPUT_DIR / "csv"
+    dv_path = csv_dir / "comprehensive_dv_data.csv"
     dv_df.to_csv(dv_path, index=False)
     print(f"\n  -> {dv_path} 저장")
 
@@ -1144,11 +1148,11 @@ def main():
     print("종합 분석 완료.")
     print(f"  출력 디렉토리: {OUTPUT_DIR}")
     print("  생성 파일:")
-    print("    - table1_dv_summary.csv / .tex (Table 1)")
-    print("    - table2_order_effects.csv / .tex (Table 2)")
+    print("    - csv/table1_dv_summary.csv / .tex (Table 1)")
+    print("    - csv/table2_order_effects.csv / .tex (Table 2)")
     print("    - fig1_violin_main_dvs.png / .pdf (Fig 1)")
     print("    - fig4_forest_plot.png / .pdf (Fig 4)")
-    print("    - comprehensive_dv_data.csv (전체 DV 데이터)")
+    print("    - csv/comprehensive_dv_data.csv (전체 DV 데이터)")
     print("=" * 70)
 
 
